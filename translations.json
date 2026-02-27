@@ -1,0 +1,176 @@
+{
+    "gu": {
+        "login": {
+            "appName": "વાડી-હિસાબ",
+            "tagline": "ખેડૂત માટે સ્માર્ટ હિસાબ",
+            "label": "મોબાઈલ નંબર",
+            "placeholder": "10 આંકડા દાખલ કરો",
+            "sendOtpBtn": "OTP મોકલો",
+            "hint": "OTP SMS દ્વારા આવશે",
+            "errTitle": "ભૂલ"
+        },
+        "otp": {
+            "title": "OTP ચકાસો",
+            "subtitle": "+91 {phone} પર OTP મોકલ્યો",
+            "verify": "ચકાસો",
+            "resend": "🔁 ફરી OTP મોકલો",
+            "resendWait": "{seconds}s પછી ફરી મોકલી શકશો",
+            "changeNum": "← નંબર બદલો",
+            "successMsg": "ચકાસણી સફળ! ✓",
+            "errInvalid": "OTP ખોટો છે, ફરી પ્રયાસ કરો",
+            "errNetwork": "નેટવર્ક ભૂલ",
+            "secure": "2Factor દ્વારા સુરક્ષિત",
+            "errTitle": "ભૂલ",
+            "or": "અથવા"
+        },
+        "consent": {
+            "heading": "ડેટા શેર સહમતી",
+            "question": "શું તમે ગ્રામ-સ્તરીય વિશ્લેષણ માટે\nઅનામ ડેટા શેર કરવા સંમત છો?",
+            "whatIs": "આ શા માટે?",
+            "f1title": "ગ્રામ સરખામણી",
+            "f1desc": "તમારા ગામ સાથે ઉત્પાદન સરખાવો",
+            "f2title": "ટ્રેન્ડ જુઓ",
+            "f2desc": "વિસ્તારમાં ક્યો પાક ચાલે છે",
+            "f3title": "ગુપ્તતા સુરક્ષિત",
+            "f3desc": "તમારું નામ ક્યારેય શેર ન થાય",
+            "proceed": "આગળ વધો →",
+            "yes": "હા",
+            "no": "ના",
+            "yesHint": "ગ્રામ સરખામણી સુવિધા ચાલુ થશે",
+            "noHint": "ગ્રામ સરખામણી છુપાઈ જશે",
+            "errTitle": "ભૂલ"
+        },
+        "profile": {
+            "title": "ખેડૂત માહિતી",
+            "subtitle": "તમારી વિગત ભરો",
+            "sectionBasic": "મૂળ વિગત",
+            "sectionLand": "જમીન અને પાણી",
+            "sectionResources": "સંસાધન",
+            "name": "પૂરું નામ *",
+            "namePH": "જેમ કે: રામભાઈ પટેલ",
+            "village": "ગામ *",
+            "villagePH": "તમારા ગામનું નામ",
+            "district": "જિલ્લો *",
+            "land": "કુલ જમીન *",
+            "landPH": "જથ્થો દાખલ કરો",
+            "unitAcre": "એકર",
+            "unitBigha": "વીઘા",
+            "water": "પાણીનો સ્ત્રોત *",
+            "tractor": "ટ્રેક્ટર ઉપલબ્ધ? *",
+            "tractorYes": "✅ હા",
+            "tractorNo": "❌ ના",
+            "labour": "મજૂર પ્રકાર *",
+            "save": "પ્રોફાઇલ સાચવો 🌱",
+            "errTitle": "ભૂલ",
+            "errFill": "બધી વિગત ભરો",
+            "fieldsCompleted": "ક્ષેત્ર ભર્યાં",
+            "districtLabels": {
+                "Rajkot": "રાજકોટ",
+                "Jamnagar": "જામનગર",
+                "Junagadh": "જૂનાગઢ",
+                "Amreli": "અમરેલી",
+                "Morbi": "મોરબી",
+                "Bhavnagar": "ભાવનગર",
+                "Surendranagar": "સુરેન્દ્રનગર",
+                "Other": "અન્ય"
+            },
+            "waterLabels": {
+                "Rain": "🌧 વરસાદ",
+                "Borewell": "⛽ બોરવેલ",
+                "Canal": "💧 નહેર"
+            },
+            "labourLabels": {
+                "Family": "👨‍👩‍👧 પારિવારિક",
+                "Hired": "👷 ભાડે",
+                "Mixed": "🤝 મિશ્ર"
+            }
+        }
+    },
+    "en": {
+        "login": {
+            "appName": "VADI-Hisaab",
+            "tagline": "Smart farming records",
+            "label": "Mobile Number",
+            "placeholder": "Enter 10-digit number",
+            "sendOtpBtn": "Send OTP",
+            "hint": "OTP will be sent via SMS",
+            "errTitle": "Error"
+        },
+        "otp": {
+            "title": "Verify OTP",
+            "subtitle": "OTP sent to +91 {phone}",
+            "verify": "Verify",
+            "resend": "🔁 Resend OTP",
+            "resendWait": "Resend available in {seconds}s",
+            "changeNum": "← Change Number",
+            "successMsg": "Verified! ✓",
+            "errInvalid": "Incorrect OTP — please try again",
+            "errNetwork": "Network error, please retry",
+            "secure": "Secured via 2Factor SMS",
+            "errTitle": "Error",
+            "or": "or"
+        },
+        "consent": {
+            "heading": "Data Sharing Consent",
+            "question": "Allow anonymous village-level\nanalytics sharing?",
+            "whatIs": "Why we ask",
+            "f1title": "Village Comparison",
+            "f1desc": "Compare your yields with your village",
+            "f2title": "Crop Trends",
+            "f2desc": "See what crops are thriving locally",
+            "f3title": "Privacy Protected",
+            "f3desc": "Your name is never shared with anyone",
+            "proceed": "Continue →",
+            "yes": "Yes",
+            "no": "No",
+            "yesHint": "Village comparison features will be enabled",
+            "noHint": "Village comparison features will be hidden",
+            "errTitle": "Error"
+        },
+        "profile": {
+            "title": "Farmer Profile",
+            "subtitle": "Fill in your details",
+            "sectionBasic": "Basic Details",
+            "sectionLand": "Land & Water",
+            "sectionResources": "Resources",
+            "name": "Full Name *",
+            "namePH": "e.g. Rambhai Patel",
+            "village": "Village *",
+            "villagePH": "Your village name",
+            "district": "District *",
+            "land": "Total Land *",
+            "landPH": "Enter amount",
+            "unitAcre": "Acre",
+            "unitBigha": "Bigha",
+            "water": "Water Source *",
+            "tractor": "Tractor Available? *",
+            "tractorYes": "✅ Yes",
+            "tractorNo": "❌ No",
+            "labour": "Labour Type *",
+            "save": "Save Profile 🌱",
+            "errTitle": "Error",
+            "errFill": "Please fill all required fields",
+            "fieldsCompleted": "fields completed",
+            "districtLabels": {
+                "Rajkot": "Rajkot",
+                "Jamnagar": "Jamnagar",
+                "Junagadh": "Junagadh",
+                "Amreli": "Amreli",
+                "Morbi": "Morbi",
+                "Bhavnagar": "Bhavnagar",
+                "Surendranagar": "Surendranagar",
+                "Other": "Other"
+            },
+            "waterLabels": {
+                "Rain": "🌧 Rain",
+                "Borewell": "⛽ Borewell",
+                "Canal": "💧 Canal"
+            },
+            "labourLabels": {
+                "Family": "👨‍👩‍👧 Family",
+                "Hired": "👷 Hired",
+                "Mixed": "🤝 Mixed"
+            }
+        }
+    }
+}
