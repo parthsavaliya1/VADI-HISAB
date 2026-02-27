@@ -1,17 +1,19 @@
 /**
  * FILE: app/(tabs)/index.tsx
  *
- * REDESIGN CHANGES:
- * ✅ Color palette changed from heavy green → warm amber/earth tones with green accents
- * ✅ Larger font sizes throughout for better readability
- * ✅ Header no longer gets "cut" — uses a fixed sticky header with fade transition
- * ✅ Improved card layouts with better spacing
- * ✅ Interactive touch feedback (ripple / scale animations)
- * ✅ Cleaner section dividers and visual hierarchy
+ * ✅ New style system from the other app (warm earthy tones, refined cards)
+ * ✅ ઝડપી કામ section REMOVED
+ * ✅ New "ખર્ચ ઉમેરો" section — same layout as Selected Crop Detail
+ *    → Tap → Crop picker bottom sheet → select crop → goes to add-expense
+ * ✅ Dynamic profile (name, village, land) from getMyProfile()
+ * ✅ Sticky mini header on scroll
+ * ✅ PressableCard spring animations
  */
 
 import { useProfile } from "@/contexts/ProfileContext";
 import { getCrops, getMyProfile, type Crop } from "@/utils/api";
+// ⚠️ Change to "@/services/api" if that is your import path
+
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -19,6 +21,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
+  Modal,
   Platform,
   ScrollView,
   StatusBar,
@@ -28,39 +31,33 @@ import {
   View,
 } from "react-native";
 
-const { width } = Dimensions.get("window");
+const { width, height: SCREEN_H } = Dimensions.get("window");
 
-// ─── Color System ─────────────────────────────────────────────────────────────
-const COLORS = {
-  // Primary: Deep warm amber-brown (earthy, trustworthy)
+// ─── Color System (from your other app) ──────────────────────────────────────
+const C = {
   primary: "#8B4513",
   primaryLight: "#A0522D",
   primaryMid: "#C4743A",
   primaryPale: "#F5DEB3",
 
-  // Accent: Muted sage green (farming, nature — but not overwhelming)
   accent: "#5A8A5F",
   accentLight: "#7AAD7F",
   accentPale: "#E8F5E9",
 
-  // Gold/Harvest accent
   gold: "#D4A017",
   goldLight: "#F0C842",
   goldPale: "#FFF8E1",
 
-  // Background
-  bg: "#FBF7F0", // Warm cream
+  bg: "#FBF7F0",
   surface: "#FFFFFF",
   surfaceWarm: "#FFF9F2",
 
-  // Text
   textPrimary: "#2C1810",
   textSecondary: "#6B4C3B",
   textMuted: "#A08070",
   textOnDark: "#FFFFFF",
   textOnDarkSub: "#F5DEB3",
 
-  // Status
   income: "#2E7D32",
   incomePale: "#E8F5E9",
   expense: "#C62828",
@@ -68,12 +65,11 @@ const COLORS = {
   neutral: "#1565C0",
   neutralPale: "#E3F2FD",
 
-  // Borders
   border: "#E8D5C0",
   borderLight: "#F0E8DC",
 };
 
-// ─── Weather ─────────────────────────────────────────────────────────────────
+// ─── Static data ──────────────────────────────────────────────────────────────
 const WEATHER = {
   temp: "28°C",
   condition: "આંશિક વાદળ",
@@ -81,39 +77,6 @@ const WEATHER = {
   wind: "14 km/h",
 };
 
-// ─── Quick Actions ─────────────────────────────────────────────────────────────
-const QUICK_ACTIONS = [
-  {
-    label: "ખર્ચ ઉમેરો",
-    icon: "remove-circle",
-    color: COLORS.expense,
-    bg: COLORS.expensePale,
-    route: "/expense/add-expense",
-  },
-  {
-    label: "આવક ઉમેરો",
-    icon: "add-circle",
-    color: COLORS.income,
-    bg: COLORS.incomePale,
-    route: "/expense/add-expense?type=income",
-  },
-  {
-    label: "પાક ઉમેરો",
-    icon: "leaf",
-    color: COLORS.accent,
-    bg: COLORS.accentPale,
-    route: "/crop/add-crop",
-  },
-  {
-    label: "અહેવાલ",
-    icon: "bar-chart",
-    color: COLORS.primary,
-    bg: COLORS.primaryPale,
-    route: "/report",
-  },
-];
-
-// ─── Mock Transactions ─────────────────────────────────────────────────────────
 const RECENT_TRANSACTIONS = [
   {
     id: 1,
@@ -154,18 +117,21 @@ const RECENT_TRANSACTIONS = [
 ];
 
 const CROP_COLORS: [string, string][] = [
-  [COLORS.primaryMid, COLORS.primary],
-  [COLORS.accent, "#3D6B42"],
-  [COLORS.gold, "#B8860B"],
+  [C.primaryMid, C.primary],
+  [C.accent, "#3D6B42"],
+  [C.gold, "#B8860B"],
   ["#1976D2", "#0D47A1"],
   ["#7B1FA2", "#4A148C"],
 ];
 
-// ─── Animated Number ──────────────────────────────────────────────────────────
+const HEADER_MAX = 220;
+const HEADER_MIN = 80;
+const STICKY_THRESHOLD = HEADER_MAX - HEADER_MIN;
+
+// ─── Animated counter ─────────────────────────────────────────────────────────
 function AnimatedNumber({ value }: { value: number }) {
   const anim = useRef(new Animated.Value(0)).current;
   const [display, setDisplay] = useState(0);
-
   useEffect(() => {
     Animated.timing(anim, {
       toValue: value,
@@ -175,7 +141,6 @@ function AnimatedNumber({ value }: { value: number }) {
     const id = anim.addListener(({ value: v }) => setDisplay(Math.floor(v)));
     return () => anim.removeListener(id);
   }, [value]);
-
   return (
     <Text style={styles.netProfitAmount}>
       {Math.abs(display).toLocaleString("en-IN")}
@@ -183,7 +148,7 @@ function AnimatedNumber({ value }: { value: number }) {
   );
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+// ─── Skeleton loader ──────────────────────────────────────────────────────────
 function SkeletonLine({
   width: w,
   height: h = 14,
@@ -226,46 +191,325 @@ function SkeletonLine({
   );
 }
 
-// ─── Interactive Button with press animation ──────────────────────────────────
+// ─── Spring-press card ────────────────────────────────────────────────────────
 function PressableCard({ onPress, style, children }: any) {
   const scale = useRef(new Animated.Value(1)).current;
-  const onPressIn = () =>
+  const onIn = () =>
     Animated.spring(scale, {
       toValue: 0.96,
       useNativeDriver: true,
       speed: 40,
     }).start();
-  const onPressOut = () =>
+  const onOut = () =>
     Animated.spring(scale, {
       toValue: 1,
       useNativeDriver: true,
       speed: 30,
     }).start();
+  // Extract flex from style so the TouchableOpacity container also stretches
+  const flatStyle = Array.isArray(style)
+    ? Object.assign({}, ...style)
+    : (style ?? {});
+  const { flex, width, alignSelf, ...restStyle } = flatStyle;
+  const containerStyle: any = {};
+  if (flex !== undefined) containerStyle.flex = flex;
+  if (width !== undefined) containerStyle.width = width;
+  if (alignSelf !== undefined) containerStyle.alignSelf = alignSelf;
   return (
     <TouchableOpacity
       activeOpacity={1}
       onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
+      onPressIn={onIn}
+      onPressOut={onOut}
+      style={Object.keys(containerStyle).length ? containerStyle : undefined}
     >
-      <Animated.View style={[style, { transform: [{ scale }] }]}>
+      <Animated.View style={[restStyle, { transform: [{ scale }] }]}>
         {children}
       </Animated.View>
     </TouchableOpacity>
   );
 }
 
-// ─── HEADER HEIGHT CONSTANTS ──────────────────────────────────────────────────
-const HEADER_MAX = 220;
-const HEADER_MIN = 80;
-const STICKY_THRESHOLD = HEADER_MAX - HEADER_MIN;
+// ─── Crop Picker Bottom Sheet ─────────────────────────────────────────────────
+function CropPickerModal({
+  visible,
+  crops,
+  onSelect,
+  onClose,
+  type,
+}: {
+  visible: boolean;
+  crops: Crop[];
+  onSelect: (crop: Crop) => void;
+  onClose: () => void;
+  type: "expense" | "income";
+}) {
+  const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: visible ? 0 : SCREEN_H,
+      useNativeDriver: true,
+      speed: 14,
+      bounciness: 4,
+    }).start();
+  }, [visible]);
+
+  const isExpense = type === "expense";
+  const accentColor = isExpense ? C.expense : C.income;
+  const accentPale = isExpense ? C.expensePale : C.incomePale;
+  const icon = isExpense ? "remove-circle" : "add-circle";
+  const title = isExpense ? "💸 ખર્ચ ઉમેરો" : "💰 આવક ઉમેરો";
+  const subtitle = "પહેલા પાક પસંદ કરો";
+
+  return (
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      {/* Backdrop */}
+      <TouchableOpacity
+        style={styles.modalBackdrop}
+        activeOpacity={1}
+        onPress={onClose}
+      />
+
+      <Animated.View
+        style={[styles.modalSheet, { transform: [{ translateY: slideAnim }] }]}
+      >
+        {/* Handle bar */}
+        <View style={styles.sheetHandle} />
+
+        {/* Header */}
+        <View style={styles.sheetHeader}>
+          <View>
+            <Text style={styles.sheetTitle}>{title}</Text>
+            <Text style={styles.sheetSubtitle}>{subtitle}</Text>
+          </View>
+          <TouchableOpacity style={styles.sheetCloseBtn} onPress={onClose}>
+            <Ionicons name="close" size={20} color={C.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Crop list */}
+        {crops.length === 0 ? (
+          <View style={styles.sheetEmpty}>
+            <Text style={styles.sheetEmptyEmoji}>🌱</Text>
+            <Text style={styles.sheetEmptyText}>કોઈ પાક નથી</Text>
+            <TouchableOpacity
+              style={[styles.sheetEmptyBtn, { backgroundColor: accentPale }]}
+              onPress={() => {
+                onClose();
+                router.push("/crop/add-crop");
+              }}
+            >
+              <Text style={[styles.sheetEmptyBtnText, { color: accentColor }]}>
+                + નવો પાક ઉમેરો
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+            {crops.map((crop, i) => {
+              const colors = CROP_COLORS[i % CROP_COLORS.length];
+              return (
+                <TouchableOpacity
+                  key={crop._id}
+                  style={styles.sheetCropRow}
+                  onPress={() => onSelect(crop)}
+                  activeOpacity={0.75}
+                >
+                  {/* Emoji badge with gradient */}
+                  <LinearGradient
+                    colors={colors}
+                    style={styles.sheetCropEmojiBg}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Text style={{ fontSize: 22 }}>
+                      {crop.cropEmoji ?? "🌱"}
+                    </Text>
+                  </LinearGradient>
+
+                  {/* Crop info */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sheetCropName}>{crop.cropName}</Text>
+                    <Text style={styles.sheetCropMeta}>
+                      {crop.season === "Kharif"
+                        ? "☔ ખરીફ"
+                        : crop.season === "Rabi"
+                          ? "❄️ રવી"
+                          : "☀️ ઉનાળો"}
+                      {" · "}
+                      <Text style={styles.bighaFont}>{crop.area} </Text>
+                      {crop.areaUnit ?? "Bigha"}
+                    </Text>
+                  </View>
+
+                  {/* Status badge */}
+                  <View
+                    style={[
+                      styles.sheetCropStatus,
+                      {
+                        backgroundColor:
+                          crop.status === "Active" ? C.incomePale : C.goldPale,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.statusDotSmall,
+                        {
+                          backgroundColor:
+                            crop.status === "Active" ? C.income : C.gold,
+                        },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.sheetCropStatusText,
+                        {
+                          color: crop.status === "Active" ? C.income : C.gold,
+                        },
+                      ]}
+                    >
+                      {crop.status === "Active"
+                        ? "સક્રિય"
+                        : crop.status === "Harvested"
+                          ? "લણણી"
+                          : "બંધ"}
+                    </Text>
+                  </View>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={accentColor}
+                    style={{ marginLeft: 8 }}
+                  />
+                </TouchableOpacity>
+              );
+            })}
+            <View style={{ height: 20 }} />
+          </ScrollView>
+        )}
+      </Animated.View>
+    </Modal>
+  );
+}
+
+// ─── Expense Quick Card (mirrors crop detail card style) ──────────────────────
+function ExpenseSection({
+  crops,
+  onAddExpense,
+  onAddIncome,
+}: {
+  crops: Crop[];
+  onAddExpense: () => void;
+  onAddIncome: () => void;
+}) {
+  return (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { marginBottom: 14 }]}>
+        ⚡ ઝડપી કામ
+      </Text>
+
+      {/* Top row: Expense + Income side by side */}
+      <View style={styles.qaTopRow}>
+        {/* ── ખર્ચ ઉમેરો ── */}
+        <PressableCard onPress={onAddExpense} style={styles.qaHalfCard}>
+          <LinearGradient
+            colors={[C.expense, "#E53935"]}
+            style={styles.qaHalfGrad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.qaHalfDecor} />
+            <View style={styles.qaFullLeft}>
+              <View style={styles.qaHalfIconWrap}>
+                <Ionicons name="remove-circle-outline" size={26} color="#fff" />
+              </View>
+              <View>
+                <Text style={styles.qaHalfLabel}>ખર્ચ</Text>
+              </View>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="rgba(255,255,255,0.7)"
+            />
+          </LinearGradient>
+        </PressableCard>
+
+        {/* ── આવક ઉમેરો ── */}
+        <PressableCard onPress={onAddIncome} style={styles.qaHalfCard}>
+          <LinearGradient
+            colors={[C.income, "#2E7D32"]}
+            style={styles.qaHalfGrad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.qaHalfDecor} />
+            <View style={styles.qaFullLeft}>
+              <View style={styles.qaHalfIconWrap}>
+                <Ionicons name="add-circle-outline" size={26} color="#fff" />
+              </View>
+              <View>
+                <Text style={styles.qaHalfLabel}>આવક</Text>
+              </View>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="rgba(255,255,255,0.7)"
+            />
+          </LinearGradient>
+        </PressableCard>
+      </View>
+
+      {/* Bottom row: Full-width Crop button */}
+      <PressableCard
+        onPress={() => router.push("/crop/add-crop")}
+        style={styles.qaFullCard}
+      >
+        <LinearGradient
+          colors={[C.primaryMid, C.primary]}
+          style={styles.qaFullGrad}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <View style={styles.qaFullDecor} />
+          <View style={styles.qaFullLeft}>
+            <View style={styles.qaFullIconWrap}>
+              <Ionicons name="leaf" size={26} color="#fff" />
+            </View>
+            <View>
+              <Text style={styles.qaFullLabel}>નવો પાક ઉમેરો</Text>
+            </View>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color="rgba(255,255,255,0.7)"
+          />
+        </LinearGradient>
+      </PressableCard>
+    </View>
+  );
+}
+
+// ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [selectedCrop, setSelectedCrop] = useState(0);
   const { profile, setProfile } = useProfile();
+
+  // Crop picker modal state
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [pickerType, setPickerType] = useState<"expense" | "income">("expense");
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -298,6 +542,7 @@ export default function Dashboard() {
     ]).start();
   }, []);
 
+  // Derived profile fields
   const farmerName = profile?.name ?? "";
   const farmerVillage = profile?.village ?? "";
   const farmerLand = profile?.totalLand
@@ -312,19 +557,17 @@ export default function Dashboard() {
   );
   const totalProfit = totalIncome - totalExpense;
 
-  // Header animation values
+  // Header scroll animations
   const headerHeight = scrollY.interpolate({
     inputRange: [0, STICKY_THRESHOLD],
     outputRange: [HEADER_MAX, HEADER_MIN],
     extrapolate: "clamp",
   });
-
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, STICKY_THRESHOLD * 0.4, STICKY_THRESHOLD],
     outputRange: [1, 0.6, 0],
     extrapolate: "clamp",
   });
-
   const stickyOpacity = scrollY.interpolate({
     inputRange: [STICKY_THRESHOLD * 0.6, STICKY_THRESHOLD],
     outputRange: [0, 1],
@@ -333,27 +576,42 @@ export default function Dashboard() {
 
   const paddingTop = Platform.OS === "ios" ? 50 : 36;
 
+  // Crop picker callbacks
+  const openExpensePicker = () => {
+    setPickerType("expense");
+    setPickerVisible(true);
+  };
+  const openIncomePicker = () => {
+    setPickerType("income");
+    setPickerVisible(true);
+  };
+
+  const handleCropSelected = (crop: Crop) => {
+    setPickerVisible(false);
+    const route =
+      pickerType === "expense"
+        ? `/expense/add-expense?cropId=${crop._id}`
+        : `/expense/add-expense?type=income&cropId=${crop._id}`;
+    router.push(route as any);
+  };
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
-      {/* ── Fixed Sticky Mini Header (shows when scrolled) ── */}
+      {/* ── Sticky mini header (appears on scroll) ── */}
       <Animated.View
         style={[styles.stickyHeader, { opacity: stickyOpacity, paddingTop }]}
       >
         <LinearGradient
-          colors={[COLORS.primary, COLORS.primaryLight]}
+          colors={[C.primary, C.primaryLight]}
           style={styles.stickyGradient}
         >
           <View style={styles.stickyContent}>
             <Text style={styles.stickyTitle}>{farmerName || "ડૅશબોર્ડ"}</Text>
             <View style={styles.stickyRight}>
               <TouchableOpacity style={styles.notifBtn}>
-                <Ionicons
-                  name="notifications"
-                  size={22}
-                  color={COLORS.textOnDark}
-                />
+                <Ionicons name="notifications" size={22} color={C.textOnDark} />
                 <View style={styles.notifDot} />
               </TouchableOpacity>
               <TouchableOpacity
@@ -367,15 +625,14 @@ export default function Dashboard() {
         </LinearGradient>
       </Animated.View>
 
-      {/* ── Collapsible Full Header ── */}
+      {/* ── Collapsible full header ── */}
       <Animated.View style={[styles.headerWrapper, { height: headerHeight }]}>
         <LinearGradient
-          colors={[COLORS.primary, COLORS.primaryLight, COLORS.primaryMid]}
+          colors={[C.primary, C.primaryLight, C.primaryMid]}
           style={[styles.header, { paddingTop }]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          {/* Decorative background shapes */}
           <View style={styles.decorCircle1} />
           <View style={styles.decorCircle2} />
           <View style={styles.decorDot} />
@@ -406,7 +663,7 @@ export default function Dashboard() {
                     <Ionicons
                       name="location-sharp"
                       size={13}
-                      color={COLORS.textOnDarkSub}
+                      color={C.textOnDarkSub}
                     />
                     <Text style={styles.locationText}>
                       {[farmerVillage, farmerLand]
@@ -422,7 +679,7 @@ export default function Dashboard() {
                   <Ionicons
                     name="notifications"
                     size={22}
-                    color={COLORS.textOnDark}
+                    color={C.textOnDark}
                   />
                   <View style={styles.notifDot} />
                 </TouchableOpacity>
@@ -444,14 +701,10 @@ export default function Dashboard() {
               </View>
             </View>
 
-            {/* Weather Bar */}
+            {/* Weather bar */}
             <View style={styles.weatherBar}>
               <View style={styles.weatherLeft}>
-                <Ionicons
-                  name="partly-sunny"
-                  size={26}
-                  color={COLORS.goldLight}
-                />
+                <Ionicons name="partly-sunny" size={26} color={C.goldLight} />
                 <View style={{ marginLeft: 10 }}>
                   <Text style={styles.weatherTemp}>{WEATHER.temp}</Text>
                   <Text style={styles.weatherCond}>{WEATHER.condition}</Text>
@@ -472,7 +725,7 @@ export default function Dashboard() {
         </LinearGradient>
       </Animated.View>
 
-      {/* ── Scrollable Content ── */}
+      {/* ── Scrollable content ── */}
       <Animated.ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
@@ -494,8 +747,8 @@ export default function Dashboard() {
             <LinearGradient
               colors={
                 totalProfit >= 0
-                  ? [COLORS.accent, "#3D6B42", "#2E5533"]
-                  : [COLORS.expense, "#B71C1C", "#7F0000"]
+                  ? [C.accent, "#3D6B42", "#2E5533"]
+                  : [C.expense, "#B71C1C", "#7F0000"]
               }
               style={styles.profitCard}
               start={{ x: 0, y: 0 }}
@@ -505,7 +758,6 @@ export default function Dashboard() {
               <View style={styles.profitCardDecor2} />
 
               <Text style={styles.profitLabel}>⚖️ કુલ ચોખ્ખો નફો</Text>
-
               <View style={styles.profitAmountRow}>
                 <Text style={styles.profitRupee}>
                   {totalProfit >= 0 ? "+" : "-"}₹
@@ -514,100 +766,72 @@ export default function Dashboard() {
               </View>
 
               <View style={styles.profitSubRow}>
-                <View style={styles.profitSubItem}>
-                  <View style={styles.profitSubIconBg}>
-                    <Ionicons
-                      name="arrow-up-circle"
-                      size={16}
-                      color={COLORS.incomePale}
-                    />
-                  </View>
-                  <View>
-                    <Text style={styles.profitSubCaption}>આવક</Text>
-                    <Text style={styles.profitSubValue}>
-                      ₹{totalIncome.toLocaleString("en-IN")}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.profitDivider} />
-                <View style={styles.profitSubItem}>
-                  <View style={styles.profitSubIconBg}>
-                    <Ionicons
-                      name="arrow-down-circle"
-                      size={16}
-                      color="#FFCDD2"
-                    />
-                  </View>
-                  <View>
-                    <Text style={styles.profitSubCaption}>ખર્ચ</Text>
-                    <Text style={styles.profitSubValue}>
-                      ₹{totalExpense.toLocaleString("en-IN")}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.profitDivider} />
-                <View style={styles.profitSubItem}>
-                  <View style={styles.profitSubIconBg}>
-                    <Ionicons name="leaf" size={16} color={COLORS.goldLight} />
-                  </View>
-                  <View>
-                    <Text style={styles.profitSubCaption}>પાક</Text>
-                    <Text style={styles.profitSubValue}>
-                      {crops.length} નંગ
-                    </Text>
-                  </View>
-                </View>
+                {[
+                  {
+                    icon: "arrow-up-circle",
+                    label: "આવક",
+                    value: totalIncome,
+                    iconColor: C.incomePale,
+                  },
+                  {
+                    icon: "arrow-down-circle",
+                    label: "ખર્ચ",
+                    value: totalExpense,
+                    iconColor: "#FFCDD2",
+                  },
+                  {
+                    icon: "leaf",
+                    label: "પાક",
+                    value: crops.length,
+                    iconColor: C.goldLight,
+                    isCount: true,
+                  },
+                ].map((item, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && <View style={styles.profitDivider} />}
+                    <View style={styles.profitSubItem}>
+                      <View style={styles.profitSubIconBg}>
+                        <Ionicons
+                          name={item.icon as any}
+                          size={16}
+                          color={item.iconColor}
+                        />
+                      </View>
+                      <View>
+                        <Text style={styles.profitSubCaption}>
+                          {item.label}
+                        </Text>
+                        <Text style={styles.profitSubValue}>
+                          {item.isCount
+                            ? `${item.value} નંગ`
+                            : `₹${item.value.toLocaleString("en-IN")}`}
+                        </Text>
+                      </View>
+                    </View>
+                  </React.Fragment>
+                ))}
               </View>
             </LinearGradient>
           </PressableCard>
         </Animated.View>
 
-        {/* ── Quick Actions ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⚡ ઝડપી કામ</Text>
-          <View style={styles.quickActionsGrid}>
-            {QUICK_ACTIONS.map((action, i) => (
-              <PressableCard
-                key={i}
-                onPress={() => action.route && router.push(action.route as any)}
-                style={[styles.quickActionBtn, { backgroundColor: action.bg }]}
-              >
-                <View
-                  style={[
-                    styles.quickActionIconBg,
-                    { backgroundColor: action.color + "20" },
-                  ]}
-                >
-                  <Ionicons
-                    name={action.icon as any}
-                    size={26}
-                    color={action.color}
-                  />
-                </View>
-                <Text
-                  style={[styles.quickActionLabel, { color: action.color }]}
-                >
-                  {action.label}
-                </Text>
-              </PressableCard>
-            ))}
-          </View>
-        </View>
+        {/* ── Expense Section (new — with crop picker) ── */}
+        <ExpenseSection
+          crops={crops}
+          onAddExpense={openExpensePicker}
+          onAddIncome={openIncomePicker}
+        />
 
-        {/* ── Active Crops ── */}
+        {/* ── My Crops ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>🌱 મારા પાક</Text>
             <TouchableOpacity
               style={styles.seeAllBtn}
-              onPress={() => router.push("/crop")}
+              onPress={() => router.push("/crop" as any)}
             >
               <Text style={styles.seeAll}>બધા જુઓ</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={14}
-                color={COLORS.accent}
-              />
+              <Ionicons name="chevron-forward" size={14} color={C.accent} />
             </TouchableOpacity>
           </View>
 
@@ -619,7 +843,7 @@ export default function Dashboard() {
               <Text style={styles.emptyCropEmoji}>🌱</Text>
               <Text style={styles.emptyCropText}>કોઈ પાક નથી</Text>
               <View style={styles.emptyCropAddBtn}>
-                <Ionicons name="add" size={16} color={COLORS.accent} />
+                <Ionicons name="add" size={16} color={C.accent} />
                 <Text style={styles.emptyCropSub}>નવો પાક ઉમેરો</Text>
               </View>
             </PressableCard>
@@ -629,15 +853,12 @@ export default function Dashboard() {
                 const colors = CROP_COLORS[i % CROP_COLORS.length];
                 const progress =
                   (crop as any).progress ?? Math.min(90, 30 + i * 20);
-                const isSelected = selectedCrop === i;
+                const isSel = selectedCrop === i;
                 return (
                   <PressableCard
                     key={crop._id}
                     onPress={() => setSelectedCrop(i)}
-                    style={[
-                      styles.cropCard,
-                      isSelected && styles.cropCardSelected,
-                    ]}
+                    style={[styles.cropCard, isSel && styles.cropCardSelected]}
                   >
                     <LinearGradient
                       colors={colors}
@@ -645,7 +866,7 @@ export default function Dashboard() {
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     >
-                      {isSelected && <View style={styles.cropSelectedRing} />}
+                      {isSel && <View style={styles.cropSelectedRing} />}
                       <View style={styles.cropCardTop}>
                         <Text style={styles.cropEmoji}>
                           {crop.cropEmoji ?? "🌱"}
@@ -667,7 +888,7 @@ export default function Dashboard() {
                               {
                                 color:
                                   crop.status === "Active"
-                                    ? COLORS.income
+                                    ? C.income
                                     : "#795548",
                               },
                             ]}
@@ -680,7 +901,6 @@ export default function Dashboard() {
                           </Text>
                         </View>
                       </View>
-
                       <Text style={styles.cropName}>{crop.cropName}</Text>
                       <Text style={styles.cropMeta}>
                         {crop.season === "Kharif"
@@ -691,12 +911,11 @@ export default function Dashboard() {
                         {" · "}
                         {crop.area} {crop.areaUnit ?? "Bigha"}
                       </Text>
-
                       <View style={styles.progressBg}>
                         <View
                           style={[
                             styles.progressFill,
-                            { width: `${progress}%` },
+                            { width: `${progress}%` as any },
                           ]}
                         />
                       </View>
@@ -725,7 +944,7 @@ export default function Dashboard() {
                   {/* Header */}
                   <View style={styles.cropDetailHeader}>
                     <View style={styles.cropDetailEmojiWrap}>
-                      <Text style={styles.cropDetailEmoji}>
+                      <Text style={{ fontSize: 28 }}>
                         {c.cropEmoji ?? "🌱"}
                       </Text>
                     </View>
@@ -736,8 +955,9 @@ export default function Dashboard() {
                           ? "ખરીફ"
                           : c.season === "Rabi"
                             ? "રવી"
-                            : "ઉનાળો"}{" "}
-                        · {c.area} {c.areaUnit}
+                            : "ઉનાળો"}
+                        {" · "}
+                        {c.area} {c.areaUnit}
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -749,7 +969,7 @@ export default function Dashboard() {
                       <Ionicons
                         name="create-outline"
                         size={18}
-                        color={COLORS.primaryMid}
+                        color={C.primaryMid}
                       />
                     </TouchableOpacity>
                   </View>
@@ -761,44 +981,41 @@ export default function Dashboard() {
                         icon: "💰",
                         val: income,
                         label: "કુલ આવક",
-                        color: COLORS.income,
-                        bg: COLORS.incomePale,
+                        color: C.income,
+                        bg: C.incomePale,
                       },
                       {
                         icon: "📉",
                         val: expense,
                         label: "કુલ ખર્ચ",
-                        color: COLORS.expense,
-                        bg: COLORS.expensePale,
+                        color: C.expense,
+                        bg: C.expensePale,
                       },
                       {
                         icon: profit >= 0 ? "📈" : "⚠️",
                         val: profit,
                         label: "ચોખ્ખો નફો",
-                        color: profit >= 0 ? COLORS.neutral : "#E65100",
-                        bg: profit >= 0 ? COLORS.neutralPale : "#FFF3E0",
+                        color: profit >= 0 ? C.neutral : "#E65100",
+                        bg: profit >= 0 ? C.neutralPale : "#FFF3E0",
                       },
-                    ].map((stat, idx) => (
+                    ].map((s, idx) => (
                       <View
                         key={idx}
-                        style={[
-                          styles.cropStatBox,
-                          { backgroundColor: stat.bg },
-                        ]}
+                        style={[styles.cropStatBox, { backgroundColor: s.bg }]}
                       >
-                        <Text style={styles.cropStatIcon}>{stat.icon}</Text>
+                        <Text style={styles.cropStatIcon}>{s.icon}</Text>
                         <Text
-                          style={[styles.cropStatValue, { color: stat.color }]}
+                          style={[styles.cropStatValue, { color: s.color }]}
                         >
                           {profit < 0 && idx === 2 ? "-" : ""}₹
-                          {Math.abs(stat.val).toLocaleString("en-IN")}
+                          {Math.abs(s.val).toLocaleString("en-IN")}
                         </Text>
-                        <Text style={styles.cropStatLabel}>{stat.label}</Text>
+                        <Text style={styles.cropStatLabel}>{s.label}</Text>
                       </View>
                     ))}
                   </View>
 
-                  {/* Action Buttons */}
+                  {/* Actions */}
                   <View style={styles.cropDetailActions}>
                     <PressableCard
                       onPress={() =>
@@ -808,24 +1025,20 @@ export default function Dashboard() {
                       }
                       style={[
                         styles.cropDetailBtn,
-                        { backgroundColor: COLORS.expensePale },
+                        { backgroundColor: C.expensePale },
                       ]}
                     >
                       <Ionicons
                         name="remove-circle-outline"
                         size={18}
-                        color={COLORS.expense}
+                        color={C.expense}
                       />
                       <Text
-                        style={[
-                          styles.cropDetailBtnText,
-                          { color: COLORS.expense },
-                        ]}
+                        style={[styles.cropDetailBtnText, { color: C.expense }]}
                       >
                         ખર્ચ ઉમેરો
                       </Text>
                     </PressableCard>
-
                     <PressableCard
                       onPress={() =>
                         router.push(
@@ -834,19 +1047,16 @@ export default function Dashboard() {
                       }
                       style={[
                         styles.cropDetailBtn,
-                        { backgroundColor: COLORS.incomePale },
+                        { backgroundColor: C.incomePale },
                       ]}
                     >
                       <Ionicons
                         name="add-circle-outline"
                         size={18}
-                        color={COLORS.income}
+                        color={C.income}
                       />
                       <Text
-                        style={[
-                          styles.cropDetailBtnText,
-                          { color: COLORS.income },
-                        ]}
+                        style={[styles.cropDetailBtnText, { color: C.income }]}
                       >
                         આવક ઉમેરો
                       </Text>
@@ -866,14 +1076,9 @@ export default function Dashboard() {
               onPress={() => router.push("/expense" as any)}
             >
               <Text style={styles.seeAll}>બધા જુઓ</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={14}
-                color={COLORS.accent}
-              />
+              <Ionicons name="chevron-forward" size={14} color={C.accent} />
             </TouchableOpacity>
           </View>
-
           <View style={styles.transactionList}>
             {RECENT_TRANSACTIONS.map((t, i) => (
               <TouchableOpacity
@@ -890,16 +1095,14 @@ export default function Dashboard() {
                     styles.transactionIcon,
                     {
                       backgroundColor:
-                        t.type === "income"
-                          ? COLORS.incomePale
-                          : COLORS.expensePale,
+                        t.type === "income" ? C.incomePale : C.expensePale,
                     },
                   ]}
                 >
                   <Ionicons
                     name={t.icon as any}
                     size={20}
-                    color={t.type === "income" ? COLORS.income : COLORS.expense}
+                    color={t.type === "income" ? C.income : C.expense}
                   />
                 </View>
                 <View style={styles.transactionInfo}>
@@ -913,8 +1116,7 @@ export default function Dashboard() {
                     style={[
                       styles.transactionAmount,
                       {
-                        color:
-                          t.type === "income" ? COLORS.income : COLORS.expense,
+                        color: t.type === "income" ? C.income : C.expense,
                       },
                     ]}
                   >
@@ -924,7 +1126,7 @@ export default function Dashboard() {
                   <Ionicons
                     name="chevron-forward"
                     size={14}
-                    color={COLORS.textMuted}
+                    color={C.textMuted}
                   />
                 </View>
               </TouchableOpacity>
@@ -934,15 +1136,24 @@ export default function Dashboard() {
 
         <View style={{ height: 120 }} />
       </Animated.ScrollView>
+
+      {/* ── Crop Picker Bottom Sheet Modal ── */}
+      <CropPickerModal
+        visible={pickerVisible}
+        crops={crops}
+        type={pickerType}
+        onSelect={handleCropSelected}
+        onClose={() => setPickerVisible(false)}
+      />
     </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  container: { flex: 1, backgroundColor: C.bg },
 
-  // ── Sticky mini header ──
+  // Sticky header
   stickyHeader: {
     position: "absolute",
     top: 0,
@@ -959,12 +1170,12 @@ const styles = StyleSheet.create({
   stickyTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: COLORS.textOnDark,
+    color: C.textOnDark,
     flex: 1,
   },
   stickyRight: { flexDirection: "row", alignItems: "center", gap: 10 },
 
-  // ── Collapsible header ──
+  // Collapsible header
   headerWrapper: { overflow: "hidden", zIndex: 50 },
   header: {
     flex: 1,
@@ -995,7 +1206,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: COLORS.goldLight + "20",
+    backgroundColor: C.goldLight + "20",
     bottom: 20,
     left: 30,
   },
@@ -1008,14 +1219,14 @@ const styles = StyleSheet.create({
   },
   greetingSmall: {
     fontSize: 13,
-    color: COLORS.textOnDarkSub,
+    color: C.textOnDarkSub,
     marginBottom: 2,
     fontWeight: "500",
   },
   farmerName: {
     fontSize: 26,
     fontWeight: "800",
-    color: COLORS.textOnDark,
+    color: C.textOnDark,
     letterSpacing: 0.2,
   },
   locationRow: {
@@ -1024,8 +1235,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     gap: 4,
   },
-  locationText: { fontSize: 13, color: COLORS.textOnDarkSub },
-
+  locationText: { fontSize: 13, color: C.textOnDarkSub },
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
@@ -1040,22 +1250,21 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: COLORS.goldLight,
+    backgroundColor: C.goldLight,
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
+    borderColor: C.primary,
   },
   avatarCircle: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.goldPale,
+    backgroundColor: C.goldPale,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2.5,
-    borderColor: COLORS.goldLight,
+    borderColor: C.goldLight,
   },
-  avatarText: { fontSize: 18, fontWeight: "800", color: COLORS.primary },
-
+  avatarText: { fontSize: 18, fontWeight: "800", color: C.primary },
   weatherBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1069,13 +1278,13 @@ const styles = StyleSheet.create({
     borderColor: "#ffffff15",
   },
   weatherLeft: { flexDirection: "row", alignItems: "center" },
-  weatherTemp: { fontSize: 18, fontWeight: "700", color: COLORS.textOnDark },
-  weatherCond: { fontSize: 11, color: COLORS.textOnDarkSub, marginTop: 1 },
+  weatherTemp: { fontSize: 18, fontWeight: "700", color: C.textOnDark },
+  weatherCond: { fontSize: 11, color: C.textOnDarkSub, marginTop: 1 },
   weatherStats: { flexDirection: "row", gap: 16 },
   weatherStat: { flexDirection: "row", alignItems: "center", gap: 4 },
   weatherStatText: { fontSize: 12, color: "#93C5FD", fontWeight: "500" },
 
-  // ── Scroll content ──
+  // Content
   scrollContent: { paddingTop: 20 },
   section: { marginHorizontal: 16, marginBottom: 22 },
   sectionHeader: {
@@ -1084,11 +1293,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 14,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "800", color: COLORS.textPrimary },
+  sectionTitle: { fontSize: 18, fontWeight: "800", color: C.textPrimary },
   seeAllBtn: { flexDirection: "row", alignItems: "center", gap: 2 },
-  seeAll: { fontSize: 14, color: COLORS.accent, fontWeight: "700" },
+  seeAll: { fontSize: 14, color: C.accent, fontWeight: "700" },
 
-  // ── Profit card ──
+  // Profit card
   profitCard: {
     borderRadius: 24,
     padding: 22,
@@ -1128,16 +1337,15 @@ const styles = StyleSheet.create({
   profitRupee: {
     fontSize: 26,
     fontWeight: "700",
-    color: COLORS.textOnDark,
+    color: C.textOnDark,
     marginBottom: 6,
   },
   netProfitAmount: {
     fontSize: 44,
     fontWeight: "900",
-    color: COLORS.textOnDark,
+    color: C.textOnDark,
     letterSpacing: -2,
   },
-
   profitSubRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1167,42 +1375,13 @@ const styles = StyleSheet.create({
   },
   profitSubValue: {
     fontSize: 14,
-    color: COLORS.textOnDark,
+    color: C.textOnDark,
     fontWeight: "700",
     marginTop: 1,
   },
   profitDivider: { width: 1, height: 32, backgroundColor: "#ffffff25" },
 
-  // ── Quick actions ──
-  quickActionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  quickActionBtn: {
-    width: (width - 32 - 30) / 4,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#00000010",
-  },
-  quickActionIconBg: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  quickActionLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    textAlign: "center",
-    lineHeight: 14,
-  },
-
-  // ── Crop cards ──
+  // Crops
   cropCard: {
     width: 170,
     marginRight: 12,
@@ -1218,10 +1397,13 @@ const styles = StyleSheet.create({
   cropCardGradient: { padding: 16, minHeight: 180 },
   cropSelectedRing: {
     position: "absolute",
-    inset: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     borderRadius: 20,
     borderWidth: 2.5,
-    borderColor: COLORS.goldLight,
+    borderColor: C.goldLight,
   },
   cropCardTop: {
     flexDirection: "row",
@@ -1239,7 +1421,7 @@ const styles = StyleSheet.create({
   cropName: {
     fontSize: 17,
     fontWeight: "800",
-    color: COLORS.textOnDark,
+    color: C.textOnDark,
     marginBottom: 3,
   },
   cropMeta: {
@@ -1254,57 +1436,53 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     marginBottom: 5,
   },
-  progressFill: {
-    height: 5,
-    backgroundColor: COLORS.textOnDark,
-    borderRadius: 3,
-  },
+  progressFill: { height: 5, backgroundColor: C.textOnDark, borderRadius: 3 },
   progressLabel: {
     fontSize: 10,
     color: "rgba(255,255,255,0.7)",
     fontWeight: "500",
   },
 
-  // ── Empty crop ──
+  // Empty crop
   emptyCropCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: C.surface,
     borderRadius: 20,
     padding: 32,
     alignItems: "center",
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: C.border,
     borderStyle: "dashed",
   },
   emptyCropEmoji: { fontSize: 48, marginBottom: 10 },
   emptyCropText: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.textSecondary,
+    color: C.textSecondary,
     marginBottom: 8,
   },
   emptyCropAddBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: COLORS.accentPale,
+    backgroundColor: C.accentPale,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
-  emptyCropSub: { fontSize: 14, color: COLORS.accent, fontWeight: "700" },
+  emptyCropSub: { fontSize: 14, color: C.accent, fontWeight: "700" },
 
-  // ── Crop detail ──
+  // Crop detail
   cropDetailCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: C.surface,
     borderRadius: 22,
     padding: 18,
-    shadowColor: COLORS.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 4,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: C.borderLight,
   },
   cropDetailHeader: {
     flexDirection: "row",
@@ -1313,32 +1491,26 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    borderBottomColor: C.borderLight,
   },
   cropDetailEmojiWrap: {
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: COLORS.primaryPale,
+    backgroundColor: C.primaryPale,
     justifyContent: "center",
     alignItems: "center",
   },
-  cropDetailEmoji: { fontSize: 28 },
-  cropDetailName: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: COLORS.textPrimary,
-  },
-  cropDetailMeta: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
+  cropDetailName: { fontSize: 17, fontWeight: "800", color: C.textPrimary },
+  cropDetailMeta: { fontSize: 13, color: C.textMuted, marginTop: 2 },
   editIconBtn: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: COLORS.primaryPale,
+    backgroundColor: C.primaryPale,
     justifyContent: "center",
     alignItems: "center",
   },
-
   cropDetailStats: { flexDirection: "row", gap: 8, marginBottom: 16 },
   cropStatBox: {
     flex: 1,
@@ -1352,11 +1524,10 @@ const styles = StyleSheet.create({
   cropStatValue: { fontSize: 14, fontWeight: "900", marginBottom: 3 },
   cropStatLabel: {
     fontSize: 10,
-    color: COLORS.textMuted,
+    color: C.textMuted,
     fontWeight: "600",
     textAlign: "center",
   },
-
   cropDetailActions: { flexDirection: "row", gap: 10 },
   cropDetailBtn: {
     flex: 1,
@@ -1371,13 +1542,76 @@ const styles = StyleSheet.create({
   },
   cropDetailBtnText: { fontSize: 13, fontWeight: "800" },
 
-  // ── Transactions ──
+  // Expense section card
+  expenseCard: {
+    backgroundColor: C.surface,
+    borderRadius: 22,
+    padding: 18,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  expenseCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.borderLight,
+  },
+  expenseCardEmojiWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: C.goldPale,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  expenseCardTitle: { fontSize: 17, fontWeight: "800", color: C.textPrimary },
+  expenseCardSub: { fontSize: 13, color: C.textMuted, marginTop: 2 },
+  expenseStatsRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
+  expenseStatBox: {
+    flex: 1,
+    borderRadius: 14,
+    padding: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#00000008",
+  },
+  expenseStatIcon: { fontSize: 18, marginBottom: 5 },
+  expenseStatValue: { fontSize: 14, fontWeight: "900", marginBottom: 3 },
+  expenseStatLabel: {
+    fontSize: 10,
+    color: C.textMuted,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  expenseActions: { flexDirection: "row", gap: 10 },
+  expenseActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#00000008",
+  },
+  expenseActionText: { fontSize: 14, fontWeight: "800" },
+
+  // Transactions
   transactionList: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: C.surface,
     borderRadius: 20,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: C.borderLight,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -1390,10 +1624,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  transactionBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
-  },
+  transactionBorder: { borderBottomWidth: 1, borderBottomColor: C.borderLight },
   transactionIcon: {
     width: 46,
     height: 46,
@@ -1402,17 +1633,213 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   transactionInfo: { flex: 1 },
-  transactionLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-  },
+  transactionLabel: { fontSize: 15, fontWeight: "700", color: C.textPrimary },
   transactionCrop: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: C.textMuted,
     marginTop: 2,
     fontWeight: "500",
   },
   transactionAmountWrap: { flexDirection: "row", alignItems: "center", gap: 4 },
   transactionAmount: { fontSize: 15, fontWeight: "900" },
+
+  // Crop picker modal
+  modalBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  modalSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: C.surface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: SCREEN_H * 0.75,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === "ios" ? 36 : 20,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.border,
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.borderLight,
+    marginBottom: 12,
+  },
+  sheetTitle: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
+  sheetSubtitle: { fontSize: 13, color: C.textMuted, marginTop: 3 },
+  sheetCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: C.borderLight,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // Sheet crop rows
+  sheetCropRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: C.borderLight,
+  },
+  sheetCropEmojiBg: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sheetCropName: { fontSize: 16, fontWeight: "800", color: C.textPrimary },
+  sheetCropMeta: {
+    fontSize: 12,
+    color: C.textMuted,
+    marginTop: 3,
+    fontWeight: "500",
+  },
+  bighaFont: {
+    fontSize: 12,
+    color: C.textPrimary,
+    marginTop: 3,
+    fontWeight: "800",
+  },
+  sheetCropStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  sheetCropStatusText: { fontSize: 11, fontWeight: "700" },
+  statusDotSmall: { width: 6, height: 6, borderRadius: 3 },
+
+  // Sheet empty state
+  sheetEmpty: { alignItems: "center", paddingVertical: 40 },
+  sheetEmptyEmoji: { fontSize: 52, marginBottom: 14 },
+  sheetEmptyText: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: C.textSecondary,
+    marginBottom: 16,
+  },
+  sheetEmptyBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  sheetEmptyBtnText: { fontSize: 14, fontWeight: "800" },
+
+  // Quick actions redesigned
+  qaTopRow: { flexDirection: "row", gap: 12, marginBottom: 12 },
+
+  qaHalfCard: {
+    flex: 1,
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  qaHalfGrad: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    position: "relative",
+  },
+  qaHalfDecor: {
+    position: "absolute",
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#ffffff18",
+    top: -30,
+    right: -20,
+  },
+  qaHalfIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  qaHalfLabel: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#fff",
+    marginBottom: 2,
+  },
+  qaHalfSub: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.7)",
+    fontWeight: "500",
+  },
+
+  qaFullCard: {
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  qaFullGrad: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    position: "relative",
+  },
+  qaFullDecor: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#ffffff12",
+    top: -40,
+    right: 40,
+  },
+  qaFullLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
+  qaFullIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  qaFullLabel: { fontSize: 20, fontWeight: "800", color: "#fff" },
+  qaFullSub: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 2,
+    fontWeight: "500",
+  },
 });
