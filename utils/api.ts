@@ -59,12 +59,11 @@ API.interceptors.response.use(
     // 🐛 Full debug info
     console.log("❌ [API ERROR]");
     console.log("   URL     :", error.config?.baseURL + error.config?.url);
-    console.log("   Code    :", error.code); // e.g. ECONNREFUSED, ENETUNREACH, ETIMEDOUT
+    console.log("   Code    :", error.code);
     console.log("   Message :", error.message);
     console.log("   Status  :", error.response?.status);
     console.log("   Data    :", JSON.stringify(error.response?.data));
 
-    // Friendly error codes guide
     if (error.code === "ECONNREFUSED") {
       return Promise.reject(
         new Error(
@@ -83,7 +82,6 @@ API.interceptors.response.use(
       );
     }
     if (!error.response) {
-      // No response at all = network level failure
       return Promise.reject(
         new Error(
           "Network error — make sure phone and PC are on same WiFi, and usesCleartextTraffic is enabled in app.json",
@@ -91,7 +89,6 @@ API.interceptors.response.use(
       );
     }
 
-    // Server responded with an error
     const message =
       error.response?.data?.message ??
       error.response?.data?.error ??
@@ -162,16 +159,13 @@ export interface ProfileResponse {
 // 🔐 AUTH APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/** POST /auth/send-otp — Send OTP via 2Factor SMS */
+/** POST /auth/send-otp */
 export const sendOtp = async (phone: string): Promise<SendOtpResponse> => {
   const res = await API.post<SendOtpResponse>("/auth/send-otp", { phone });
   return res.data;
 };
 
-/**
- * POST /auth/verify-otp — Verify OTP
- * ✅ Token is automatically saved to AsyncStorage here
- */
+/** POST /auth/verify-otp — token auto-saved to AsyncStorage */
 export const verifyOtp = async (
   phone: string,
   otp: string,
@@ -182,11 +176,11 @@ export const verifyOtp = async (
     otp,
     sessionId,
   });
-  await TokenStore.save(res.data.token); // ✅ auto-save
+  await TokenStore.save(res.data.token);
   return res.data;
 };
 
-/** POST /auth/consent — Save analytics consent (token auto-attached) */
+/** POST /auth/consent */
 export const saveConsent = async (
   consent: boolean,
 ): Promise<ConsentResponse> => {
@@ -198,7 +192,7 @@ export const saveConsent = async (
 // 👤 PROFILE APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/** POST /profile/complete — Save profile first time (token auto-attached) */
+/** POST /profile/complete */
 export const completeProfile = async (
   payload: FarmerProfilePayload,
 ): Promise<ProfileResponse> => {
@@ -206,13 +200,13 @@ export const completeProfile = async (
   return res.data;
 };
 
-/** GET /profile/me — Get my profile (token auto-attached) */
+/** GET /profile/me */
 export const getMyProfile = async (): Promise<FarmerProfile> => {
   const res = await API.get<FarmerProfile>("/profile/me");
   return res.data;
 };
 
-/** PUT /profile/update — Update profile (token auto-attached) */
+/** PUT /profile/update */
 export const updateProfile = async (
   payload: Partial<FarmerProfilePayload>,
 ): Promise<ProfileResponse> => {
@@ -234,7 +228,7 @@ export type CropStatus = "Active" | "Harvested" | "Closed";
 export type AreaUnit = "Acre" | "Bigha" | "Hectare";
 
 export interface CropPayload {
-  userId?: string; // ← add this
+  userId?: string;
   season: CropSeason;
   cropName: string;
   cropEmoji?: string;
@@ -266,7 +260,7 @@ export interface CropListResponse {
 // 🌾 CROP APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/** POST /crops — Create crop */
+/** POST /crops */
 export const createCrop = async (payload: CropPayload): Promise<Crop> => {
   const res = await API.post<{ success: boolean; data: Crop }>(
     "/crops",
@@ -275,7 +269,7 @@ export const createCrop = async (payload: CropPayload): Promise<Crop> => {
   return res.data.data;
 };
 
-/** GET /crops — Get all crops */
+/** GET /crops */
 export const getCrops = async (
   page = 1,
   limit = 20,
@@ -288,13 +282,13 @@ export const getCrops = async (
   return res.data;
 };
 
-/** GET /crops/:id — Get single crop */
+/** GET /crops/:id */
 export const getCropById = async (id: string): Promise<Crop> => {
   const res = await API.get<{ success: boolean; data: Crop }>(`/crops/${id}`);
   return res.data.data;
 };
 
-/** PUT /crops/:id — Update crop */
+/** PUT /crops/:id */
 export const updateCrop = async (
   id: string,
   payload: Partial<CropPayload>,
@@ -306,7 +300,7 @@ export const updateCrop = async (
   return res.data.data;
 };
 
-/** PATCH /crops/:id/status — Quick status update */
+/** PATCH /crops/:id/status */
 export const updateCropStatus = async (
   id: string,
   status: CropStatus,
@@ -369,7 +363,6 @@ export type MachineryImplement =
   | "બલૂન (Baluun)"
   | "રેપ (Rap)";
 
-// Sub-payload types (what you send to the API)
 export interface SeedExpensePayload {
   seedType: SeedType;
   quantityKg: number;
@@ -407,7 +400,6 @@ export interface MachineryExpensePayload {
   rate: number;
 }
 
-// Full expense payload sent to POST /expenses
 export interface ExpensePayload {
   userId?: string;
   cropId: string;
@@ -422,7 +414,6 @@ export interface ExpensePayload {
   machinery?: MachineryExpensePayload;
 }
 
-// What the API returns (includes derived fields)
 export interface SeedExpense extends SeedExpensePayload {
   ratePerKg?: number;
 }
@@ -465,7 +456,7 @@ export interface ExpenseListResponse {
 // 💰 EXPENSE APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/** POST /expenses — Create expense */
+/** POST /expenses */
 export const createExpense = async (
   payload: ExpensePayload,
 ): Promise<Expense> => {
@@ -476,7 +467,7 @@ export const createExpense = async (
   return res.data.data;
 };
 
-/** GET /expenses — Get all expenses (filter by cropId / category) */
+/** GET /expenses — filter by cropId / category / year */
 export const getExpenses = async (
   cropId?: string,
   category?: ExpenseCategory,
@@ -489,7 +480,7 @@ export const getExpenses = async (
   return res.data;
 };
 
-/** GET /expenses/:id — Get single expense */
+/** GET /expenses/:id */
 export const getExpenseById = async (id: string): Promise<Expense> => {
   const res = await API.get<{ success: boolean; data: Expense }>(
     `/expenses/${id}`,
@@ -497,7 +488,193 @@ export const getExpenseById = async (id: string): Promise<Expense> => {
   return res.data.data;
 };
 
-/** DELETE /expenses/:id — Delete expense */
+/** DELETE /expenses/:id */
 export const deleteExpense = async (id: string): Promise<void> => {
   await API.delete(`/expenses/${id}`);
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🌱 INCOME TYPES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export type IncomeCategory =
+  | "Crop Sale"
+  | "Subsidy"
+  | "Rental Income"
+  | "Other";
+
+// ── Sub-payload types (what you send to the API) ──────────────────────────────
+
+export interface CropSalePayload {
+  /** If cropId is NOT passed at the top level, provide the crop name here */
+  cropName?: string;
+  quantityKg: number;
+  pricePerKg: number;
+  buyerName?: string;
+  marketName?: string;
+}
+
+export interface SubsidyPayload {
+  schemeType: string;
+  amount: number;
+  referenceNumber?: string;
+}
+
+export interface RentalIncomePayload {
+  assetType: string;
+  rentedToName?: string;
+  hoursOrDays: number;
+  ratePerUnit: number;
+}
+
+export interface OtherIncomePayload {
+  source: string;
+  amount: number;
+  description?: string;
+}
+
+// ── What the API returns (includes derived fields) ────────────────────────────
+
+export interface CropSaleIncome extends CropSalePayload {
+  /** Server-computed: quantityKg × pricePerKg */
+  totalAmount?: number;
+}
+
+export interface RentalIncomeIncome extends RentalIncomePayload {
+  /** Server-computed: hoursOrDays × ratePerUnit */
+  totalAmount?: number;
+}
+
+// ── Full income payload sent to POST /income ──────────────────────────────────
+export interface IncomePayload {
+  /** Optional — links income to a specific crop */
+  cropId?: string;
+  category: IncomeCategory;
+  date?: string;
+  notes?: string;
+  cropSale?: CropSalePayload;
+  subsidy?: SubsidyPayload;
+  rentalIncome?: RentalIncomePayload;
+  otherIncome?: OtherIncomePayload;
+}
+
+// ── Full income document returned by the API ─────────────────────────────────
+export interface Income {
+  _id: string;
+  userId?: string;
+  /** Populated when ?populate=true or returned as object by backend */
+  cropId?: string | { _id: string; cropName: string };
+  category: IncomeCategory;
+  date: string;
+  notes?: string;
+  cropSale?: CropSaleIncome;
+  subsidy?: SubsidyPayload;
+  rentalIncome?: RentalIncomeIncome;
+  otherIncome?: OtherIncomePayload;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IncomeListResponse {
+  success: boolean;
+  data: Income[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface IncomeSummaryItem {
+  /** IncomeCategory value */
+  _id: string;
+  totalAmount: number;
+  count: number;
+}
+
+export interface IncomeSummaryResponse {
+  success: boolean;
+  year: string | number;
+  summary: IncomeSummaryItem[];
+  grandTotal: number;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🌱 INCOME APIs
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * GET /income
+ * Supports: year, category, cropId, page, limit
+ */
+export const getIncomes = async (
+  page = 1,
+  limit = 20,
+  cropId?: string,
+  category?: IncomeCategory,
+  year?: number,
+): Promise<IncomeListResponse> => {
+  const res = await API.get<IncomeListResponse>("/income", {
+    params: { page, limit, cropId, category, year },
+  });
+  return res.data;
+};
+
+/**
+ * GET /income/summary
+ * Returns totals grouped by category + grandTotal
+ * @param year  e.g. 2024 — pass undefined for all-time
+ */
+export const getIncomeSummary = async (
+  year?: number,
+): Promise<IncomeSummaryResponse> => {
+  const res = await API.get<IncomeSummaryResponse>("/income/summary", {
+    params: { year },
+  });
+  return res.data;
+};
+
+/**
+ * GET /income/:id
+ * Returns a single income document
+ */
+export const getIncomeById = async (id: string): Promise<Income> => {
+  const res = await API.get<{ success: boolean; data: Income }>(
+    `/income/${id}`,
+  );
+  return res.data.data;
+};
+
+/**
+ * POST /income
+ * Creates a new income entry; pre-save hook computes derived fields
+ */
+export const createIncome = async (payload: IncomePayload): Promise<Income> => {
+  const res = await API.post<{ success: boolean; data: Income }>(
+    "/income",
+    payload,
+  );
+  return res.data.data;
+};
+
+/**
+ * PUT /income/:id
+ * Updates an income entry; pre-save hook re-computes derived fields
+ */
+export const updateIncome = async (
+  id: string,
+  payload: Partial<IncomePayload>,
+): Promise<Income> => {
+  const res = await API.put<{ success: boolean; data: Income }>(
+    `/income/${id}`,
+    payload,
+  );
+  return res.data.data;
+};
+
+/**
+ * DELETE /income/:id
+ */
+export const deleteIncome = async (id: string): Promise<void> => {
+  await API.delete(`/income/${id}`);
 };

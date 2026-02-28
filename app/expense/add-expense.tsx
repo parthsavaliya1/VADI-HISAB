@@ -26,41 +26,73 @@ import {
   View,
 } from "react-native";
 
+// ─── Color system — matches dashboard exactly ─────────────────────────────────
+const C = {
+  green900: "#1B5E20",
+  green700: "#2E7D32",
+  green500: "#4CAF50",
+  green100: "#C8E6C9",
+  green50: "#E8F5E9",
+
+  bg: "#F5F7F2",
+  surface: "#FFFFFF",
+  surfaceGreen: "#F1F8F1",
+
+  textPrimary: "#1A2E1C",
+  textSecondary: "#3D5C40",
+  textMuted: "#7A9B7E",
+
+  income: "#2E7D32",
+  incomePale: "#E8F5E9",
+  expense: "#C62828",
+  expensePale: "#FFEBEE",
+
+  border: "#C8E6C9",
+  borderLight: "#EAF4EA",
+};
+
+// ─── Categories ───────────────────────────────────────────────────────────────
 const CATEGORIES: {
   value: ExpenseCategory;
   label: string;
   icon: string;
-  colors: [string, string];
+  color: string;
+  pale: string;
 }[] = [
   {
     value: "Seed",
     label: "બિયારણ",
     icon: "🌱",
-    colors: ["#16A34A", "#15803D"],
+    color: "#16A34A",
+    pale: "#DCFCE7",
   },
   {
     value: "Fertilizer",
     label: "ખાતર",
     icon: "🧪",
-    colors: ["#0891B2", "#0E7490"],
+    color: "#0891B2",
+    pale: "#E0F2FE",
   },
   {
     value: "Pesticide",
-    label: "જંતુનાશક",
+    label: "જંતુ.",
     icon: "🧴",
-    colors: ["#DC2626", "#B91C1C"],
+    color: "#DC2626",
+    pale: "#FEE2E2",
   },
   {
     value: "Labour",
     label: "મજૂરી",
     icon: "👷",
-    colors: ["#D97706", "#B45309"],
+    color: "#D97706",
+    pale: "#FEF3C7",
   },
   {
     value: "Machinery",
-    label: "મશીનરી",
+    label: "મશીન",
     icon: "🚜",
-    colors: ["#7C3AED", "#6D28D9"],
+    color: "#7C3AED",
+    pale: "#EDE9FE",
   },
 ];
 
@@ -108,7 +140,7 @@ const MACHINERY_IMPLEMENTS: { value: MachineryImplement; label: string }[] = [
   { value: "રેપ (Rap)", label: "રેપ" },
 ];
 
-// ─── Reusable Components ──────────────────────────────────────────────────────
+// ─── Reusable components ──────────────────────────────────────────────────────
 function SectionLabel({ text }: { text: string }) {
   return <Text style={styles.label}>{text}</Text>;
 }
@@ -141,7 +173,7 @@ function SelectPicker<T extends string>({
         <Ionicons
           name={open ? "chevron-up" : "chevron-down"}
           size={16}
-          color="#6B7280"
+          color={C.textMuted}
         />
       </TouchableOpacity>
       {open && (
@@ -167,7 +199,7 @@ function SelectPicker<T extends string>({
                 {o.label}
               </Text>
               {selected === o.value && (
-                <Ionicons name="checkmark" size={16} color="#059669" />
+                <Ionicons name="checkmark" size={16} color={C.green700} />
               )}
             </TouchableOpacity>
           ))}
@@ -209,14 +241,10 @@ function NumericInput({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AddExpense() {
   const params = useLocalSearchParams<{ cropId: string }>();
-  // useLocalSearchParams can return string | string[] — always coerce to plain string
   const cropId = Array.isArray(params.cropId)
     ? params.cropId[0]
     : params.cropId;
   const { profile } = useProfile();
-
-  // 🐛 Debug: log cropId so you can verify it arrives correctly
-  console.log("[AddExpense] cropId from params:", cropId, "| params:", params);
 
   const [category, setCategory] = useState<ExpenseCategory | "">("");
   const [saving, setSaving] = useState(false);
@@ -296,7 +324,7 @@ export default function AddExpense() {
       setSaving(true);
       await createExpense({
         userId: profile?._id,
-        cropId: cropId as string, // validated above — guaranteed non-empty here
+        cropId: cropId as string,
         category: category as ExpenseCategory,
         notes: notes.trim() || undefined,
         ...(category === "Seed" && {
@@ -356,33 +384,39 @@ export default function AddExpense() {
   };
 
   const activeCat = CATEGORIES.find((c) => c.value === category);
+  const paddingTop = Platform.OS === "ios" ? 50 : 36;
 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#14532D" />
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+
+      {/* ── Header — light green, matches dashboard ── */}
       <LinearGradient
-        colors={["#14532D", "#166534", "#15803D"]}
-        style={styles.header}
+        colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]}
+        style={[styles.header, { paddingTop }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View style={styles.decorCircle} />
+        <View style={styles.decorCircle1} />
+        <View style={styles.decorCircle2} />
         <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Ionicons name="arrow-back" size={20} color={C.green700} />
           </TouchableOpacity>
           <View style={{ alignItems: "center" }}>
-            <Text style={styles.headerTitle}>💰 ખર્ચ ઉમેરો</Text>
-            <Text style={styles.headerSub}>
+            <Text style={styles.headerTitle}>
               {activeCat
-                ? `${activeCat.icon} ${activeCat.label}`
-                : "પ્રકાર પસંદ કરો"}
+                ? `${activeCat.icon} ${activeCat.label} ખર્ચ`
+                : "💰 ખર્ચ ઉમેરો"}
+            </Text>
+            <Text style={styles.headerSub}>
+              {activeCat ? "વિગત ભરો અને સાચવો" : "ખર્ચ પ્રકાર પસંદ કરો"}
             </Text>
           </View>
           <View style={{ width: 36 }} />
@@ -390,12 +424,12 @@ export default function AddExpense() {
       </LinearGradient>
 
       <ScrollView
-        style={{ flex: 1, backgroundColor: "#F0FDF4" }}
+        style={{ flex: 1, backgroundColor: C.bg }}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Category Tabs */}
+        {/* ── Category chips ── */}
         <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર</Text>
         <ScrollView
           horizontal
@@ -411,31 +445,45 @@ export default function AddExpense() {
                 activeOpacity={0.8}
                 style={{ marginRight: 10 }}
               >
-                {active ? (
-                  <LinearGradient
-                    colors={cat.colors}
-                    style={styles.catChipActive}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                <View
+                  style={[
+                    styles.catChip,
+                    active && {
+                      backgroundColor: cat.pale,
+                      borderColor: cat.color,
+                      borderWidth: 2,
+                    },
+                  ]}
+                >
+                  <Text style={styles.catIcon}>{cat.icon}</Text>
+                  <Text
+                    style={[
+                      styles.catLabel,
+                      active && { color: cat.color, fontWeight: "800" },
+                    ]}
                   >
-                    <Text style={styles.catIcon}>{cat.icon}</Text>
-                    <Text style={styles.catLabelActive}>{cat.label}</Text>
-                  </LinearGradient>
-                ) : (
-                  <View style={styles.catChip}>
-                    <Text style={styles.catIcon}>{cat.icon}</Text>
-                    <Text style={styles.catLabel}>{cat.label}</Text>
-                  </View>
-                )}
+                    {cat.label}
+                  </Text>
+                  {active && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={14}
+                      color={cat.color}
+                      style={{ marginLeft: 2 }}
+                    />
+                  )}
+                </View>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
-        {/* SEED */}
+        {/* ── SEED ── */}
         {category === "Seed" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🌱 બિયારણ ખર્ચ</Text>
+            <View style={[styles.cardTitleRow, { borderLeftColor: "#16A34A" }]}>
+              <Text style={styles.cardTitle}>🌱 બિયારણ ખર્ચ</Text>
+            </View>
             <SectionLabel text="બિયારણ પ્રકાર *" />
             <SelectPicker
               options={SEED_TYPES}
@@ -459,7 +507,7 @@ export default function AddExpense() {
             />
             {seedRatePerKg && (
               <View style={styles.derivedBox}>
-                <Ionicons name="calculator" size={14} color="#059669" />
+                <Ionicons name="calculator" size={14} color={C.green700} />
                 <Text style={styles.derivedText}>
                   દર: ₹{seedRatePerKg} / કિ.ગ્રા.
                 </Text>
@@ -468,10 +516,12 @@ export default function AddExpense() {
           </View>
         )}
 
-        {/* FERTILIZER */}
+        {/* ── FERTILIZER ── */}
         {category === "Fertilizer" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🧪 ખાતર ખર્ચ</Text>
+            <View style={[styles.cardTitleRow, { borderLeftColor: "#0891B2" }]}>
+              <Text style={styles.cardTitle}>🧪 ખાતર ખર્ચ</Text>
+            </View>
             <SectionLabel text="ઉત્પાદન *" />
             <SelectPicker
               options={FERTILIZER_PRODUCTS}
@@ -496,14 +546,16 @@ export default function AddExpense() {
           </View>
         )}
 
-        {/* PESTICIDE */}
+        {/* ── PESTICIDE ── */}
         {category === "Pesticide" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🧴 જંતુનાશક ખર્ચ</Text>
-            <View style={styles.safetyNote}>
+            <View style={[styles.cardTitleRow, { borderLeftColor: "#DC2626" }]}>
+              <Text style={styles.cardTitle}>🧴 જંતુનાશક ખર્ચ</Text>
+            </View>
+            <View style={styles.infoNote}>
               <Ionicons name="information-circle" size={14} color="#0891B2" />
-              <Text style={styles.safetyText}>
-                અહીં ફક્ત આર્થિક માહિતી નોંધો. રાસાયણિક વિગત MVP માં નથી.
+              <Text style={styles.infoNoteText}>
+                અહીં ફક્ત આર્થિક માહિતી નોંધો.
               </Text>
             </View>
             <SectionLabel text="પ્રકાર *" />
@@ -530,10 +582,12 @@ export default function AddExpense() {
           </View>
         )}
 
-        {/* LABOUR */}
+        {/* ── LABOUR ── */}
         {category === "Labour" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>👷 મજૂરી ખર્ચ</Text>
+            <View style={[styles.cardTitleRow, { borderLeftColor: "#D97706" }]}>
+              <Text style={styles.cardTitle}>👷 મજૂરી ખર્ચ</Text>
+            </View>
             <View style={styles.toggleRow}>
               <TouchableOpacity
                 style={[
@@ -615,9 +669,9 @@ export default function AddExpense() {
               </>
             ) : (
               <>
-                <View style={styles.contractNote}>
+                <View style={styles.warnNote}>
                   <Ionicons name="warning" size={14} color="#D97706" />
-                  <Text style={styles.contractNoteText}>
+                  <Text style={styles.warnNoteText}>
                     આ રકમ ખેત ખર્ચ નથી — ભવિષ્યની જવાબદારી સામે ડેબિટ છે.
                   </Text>
                 </View>
@@ -640,10 +694,12 @@ export default function AddExpense() {
           </View>
         )}
 
-        {/* MACHINERY */}
+        {/* ── MACHINERY ── */}
         {category === "Machinery" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🚜 મશીનરી ખર્ચ</Text>
+            <View style={[styles.cardTitleRow, { borderLeftColor: "#7C3AED" }]}>
+              <Text style={styles.cardTitle}>🚜 મશીનરી ખર્ચ</Text>
+            </View>
             <View style={styles.toggleRow}>
               <TouchableOpacity
                 style={[
@@ -711,10 +767,14 @@ export default function AddExpense() {
           </View>
         )}
 
-        {/* Notes */}
+        {/* ── Notes ── */}
         {category !== "" && (
           <View style={[styles.card, { marginTop: 4 }]}>
-            <Text style={styles.cardTitle}>📝 નોંધ (વૈકલ્પિક)</Text>
+            <View
+              style={[styles.cardTitleRow, { borderLeftColor: C.textMuted }]}
+            >
+              <Text style={styles.cardTitle}>📝 નોંધ (વૈકલ્પિક)</Text>
+            </View>
             <TextInput
               style={styles.notesInput}
               value={notes}
@@ -727,9 +787,11 @@ export default function AddExpense() {
             />
           </View>
         )}
+
         <View style={{ height: 120 }} />
       </ScrollView>
 
+      {/* ── Bottom bar ── */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={[styles.saveBtn, saving && { opacity: 0.65 }]}
@@ -738,11 +800,7 @@ export default function AddExpense() {
           activeOpacity={0.88}
         >
           <LinearGradient
-            colors={
-              saving
-                ? ["#9CA3AF", "#6B7280"]
-                : ["#065F46", "#059669", "#10B981"]
-            }
+            colors={saving ? ["#9CA3AF", "#6B7280"] : [C.green700, C.green500]}
             style={styles.btnGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -762,21 +820,33 @@ export default function AddExpense() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  // Header
   header: {
-    paddingTop: 54,
-    paddingBottom: 18,
     paddingHorizontal: 20,
+    paddingBottom: 18,
     overflow: "hidden",
+    borderBottomWidth: 1,
+    borderBottomColor: C.borderLight,
   },
-  decorCircle: {
+  decorCircle1: {
     position: "absolute",
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: "#ffffff0D",
-    top: -50,
-    right: -40,
+    backgroundColor: "#C8E6C980",
+    top: -40,
+    right: -30,
+  },
+  decorCircle2: {
+    position: "absolute",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#C8E6C950",
+    bottom: 8,
+    left: 16,
   },
   headerRow: {
     flexDirection: "row",
@@ -787,19 +857,24 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: "#ffffff22",
+    backgroundColor: C.green50,
+    borderWidth: 1,
+    borderColor: C.green100,
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 16, fontWeight: "800", color: "#fff" },
-  headerSub: { fontSize: 11, color: "#A7F3D0", marginTop: 2 },
+  headerTitle: { fontSize: 16, fontWeight: "800", color: C.textPrimary },
+  headerSub: { fontSize: 11, color: C.textMuted, marginTop: 2 },
+
   scroll: { padding: 18 },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#374151",
+    color: C.textSecondary,
     marginBottom: 12,
   },
+
+  // Category chips
   catChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -808,72 +883,61 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#fff",
+    borderColor: C.border,
+    backgroundColor: C.surface,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 3,
     elevation: 2,
   },
-  catChipActive: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
-  },
   catIcon: { fontSize: 18 },
-  catLabel: { fontSize: 13, fontWeight: "600", color: "#374151" },
-  catLabelActive: { fontSize: 13, fontWeight: "700", color: "#fff" },
+  catLabel: { fontSize: 13, fontWeight: "600", color: C.textSecondary },
+
+  // Card
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderRadius: 18,
     padding: 18,
+    borderWidth: 1,
+    borderColor: C.borderLight,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
     marginBottom: 12,
   },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#1F2937",
-    marginBottom: 16,
-  },
+  cardTitleRow: { borderLeftWidth: 3, paddingLeft: 10, marginBottom: 16 },
+  cardTitle: { fontSize: 15, fontWeight: "800", color: C.textPrimary },
+
   label: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#6B7280",
+    color: C.textMuted,
     marginBottom: 6,
     marginTop: 4,
   },
+
+  // Select / dropdown
   selectBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    borderColor: C.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: C.surfaceGreen,
   },
-  selectBtnOpen: { borderColor: "#059669", backgroundColor: "#fff" },
-  selectText: { fontSize: 14, color: "#1F2937" },
+  selectBtnOpen: { borderColor: C.green700, backgroundColor: C.surface },
+  selectText: { fontSize: 14, color: C.textPrimary },
   dropList: {
     borderWidth: 1.5,
-    borderColor: "#D1FAE5",
+    borderColor: C.green100,
     borderRadius: 12,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     overflow: "hidden",
     marginTop: 4,
     shadowColor: "#000",
@@ -889,90 +953,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: C.borderLight,
   },
-  dropItemActive: { backgroundColor: "#ECFDF5" },
-  dropItemText: { fontSize: 14, color: "#374151" },
-  dropItemTextActive: { fontWeight: "700", color: "#065F46" },
+  dropItemActive: { backgroundColor: C.green50 },
+  dropItemText: { fontSize: 14, color: C.textSecondary },
+  dropItemTextActive: { fontWeight: "700", color: C.green700 },
+
+  // Numeric input
   numRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    borderColor: C.border,
     borderRadius: 12,
     paddingHorizontal: 12,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: C.surfaceGreen,
     marginBottom: 4,
   },
-  numAffix: { fontSize: 14, color: "#6B7280", marginHorizontal: 4 },
-  numInput: { flex: 1, fontSize: 16, color: "#1F2937", paddingVertical: 12 },
+  numAffix: { fontSize: 14, color: C.textMuted, marginHorizontal: 4 },
+  numInput: {
+    flex: 1,
+    fontSize: 16,
+    color: C.textPrimary,
+    paddingVertical: 12,
+  },
+
+  // Derived / info boxes
   derivedBox: {
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
-    backgroundColor: "#D1FAE5",
+    backgroundColor: C.green50,
     borderRadius: 10,
     padding: 10,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: C.green100,
   },
-  derivedText: { fontSize: 12, fontWeight: "600", color: "#065F46" },
+  derivedText: { fontSize: 12, fontWeight: "600", color: C.green700 },
+
   totalBox: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#064E3B",
+    backgroundColor: C.green50,
     borderRadius: 12,
     padding: 14,
     marginTop: 12,
-  },
-  totalLabel: { fontSize: 13, color: "#A7F3D0", fontWeight: "700" },
-  totalValue: { fontSize: 20, color: "#fff", fontWeight: "900" },
-  toggleRow: {
-    flexDirection: "row",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-  },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  toggleBtnActive: {
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  toggleText: { fontSize: 13, fontWeight: "600", color: "#6B7280" },
-  toggleTextActive: { fontSize: 13, fontWeight: "800", color: "#065F46" },
-  multiRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  multiX: {
-    fontSize: 18,
-    color: "#6B7280",
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  notesInput: {
-    fontSize: 13,
-    color: "#1F2937",
     borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    padding: 12,
-    minHeight: 80,
-    marginTop: 8,
+    borderColor: C.green100,
   },
-  safetyNote: {
+  totalLabel: { fontSize: 13, color: C.textSecondary, fontWeight: "700" },
+  totalValue: { fontSize: 20, color: C.green700, fontWeight: "900" },
+
+  // Info / warn notes
+  infoNote: {
     flexDirection: "row",
     gap: 6,
     backgroundColor: "#E0F2FE",
@@ -981,8 +1016,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     alignItems: "flex-start",
   },
-  safetyText: { fontSize: 11, color: "#0369A1", flex: 1, lineHeight: 16 },
-  contractNote: {
+  infoNoteText: { fontSize: 11, color: "#0369A1", flex: 1, lineHeight: 16 },
+  warnNote: {
     flexDirection: "row",
     gap: 6,
     backgroundColor: "#FEF3C7",
@@ -991,7 +1026,61 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     alignItems: "flex-start",
   },
-  contractNoteText: { fontSize: 11, color: "#92400E", flex: 1, lineHeight: 16 },
+  warnNoteText: { fontSize: 11, color: "#92400E", flex: 1, lineHeight: 16 },
+
+  // Toggle
+  toggleRow: {
+    flexDirection: "row",
+    backgroundColor: C.surfaceGreen,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  toggleBtnActive: {
+    backgroundColor: C.surface,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  toggleText: { fontSize: 13, fontWeight: "600", color: C.textMuted },
+  toggleTextActive: { fontSize: 13, fontWeight: "800", color: C.green700 },
+
+  multiRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  multiX: {
+    fontSize: 18,
+    color: C.textMuted,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+
+  notesInput: {
+    fontSize: 13,
+    color: C.textPrimary,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 80,
+    marginTop: 8,
+    backgroundColor: C.surfaceGreen,
+  },
+
+  // Bottom bar
   bottomBar: {
     position: "absolute",
     bottom: 0,
@@ -999,9 +1088,9 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 18,
     paddingBottom: Platform.OS === "ios" ? 36 : 18,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: C.bg,
     borderTopWidth: 1,
-    borderTopColor: "#D1FAE5",
+    borderTopColor: C.borderLight,
   },
   saveBtn: { borderRadius: 14, overflow: "hidden" },
   btnGradient: {

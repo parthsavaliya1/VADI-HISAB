@@ -280,7 +280,7 @@ export default function AddCrop() {
   const set = (key: keyof FormState, val: any) =>
     setForm((p) => ({ ...p, [key]: val }));
 
-  const animateStep = (next: number) => {
+  const animateStep = (targetStep: number) => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -292,8 +292,9 @@ export default function AddCrop() {
         duration: 120,
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      setStep(next);
+    ]).start(({ finished }) => {
+      if (!finished) return;
+      setStep(targetStep);
       slideAnim.setValue(20);
       Animated.parallel([
         Animated.timing(fadeAnim, {
