@@ -10,7 +10,7 @@ import axios from "axios";
 //           Phone & computer must be on SAME WiFi
 // 🚀 PROD:  Uncomment the render/production line
 
-const BASE_URL = "http://192.168.1.10:8000/api"; // 🔧 Change IP here
+const BASE_URL = "http://192.168.1.3:8000/api"; // 🔧 Change IP here
 // const BASE_URL = "https://vadi-backend.onrender.com/api"; // 🚀 Production
 
 // ─── Axios Instance ───────────────────────────
