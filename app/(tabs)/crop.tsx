@@ -16,6 +16,7 @@ import {
   Dimensions,
   FlatList,
   PanResponder,
+  Platform,
   RefreshControl,
   StatusBar,
   StyleSheet,
@@ -27,23 +28,58 @@ import {
 const { width: SCREEN_W } = Dimensions.get("window");
 const SWIPE_THRESHOLD = -80;
 
+// ─── Color system — matches dashboard exactly ─────────────────────────────────
+const C = {
+  green900: "#1B5E20",
+  green700: "#2E7D32",
+  green500: "#4CAF50",
+  green400: "#66BB6A",
+  green100: "#C8E6C9",
+  green50: "#E8F5E9",
+
+  bg: "#F5F7F2",
+  surface: "#FFFFFF",
+  surfaceGreen: "#F1F8F1",
+
+  textPrimary: "#1A2E1C",
+  textSecondary: "#3D5C40",
+  textMuted: "#7A9B7E",
+
+  income: "#2E7D32",
+  incomePale: "#E8F5E9",
+  expense: "#C62828",
+  expensePale: "#FFEBEE",
+
+  gold: "#F9A825",
+  goldLight: "#FBBF24",
+  goldPale: "#FFFDE7",
+
+  border: "#C8E6C9",
+  borderLight: "#EAF4EA",
+};
+
 // ─── Season & Status config ───────────────────────────────────────────────────
 const SEASON_META: Record<
   string,
-  { label: string; icon: string; color: string }
+  { label: string; icon: string; color: string; pale: string }
 > = {
-  Kharif: { label: "ખરીફ", icon: "☔", color: "#0EA5E9" },
-  Rabi: { label: "રવી", icon: "❄️", color: "#6366F1" },
-  Summer: { label: "ઉનાળો", icon: "☀️", color: "#F59E0B" },
+  Kharif: { label: "ખરીફ", icon: "☔", color: "#0EA5E9", pale: "#E0F2FE" },
+  Rabi: { label: "રવી", icon: "❄️", color: "#6366F1", pale: "#EEF2FF" },
+  Summer: { label: "ઉનાળો", icon: "☀️", color: "#F59E0B", pale: "#FEF3C7" },
 };
 
 const STATUS_META: Record<
   string,
   { label: string; bg: string; text: string; dot: string }
 > = {
-  Active: { label: "સક્રિય", bg: "#D1FAE5", text: "#065F46", dot: "#10B981" },
+  Active: {
+    label: "સક્રિય",
+    bg: C.incomePale,
+    text: C.green700,
+    dot: C.green500,
+  },
   Harvested: { label: "લણણી", bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
-  Closed: { label: "બંધ", bg: "#FEE2E2", text: "#991B1B", dot: "#EF4444" },
+  Closed: { label: "બંધ", bg: C.expensePale, text: C.expense, dot: "#EF4444" },
 };
 
 const FILTER_TABS = [
@@ -53,7 +89,7 @@ const FILTER_TABS = [
   { key: "Closed", label: "બંધ" },
 ];
 
-// ─── Animated crop card with swipe-to-reveal actions ─────────────────────────
+// ─── Crop card ────────────────────────────────────────────────────────────────
 function CropCard({
   item,
   index,
@@ -72,19 +108,18 @@ function CropCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuAnim = useRef(new Animated.Value(0)).current;
 
-  // Entrance animation
   useEffect(() => {
     Animated.parallel([
       Animated.timing(cardScale, {
         toValue: 1,
-        duration: 320,
-        delay: index * 60,
+        duration: 300,
+        delay: index * 55,
         useNativeDriver: true,
       }),
       Animated.timing(cardOpacity, {
         toValue: 1,
-        duration: 320,
-        delay: index * 60,
+        duration: 300,
+        delay: index * 55,
         useNativeDriver: true,
       }),
     ]).start();
@@ -132,7 +167,8 @@ function CropCard({
   const season = SEASON_META[item.season] ?? {
     label: item.season,
     icon: "🌾",
-    color: "#6B7280",
+    color: C.textMuted,
+    pale: C.green50,
   };
   const status = STATUS_META[item.status ?? "Active"] ?? STATUS_META.Active;
 
@@ -143,11 +179,10 @@ function CropCard({
         { opacity: cardOpacity, transform: [{ scale: cardScale }] },
       ]}
     >
-      {/* ── Swipe action background ── */}
+      {/* Swipe action buttons */}
       <View style={styles.swipeActions}>
-        {/* Change status */}
         <TouchableOpacity
-          style={[styles.swipeBtn, { backgroundColor: "#059669" }]}
+          style={[styles.swipeBtn, { backgroundColor: C.green700 }]}
           onPress={() => {
             closeSwipe();
             const next: CropStatus =
@@ -163,7 +198,6 @@ function CropCard({
           <Text style={styles.swipeBtnText}>સ્ટેટ</Text>
         </TouchableOpacity>
 
-        {/* Edit */}
         <TouchableOpacity
           style={[styles.swipeBtn, { backgroundColor: "#0284C7" }]}
           onPress={() => {
@@ -175,9 +209,8 @@ function CropCard({
           <Text style={styles.swipeBtnText}>ફેરફાર</Text>
         </TouchableOpacity>
 
-        {/* Delete */}
         <TouchableOpacity
-          style={[styles.swipeBtn, { backgroundColor: "#DC2626" }]}
+          style={[styles.swipeBtn, { backgroundColor: C.expense }]}
           onPress={() => {
             closeSwipe();
             onDelete(item._id);
@@ -188,33 +221,54 @@ function CropCard({
         </TouchableOpacity>
       </View>
 
-      {/* ── Main card ── */}
+      {/* Main card */}
       <Animated.View
         style={[styles.card, { transform: [{ translateX }] }]}
         {...panResponder.panHandlers}
       >
-        {/* Season accent bar */}
-        <View style={[styles.cardAccent, { backgroundColor: season.color }]} />
+        {/* Top accent bar — season colour */}
+        <View
+          style={[styles.cardAccentBar, { backgroundColor: season.color }]}
+        />
 
         <View style={styles.cardInner}>
           {/* Top row */}
           <View style={styles.cardTop}>
-            <View style={styles.cropEmojiWrap}>
+            <View
+              style={[styles.cropEmojiWrap, { backgroundColor: season.pale }]}
+            >
               <Text style={styles.cropEmoji}>{item.cropEmoji ?? "🌱"}</Text>
             </View>
 
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.cropName}>{item.cropName}</Text>
+
+              {/* subType + batchLabel */}
+              {(item as any).subType || (item as any).batchLabel ? (
+                <Text style={styles.cropSubInfo}>
+                  {(item as any).subType ? `🏷️ ${(item as any).subType}` : ""}
+                  {(item as any).subType && (item as any).batchLabel
+                    ? "  ·  "
+                    : ""}
+                  {(item as any).batchLabel
+                    ? `🔢 ${(item as any).batchLabel}`
+                    : ""}
+                </Text>
+              ) : null}
+
               <View style={styles.tagsRow}>
-                {/* Season tag */}
-                <View
-                  style={[styles.tag, { backgroundColor: season.color + "22" }]}
-                >
-                  <Text style={styles.tagText}>
+                <View style={[styles.tag, { backgroundColor: season.pale }]}>
+                  <Text style={[styles.tagText, { color: season.color }]}>
                     {season.icon} {season.label}
                   </Text>
                 </View>
-                {/* Status badge */}
+                {(item as any).year ? (
+                  <View style={[styles.tag, { backgroundColor: C.green50 }]}>
+                    <Text style={[styles.tagText, { color: C.green700 }]}>
+                      📅 {(item as any).year}
+                    </Text>
+                  </View>
+                ) : null}
                 <View
                   style={[styles.statusBadge, { backgroundColor: status.bg }]}
                 >
@@ -228,9 +282,12 @@ function CropCard({
               </View>
             </View>
 
-            {/* Menu trigger */}
             <TouchableOpacity onPress={toggleMenu} style={styles.menuTrigger}>
-              <Ionicons name="ellipsis-vertical" size={18} color="#9CA3AF" />
+              <Ionicons
+                name="ellipsis-vertical"
+                size={18}
+                color={C.textMuted}
+              />
             </TouchableOpacity>
           </View>
 
@@ -239,10 +296,7 @@ function CropCard({
             <Animated.View
               style={[
                 styles.dropMenu,
-                {
-                  opacity: menuAnim,
-                  transform: [{ scaleY: menuAnim }],
-                },
+                { opacity: menuAnim, transform: [{ scaleY: menuAnim }] },
               ]}
             >
               {(["Active", "Harvested", "Closed"] as CropStatus[]).map((s) => (
@@ -267,7 +321,7 @@ function CropCard({
                     style={[
                       styles.dropMenuText,
                       item.status === s && {
-                        color: "#059669",
+                        color: C.green700,
                         fontWeight: "700",
                       },
                     ]}
@@ -278,7 +332,7 @@ function CropCard({
                     <Ionicons
                       name="checkmark"
                       size={14}
-                      color="#059669"
+                      color={C.green700}
                       style={{ marginLeft: "auto" }}
                     />
                   )}
@@ -292,7 +346,11 @@ function CropCard({
                   router.push(`/crop/add-crop?id=${item._id}`);
                 }}
               >
-                <Ionicons name="create-outline" size={14} color="#374151" />
+                <Ionicons
+                  name="create-outline"
+                  size={14}
+                  color={C.textSecondary}
+                />
                 <Text style={styles.dropMenuText}>ફેરફાર કરો</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -302,52 +360,48 @@ function CropCard({
                   onDelete(item._id);
                 }}
               >
-                <Ionicons name="trash-outline" size={14} color="#DC2626" />
-                <Text style={[styles.dropMenuText, { color: "#DC2626" }]}>
+                <Ionicons name="trash-outline" size={14} color={C.expense} />
+                <Text style={[styles.dropMenuText, { color: C.expense }]}>
                   કાઢી નાખો
                 </Text>
               </TouchableOpacity>
             </Animated.View>
           )}
 
-          {/* Stats row */}
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Ionicons name="resize-outline" size={13} color="#9CA3AF" />
-              <Text style={styles.statText}>
+          {/* Footer stats */}
+          <View style={styles.cardFooter}>
+            <View style={styles.footerItem}>
+              <Ionicons name="resize-outline" size={13} color={C.textMuted} />
+              <Text style={styles.footerText}>
                 {item.area} {item.areaUnit ?? "Bigha"}
               </Text>
             </View>
             {item.notes ? (
-              <View style={styles.statItem}>
+              <View style={styles.footerItem}>
                 <Ionicons
                   name="document-text-outline"
                   size={13}
-                  color="#9CA3AF"
+                  color={C.textMuted}
                 />
-                <Text style={styles.statText} numberOfLines={1}>
+                <Text style={styles.footerText} numberOfLines={1}>
                   {item.notes}
                 </Text>
               </View>
             ) : null}
+            {index === 0 && !swiped && (
+              <View style={styles.swipeHint}>
+                <Ionicons name="chevron-back" size={10} color={C.green100} />
+                <Text style={styles.swipeHintText}>← સ્વાઈપ કરો</Text>
+              </View>
+            )}
           </View>
-
-          {/* Swipe hint (only on first render if not swiped) */}
-          {index === 0 && !swiped && (
-            <View style={styles.swipeHint}>
-              <Ionicons name="chevron-back" size={10} color="#9CA3AF" />
-              <Text style={styles.swipeHintText}>
-                ← ક્રિયાઓ માટે સ્વાઈપ કરો
-              </Text>
-            </View>
-          )}
         </View>
       </Animated.View>
     </Animated.View>
   );
 }
 
-// ─── Stats header card ────────────────────────────────────────────────────────
+// ─── Stats header — light green, matches dashboard ────────────────────────────
 function StatsBar({ crops }: { crops: Crop[] }) {
   const active = crops.filter((c) => c.status === "Active").length;
   const harvested = crops.filter((c) => c.status === "Harvested").length;
@@ -363,24 +417,75 @@ function StatsBar({ crops }: { crops: Crop[] }) {
     }).start();
   }, []);
 
+  const paddingTop = Platform.OS === "ios" ? 50 : 36;
+
   return (
-    <Animated.View style={[styles.statsBar, { opacity: anim }]}>
+    <Animated.View style={{ opacity: anim }}>
       <LinearGradient
-        colors={["#14532D", "#166534", "#15803D"]}
-        style={styles.statsGrad}
+        colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]}
+        style={[styles.statsGrad, { paddingTop }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View style={styles.statsDecor} />
-        <Text style={styles.statsTitle}>🌾 મારી પાક સૂચિ</Text>
+        <View style={styles.decorCircle1} />
+        <View style={styles.decorCircle2} />
+
+        <View style={styles.statsTitleRow}>
+          <View>
+            <Text style={styles.statsGreeting}>🌾 મારી પાક સૂચિ</Text>
+            <Text style={styles.statsSubtitle}>
+              {crops.length} પાક નોંધાયેલ છે
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.statsAddBtn}
+            onPress={() => router.push("/crop/add-crop")}
+          >
+            <Ionicons name="add" size={20} color={C.green700} />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.statsGrid}>
           {[
-            { label: "સક્રિય", value: active, color: "#10B981" },
-            { label: "લણણી", value: harvested, color: "#F59E0B" },
-            { label: "બંધ", value: closed, color: "#EF4444" },
-            { label: "કુલ વિઘા", value: totalArea, color: "#A7F3D0" },
+            {
+              label: "સક્રિય",
+              value: active,
+              color: C.income,
+              bg: C.incomePale,
+              icon: "leaf-outline",
+            },
+            {
+              label: "લણણી",
+              value: harvested,
+              color: "#B45309",
+              bg: "#FEF3C7",
+              icon: "checkmark-circle-outline",
+            },
+            {
+              label: "બંધ",
+              value: closed,
+              color: C.expense,
+              bg: C.expensePale,
+              icon: "close-circle-outline",
+            },
+            {
+              label: "કુલ વીઘા",
+              value: totalArea,
+              color: C.green700,
+              bg: C.green50,
+              icon: "resize-outline",
+            },
           ].map((s) => (
-            <View key={s.label} style={styles.statBox}>
+            <View
+              key={s.label}
+              style={[styles.statBox, { backgroundColor: s.bg }]}
+            >
+              <Ionicons
+                name={s.icon as any}
+                size={16}
+                color={s.color}
+                style={{ marginBottom: 4 }}
+              />
               <Text style={[styles.statValue, { color: s.color }]}>
                 {s.value}
               </Text>
@@ -453,7 +558,9 @@ function EmptyState({ filter }: { filter: string }) {
     <Animated.View
       style={[styles.empty, { opacity: anim, transform: [{ scale: anim }] }]}
     >
-      <Text style={styles.emptyEmoji}>🌱</Text>
+      <View style={styles.emptyIconWrap}>
+        <Text style={styles.emptyEmoji}>🌱</Text>
+      </View>
       <Text style={styles.emptyTitle}>
         {filter === "all"
           ? "કોઈ પાક નથી"
@@ -469,14 +576,15 @@ function EmptyState({ filter }: { filter: string }) {
           style={styles.emptyBtn}
           onPress={() => router.push("/crop/add-crop")}
         >
-          <Text style={styles.emptyBtnText}>+ નવો પાક ઉમેરો</Text>
+          <Ionicons name="add-circle-outline" size={16} color={C.green700} />
+          <Text style={styles.emptyBtnText}>નવો પાક ઉમેરો</Text>
         </TouchableOpacity>
       )}
     </Animated.View>
   );
 }
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+// ─── Main screen ──────────────────────────────────────────────────────────────
 export default function CropScreen() {
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -498,13 +606,11 @@ export default function CropScreen() {
   useEffect(() => {
     fetchCrops();
   }, []);
-
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchCrops();
   }, []);
 
-  // ── Delete ─────────────────────────────────────────────────────────────────
   const handleDelete = (id: string) => {
     Alert.alert("ખાતરી કરો", "શું તમે આ પાક કાઢવા માંગો છો?", [
       { text: "રદ કરો", style: "cancel" },
@@ -523,7 +629,6 @@ export default function CropScreen() {
     ]);
   };
 
-  // ── Status change ──────────────────────────────────────────────────────────
   const handleStatusChange = async (id: string, status: CropStatus) => {
     try {
       await updateCropStatus(id, status);
@@ -535,10 +640,8 @@ export default function CropScreen() {
     }
   };
 
-  // ── Filter ─────────────────────────────────────────────────────────────────
   const filtered =
     filter === "all" ? crops : crops.filter((c) => c.status === filter);
-
   const counts: Record<string, number> = {
     all: crops.length,
     Active: crops.filter((c) => c.status === "Active").length,
@@ -546,12 +649,11 @@ export default function CropScreen() {
     Closed: crops.filter((c) => c.status === "Closed").length,
   };
 
-  // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.loaderWrap}>
-        <StatusBar barStyle="dark-content" backgroundColor="#F0FDF4" />
-        <ActivityIndicator size="large" color="#059669" />
+        <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+        <ActivityIndicator size="large" color={C.green700} />
         <Text style={styles.loadingText}>પાક લોડ થઈ રહ્યો છે...</Text>
       </View>
     );
@@ -559,15 +661,11 @@ export default function CropScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" backgroundColor="#14532D" />
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
-      {/* Stats header */}
       <StatsBar crops={crops} />
-
-      {/* Filter tabs */}
       <FilterTabs active={filter} onChange={setFilter} counts={counts} />
 
-      {/* List */}
       {filtered.length === 0 ? (
         <EmptyState filter={filter} />
       ) : (
@@ -588,8 +686,8 @@ export default function CropScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={["#059669"]}
-              tintColor="#059669"
+              colors={[C.green700]}
+              tintColor={C.green700}
             />
           }
         />
@@ -602,7 +700,7 @@ export default function CropScreen() {
         activeOpacity={0.85}
       >
         <LinearGradient
-          colors={["#065F46", "#059669"]}
+          colors={[C.green700, C.green500]}
           style={styles.fabGrad}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -616,49 +714,76 @@ export default function CropScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F0FDF4" },
+  screen: { flex: 1, backgroundColor: C.bg },
 
-  // Loader
   loaderWrap: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F0FDF4",
+    backgroundColor: C.bg,
   },
-  loadingText: { marginTop: 12, fontSize: 14, color: "#6B7280" },
+  loadingText: { marginTop: 12, fontSize: 14, color: C.textMuted },
 
-  // Stats bar
-  statsBar: { marginHorizontal: 0 },
+  // Stats header
   statsGrad: {
-    paddingTop: 54,
-    paddingBottom: 20,
     paddingHorizontal: 20,
+    paddingBottom: 20,
     overflow: "hidden",
+    borderBottomWidth: 1,
+    borderBottomColor: C.borderLight,
   },
-  statsDecor: {
+  decorCircle1: {
     position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "#ffffff0A",
-    top: -60,
-    right: -60,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "#C8E6C980",
+    top: -40,
+    right: -30,
   },
-  statsTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#fff",
+  decorCircle2: {
+    position: "absolute",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#C8E6C950",
+    bottom: 8,
+    left: 16,
+  },
+  statsTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 16,
   },
-  statsGrid: { flexDirection: "row", gap: 0 },
+  statsGreeting: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
+  statsSubtitle: { fontSize: 13, color: C.textMuted, marginTop: 3 },
+  statsAddBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.green50,
+    borderWidth: 1.5,
+    borderColor: C.green100,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statsGrid: { flexDirection: "row", gap: 8 },
   statBox: {
     flex: 1,
+    borderRadius: 14,
+    padding: 12,
     alignItems: "center",
-    borderRightWidth: 1,
-    borderRightColor: "#ffffff20",
+    borderWidth: 1,
+    borderColor: "#00000006",
   },
-  statValue: { fontSize: 22, fontWeight: "900" },
-  statLabel: { fontSize: 10, color: "#A7F3D0", marginTop: 2 },
+  statValue: { fontSize: 20, fontWeight: "900", marginBottom: 2 },
+  statLabel: {
+    fontSize: 10,
+    color: C.textMuted,
+    fontWeight: "600",
+    textAlign: "center",
+  },
 
   // Filter tabs
   filterRow: {
@@ -666,50 +791,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: C.borderLight,
   },
   filterTab: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#F9FAFB",
+    borderColor: C.border,
+    backgroundColor: C.bg,
   },
-  filterTabActive: { borderColor: "#059669", backgroundColor: "#D1FAE5" },
-  filterTabText: { fontSize: 12, fontWeight: "600", color: "#6B7280" },
-  filterTabTextActive: { color: "#065F46" },
+  filterTabActive: { borderColor: C.green700, backgroundColor: C.green50 },
+  filterTabText: { fontSize: 12, fontWeight: "600", color: C.textMuted },
+  filterTabTextActive: { color: C.green700 },
   filterBadge: {
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: C.borderLight,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
   },
-  filterBadgeActive: { backgroundColor: "#059669" },
-  filterBadgeText: { fontSize: 10, fontWeight: "700", color: "#6B7280" },
+  filterBadgeActive: { backgroundColor: C.green700 },
+  filterBadgeText: { fontSize: 10, fontWeight: "700", color: C.textMuted },
 
   // List
-  listContent: { padding: 14, paddingBottom: 100 },
+  listContent: { padding: 14, paddingBottom: 110 },
 
-  // Card wrapper (contains swipe bg + card)
+  // Card wrapper
   cardWrapper: { marginBottom: 12 },
 
-  // Swipe action buttons (behind card)
+  // Swipe actions
   swipeActions: {
     position: "absolute",
     right: 0,
     top: 0,
     bottom: 0,
     flexDirection: "row",
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: "hidden",
   },
   swipeBtn: {
@@ -722,44 +847,44 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    backgroundColor: C.surface,
+    borderRadius: 18,
     overflow: "hidden",
-    shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  cardAccent: { height: 4 },
+  cardAccentBar: { height: 4 },
   cardInner: { padding: 14 },
 
-  // Card top row
   cardTop: { flexDirection: "row", alignItems: "flex-start", marginBottom: 10 },
   cropEmojiWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#F0FDF4",
+    width: 50,
+    height: 50,
+    borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
   },
   cropEmoji: { fontSize: 26 },
   cropName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "800",
-    color: "#1F2937",
-    marginBottom: 6,
+    color: C.textPrimary,
+    marginBottom: 3,
   },
-
+  cropSubInfo: {
+    fontSize: 11,
+    color: C.textSecondary,
+    fontWeight: "600",
+    marginBottom: 5,
+  },
   tagsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  tagText: { fontSize: 11, fontWeight: "600", color: "#374151" },
-
+  tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  tagText: { fontSize: 11, fontWeight: "600" },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -771,21 +896,19 @@ const styles = StyleSheet.create({
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 11, fontWeight: "700" },
 
-  // Menu
   menuTrigger: { padding: 4, marginLeft: 4 },
   dropMenu: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: C.surface,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: C.borderLight,
     marginTop: 8,
     marginBottom: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 6,
-    transformOrigin: "top",
     overflow: "hidden",
   },
   dropMenuItem: {
@@ -795,69 +918,80 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  dropMenuItemActive: { backgroundColor: "#F0FDF4" },
-  dropMenuText: { fontSize: 13, color: "#374151" },
-  dropDivider: { height: 1, backgroundColor: "#F3F4F6", marginHorizontal: 10 },
+  dropMenuItemActive: { backgroundColor: C.green50 },
+  dropMenuText: { fontSize: 13, color: C.textSecondary },
+  dropDivider: {
+    height: 1,
+    backgroundColor: C.borderLight,
+    marginHorizontal: 10,
+  },
 
-  // Stats row inside card
-  statsRow: {
+  cardFooter: {
     flexDirection: "row",
     gap: 14,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+    borderTopColor: C.borderLight,
     marginTop: 4,
-  },
-  statItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  statText: { fontSize: 12, color: "#6B7280", flex: 1 },
-
-  // Swipe hint
-  swipeHint: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
-    marginTop: 6,
   },
-  swipeHintText: { fontSize: 10, color: "#D1D5DB" },
+  footerItem: { flexDirection: "row", alignItems: "center", gap: 4, flex: 1 },
+  footerText: { fontSize: 12, color: C.textMuted },
+  swipeHint: { flexDirection: "row", alignItems: "center", marginLeft: "auto" },
+  swipeHintText: { fontSize: 10, color: C.green100 },
 
-  // Empty state
   empty: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 40,
   },
-  emptyEmoji: { fontSize: 64, marginBottom: 16 },
+  emptyIconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: C.green50,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: C.green100,
+  },
+  emptyEmoji: { fontSize: 44 },
   emptyTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#1F2937",
+    color: C.textPrimary,
     marginBottom: 6,
   },
   emptyDesc: {
     fontSize: 13,
-    color: "#9CA3AF",
+    color: C.textMuted,
     textAlign: "center",
     marginBottom: 20,
   },
   emptyBtn: {
-    backgroundColor: "#059669",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: C.green50,
     borderRadius: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: C.green100,
   },
-  emptyBtnText: { fontSize: 14, fontWeight: "800", color: "#fff" },
+  emptyBtnText: { fontSize: 14, fontWeight: "800", color: C.green700 },
 
-  // FAB
   fab: {
     position: "absolute",
     bottom: 28,
     right: 20,
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#059669",
+    shadowColor: C.green700,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
   },
