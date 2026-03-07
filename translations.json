@@ -124,7 +124,8 @@
             "selectCropFirst": "પહેલા પાક પસંદ કરો",
             "today": "આજે",
             "yesterday": "ગઈ કાલે",
-            "daysAgo": "{n} દિવસ"
+            "daysAgo": "{n} દિવસ",
+            "scrollHint": "સ્વાઈપ કરો"
         },
         "crop": {
             "myCropList": "મારી પાક સૂચિ",
@@ -292,7 +293,8 @@
             "selectCropFirst": "Select a crop first",
             "today": "Today",
             "yesterday": "Yesterday",
-            "daysAgo": "{n} days"
+            "daysAgo": "{n} days",
+            "scrollHint": "Swipe"
         },
         "crop": {
             "myCropList": "My Crop List",
