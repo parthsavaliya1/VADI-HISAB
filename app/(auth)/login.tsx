@@ -1,12 +1,7 @@
 /**
  * FILE: app/(auth)/login.tsx
  *
- * FIXES:
- * ✅ "native driver" conflict resolved:
- *    - Transform-only anims  → useNativeDriver: true  (inputScale, btnScale, etc.)
- *    - Color/border anims    → useNativeDriver: false  (inputBorderAnim)
- *    - They are NEVER mixed in the same Animated.parallel
- * ✅ Light sky-blue + mint + gold color palette — clean, fresh, readable
+ * Design aligned with main app (index.tsx) — light green palette, consistent cards & inputs.
  */
 
 import translations from "@/translations.json";
@@ -20,46 +15,47 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  StatusBar,
+  Image,
 } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 const LANG = "gu" as const;
 const t = translations[LANG].login;
 
-// ─── Light Fresh Palette ──────────────────────────────────────────────────────
+// ─── Main app palette (matches index.tsx) ───────────────────────────────────────
 const C = {
-  // Sky-blue gradient background
-  grad1: "#1565A0",
-  grad2: "#1976D2",
-  grad3: "#2196F3",
-  grad4: "#64B5F6",
+  green900: "#1B5E20",
+  green700: "#2E7D32",
+  green500: "#4CAF50",
+  green400: "#66BB6A",
+  green100: "#C8E6C9",
+  green50: "#E8F5E9",
 
-  // Gold accent
-  accent: "#F9A825",
-  accentLight: "#FFD54F",
+  bg: "#F5F7F2",
+  surface: "#FFFFFF",
+  surfaceGreen: "#F1F8F1",
 
-  // Mint success
-  mint: "#00897B",
+  textPrimary: "#1A2E1C",
+  textSecondary: "#3D5C40",
+  textMuted: "#7A9B7E",
 
-  // Surfaces
+  income: "#2E7D32",
+  gold: "#F9A825",
+  goldPale: "#FFFDE7",
   white: "#FFFFFF",
-  inputBg: "#F0F8FF",
 
-  // Text
-  textDark: "#0D1B2A",
-  textMid: "#1A4A7A",
-  textMuted: "#7AADD4",
-
-  // Input borders
-  borderIdle: "#BDD9F0",
-  borderFocus: "#1565A0",
+  border: "#C8E6C9",
+  borderLight: "#EAF4EA",
 };
 
 export default function Login() {
@@ -72,7 +68,6 @@ export default function Login() {
   const heroSlide = useRef(new Animated.Value(50)).current;
   const cardFade = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(70)).current;
-  const floatAnim = useRef(new Animated.Value(0)).current;
   const inputScale = useRef(new Animated.Value(1)).current;
   const btnScale = useRef(new Animated.Value(1)).current;
   const btnShine = useRef(new Animated.Value(-width)).current;
@@ -124,24 +119,6 @@ export default function Login() {
         }),
       ]),
     ]).start();
-
-    // Tractor float — native driver
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnim, {
-          toValue: -10,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(floatAnim, {
-          toValue: 10,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
 
     // Wheat sway — native driver
     wheatAnims.forEach((a, i) => {
@@ -254,6 +231,7 @@ export default function Login() {
           useNativeDriver: true,
         }),
       ]).start();
+      if (digits.length === 10) Keyboard.dismiss();
     }
   };
 
@@ -288,7 +266,7 @@ export default function Login() {
 
   const borderColor = borderAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [C.borderIdle, C.borderFocus],
+    outputRange: [C.border, C.green700],
   });
   const checkSpin = checkRotate.interpolate({
     inputRange: [0, 1],
@@ -297,10 +275,12 @@ export default function Login() {
 
   return (
     <LinearGradient
-      colors={[C.grad1, C.grad2, C.grad3, C.grad4]}
-      locations={[0, 0.3, 0.65, 1]}
+      colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]}
       style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     >
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
       <View style={styles.circle1} />
       <View style={styles.circle2} />
       <View style={styles.circle3} />
@@ -308,7 +288,14 @@ export default function Login() {
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.kav}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.inner}>
           {/* ── Hero ── */}
           <Animated.View
@@ -317,14 +304,13 @@ export default function Login() {
               { opacity: heroFade, transform: [{ translateY: heroSlide }] },
             ]}
           >
-            <Animated.Text
-              style={[
-                styles.tractorEmoji,
-                { transform: [{ translateY: floatAnim }] },
-              ]}
-            >
-              🚜
-            </Animated.Text>
+            <View style={styles.logoCircle}>
+              <Image
+                source={require("../../assets/vadi-logo.png")}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
             <Text style={styles.appName}>{t.appName}</Text>
             <Text style={styles.tagline}>{t.tagline}</Text>
             <View style={styles.wheatRow}>
@@ -359,7 +345,7 @@ export default function Login() {
             ]}
           >
             <LinearGradient
-              colors={[C.grad1, C.grad3, C.accentLight]}
+              colors={[C.green700, C.green500, C.green400]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.cardBar}
@@ -389,7 +375,7 @@ export default function Login() {
                   onChangeText={handleChangeText}
                   onFocus={onFocusInput}
                   onBlur={onBlurInput}
-                  selectionColor={C.grad1}
+                  selectionColor={C.green700}
                 />
                 <Animated.Text
                   style={[
@@ -435,8 +421,8 @@ export default function Login() {
                 <LinearGradient
                   colors={
                     isValid
-                      ? [C.grad1, C.grad2, C.grad3]
-                      : ["#A8C8E0", "#BDD8EC"]
+                      ? [C.green700, C.green500, C.green400]
+                      : [C.green100, C.green50]
                   }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -451,7 +437,7 @@ export default function Login() {
                     />
                   )}
                   {loading ? (
-                    <ActivityIndicator color={C.white} size="small" />
+                    <ActivityIndicator color="#fff" size="small" />
                   ) : (
                     <View style={styles.btnRow}>
                       <Text
@@ -479,6 +465,7 @@ export default function Login() {
             🌾 ખેડૂત · ઉત્પાદક · સમૃદ્ધ 🌾
           </Animated.Text>
         </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
   );
@@ -499,7 +486,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "#ffffff09",
+    backgroundColor: C.green100 + "80",
     top: -80,
     right: -70,
   },
@@ -508,7 +495,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: "#ffffff07",
+    backgroundColor: C.green100 + "50",
     bottom: 40,
     left: -50,
   },
@@ -517,28 +504,39 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#FFD54F18",
+    backgroundColor: C.green50 + "CC",
     top: height * 0.42,
     left: 24,
   },
 
+  scrollView: { flex: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: "center", paddingVertical: 24 },
   heroBlock: { alignItems: "center", marginBottom: 26 },
-  tractorEmoji: {
-    fontSize: 76,
-    marginBottom: 10,
-    textShadowColor: "#00000028",
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 10,
+  logoCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 22,
+    backgroundColor: C.surface,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
+  logoImage: { width: 64, height: 64 },
   appName: {
     fontSize: 34,
     fontWeight: "900",
-    color: "#fff",
+    color: C.textPrimary,
     letterSpacing: 0.8,
   },
   tagline: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.82)",
+    color: C.textSecondary,
     marginTop: 5,
     fontWeight: "500",
   },
@@ -546,28 +544,30 @@ const styles = StyleSheet.create({
   wheatEmoji: { fontSize: 22 },
 
   card: {
-    backgroundColor: C.white,
-    borderRadius: 28,
+    backgroundColor: C.surface,
+    borderRadius: 20,
     paddingHorizontal: 22,
     paddingBottom: 22,
     paddingTop: 0,
-    elevation: 20,
     overflow: "hidden",
-    shadowColor: "#0D1B2A",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
+    borderWidth: 1.5,
+    borderColor: C.borderLight,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cardBar: { height: 5, marginHorizontal: -22, marginBottom: 22 },
   cardTitle: {
     fontSize: 20,
     fontWeight: "900",
-    color: C.textDark,
+    color: C.textPrimary,
     marginBottom: 4,
   },
   cardSub: {
     fontSize: 13,
-    color: C.textMid,
+    color: C.textSecondary,
     marginBottom: 18,
     fontWeight: "500",
   },
@@ -576,8 +576,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 2,
-    borderRadius: 18,
-    backgroundColor: C.inputBg,
+    borderRadius: 16,
+    backgroundColor: C.surfaceGreen,
     marginBottom: 14,
   },
   prefix: {
@@ -588,23 +588,23 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   flag: { fontSize: 20 },
-  prefixTxt: { fontSize: 16, fontWeight: "800", color: C.textDark },
+  prefixTxt: { fontSize: 16, fontWeight: "800", color: C.textPrimary },
   prefixDiv: {
     width: 1.5,
     height: 24,
-    backgroundColor: C.borderIdle,
+    backgroundColor: C.border,
     marginLeft: 10,
   },
   input: {
     flex: 1,
     fontSize: 22,
     fontWeight: "700",
-    color: C.textDark,
+    color: C.textPrimary,
     paddingVertical: 16,
     paddingRight: 8,
     letterSpacing: 3,
   },
-  check: { fontSize: 22, color: C.mint, paddingRight: 16, fontWeight: "900" },
+  check: { fontSize: 22, color: C.income, paddingRight: 16, fontWeight: "900" },
 
   dotsRow: {
     flexDirection: "row",
@@ -613,8 +613,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   dot: { flex: 1, height: 5, borderRadius: 3 },
-  dotOn: { backgroundColor: C.grad2 },
-  dotOff: { backgroundColor: "#D0E8F8" },
+  dotOn: { backgroundColor: C.green700 },
+  dotOff: { backgroundColor: C.green100 },
   dotHint: {
     fontSize: 12,
     color: C.textMuted,
@@ -645,14 +645,14 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.5,
   },
-  btnArrow: { color: C.accentLight, fontSize: 22, fontWeight: "900" },
-  btnTxtOff: { color: "#88B8D8" },
+  btnArrow: { color: C.goldPale, fontSize: 22, fontWeight: "900" },
+  btnTxtOff: { color: C.textMuted },
 
   hintRow: { alignItems: "center" },
   hintTxt: { color: C.textMuted, fontSize: 12, fontWeight: "500" },
   bottomTag: {
     textAlign: "center",
-    color: "rgba(255,255,255,0.4)",
+    color: C.textMuted,
     fontSize: 12,
     marginTop: 20,
     letterSpacing: 1,

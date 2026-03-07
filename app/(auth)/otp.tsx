@@ -24,7 +24,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
@@ -36,25 +38,28 @@ const OTP_LENGTH = 6;
 const LANG = "gu" as const;
 const t = translations[LANG].otp;
 
-// ─── Same Light Palette ───────────────────────────────────────────────────────
+// ─── Dashboard-matching palette ───────────────────────────────────────────────
 const C = {
-  grad1: "#1565A0",
-  grad2: "#1976D2",
-  grad3: "#2196F3",
-  grad4: "#64B5F6",
+  green900: "#1B5E20",
+  green700: "#2E7D32",
+  green500: "#4CAF50",
+  green400: "#66BB6A",
+  green100: "#C8E6C9",
+  green50: "#E8F5E9",
+  bg: "#F5F7F2",
+  surface: "#FFFFFF",
+  surfaceGreen: "#F1F8F1",
+  textPrimary: "#1A2E1C",
+  textSecondary: "#3D5C40",
+  textMuted: "#7A9B7E",
   accent: "#F9A825",
-  accentLight: "#FFD54F",
-  mint: "#00897B",
-  mintPale: "#E0F2F1",
+  accentLight: "#FFFDE7",
   white: "#FFFFFF",
-  inputBg: "#F0F8FF",
-  textDark: "#0D1B2A",
-  textMid: "#1A4A7A",
-  textMuted: "#7AADD4",
-  borderIdle: "#BDD9F0",
-  borderFilled: "#1565A0",
+  inputBg: "#F1F8F1",
+  borderIdle: "#EAF4EA",
+  borderFilled: "#2E7D32",
   borderError: "#C62828",
-  bgFilled: "#E8F4FF",
+  bgFilled: "#E8F5E9",
   bgError: "#FFEBEE",
   error: "#C62828",
   errorPale: "#FFEBEE",
@@ -76,6 +81,7 @@ export default function OTP() {
   const [success, setSuccess] = useState(false);
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
+  const hiddenOtpRef = useRef<TextInput>(null);
 
   // ── Native driver: true (transforms only) ────────────────────────────────
   const heroFade = useRef(new Animated.Value(0)).current;
@@ -227,11 +233,15 @@ export default function OTP() {
     next[i] = digit;
     setOtp(next);
     if (digit) {
-      animateBoxScale(i); // native
-      animateBoxFill(i, 1); // non-native
-      if (i < OTP_LENGTH - 1) inputRefs.current[i + 1]?.focus();
+      animateBoxScale(i);
+      animateBoxFill(i, 1);
+      if (i < OTP_LENGTH - 1) {
+        inputRefs.current[i + 1]?.focus();
+      } else {
+        Keyboard.dismiss();
+      }
     } else {
-      animateBoxFill(i, 0); // non-native
+      animateBoxFill(i, 0);
     }
   };
 
@@ -365,6 +375,7 @@ export default function OTP() {
     setError("");
     try {
       const data = await verifyOtp(phone, otp.join(""), sessionId);
+      console.log("verify: data", data);
       setSuccess(true);
       launchConfetti();
       Animated.parallel([
@@ -381,9 +392,8 @@ export default function OTP() {
         }),
       ]).start();
       setTimeout(() => {
-        if (!data.consentGiven) router.replace("/(auth)/consent");
-        else if (!data.isProfileCompleted)
-          router.replace("/(auth)/profile-setup");
+        if (!data.isProfileCompleted) router.replace("/(auth)/profile-setup");
+        else if (!data.consentGiven) router.replace("/(auth)/consent");
         else router.replace("/(tabs)");
       }, 1400);
     } catch (err: any) {
@@ -403,7 +413,7 @@ export default function OTP() {
   });
   const timerColor = timerAnim.interpolate({
     inputRange: [0, 0.3, 1],
-    outputRange: [C.error, C.accent, C.grad2],
+    outputRange: [C.error, C.accent, C.green700],
   });
   const subtitle = t.subtitle.replace("{phone}", phone ?? "");
   const resendWait = t.resendWait.replace("{seconds}", String(resendTimer));
@@ -411,10 +421,12 @@ export default function OTP() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <LinearGradient
-        colors={[C.grad1, C.grad2, C.grad3, C.grad4]}
-        locations={[0, 0.3, 0.65, 1]}
+        colors={[C.green50, "#EEF6EE", C.bg]}
         style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
+        <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
         <View style={styles.circle1} />
         <View style={styles.circle2} />
 
@@ -448,8 +460,10 @@ export default function OTP() {
               ]}
             >
               <LinearGradient
-                colors={[C.grad1, C.grad3]}
+                colors={[C.green700, C.green500]}
                 style={styles.successGrad}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
               >
                 <Text style={styles.successEmoji}>✅</Text>
                 <Text style={styles.successTxt}>{t.successMsg}</Text>
@@ -462,7 +476,14 @@ export default function OTP() {
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
           <View style={styles.inner}>
             {/* Back */}
             <Animated.View style={{ opacity: heroFade }}>
@@ -506,12 +527,41 @@ export default function OTP() {
               ]}
             >
               <LinearGradient
-                colors={[C.grad1, C.grad3, C.accentLight]}
+                colors={[C.green700, C.green500, C.green400]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.cardBar}
               />
               <Text style={styles.cardTitle}>OTP દાખલ કરો</Text>
+
+              <Pressable
+                onPress={() => hiddenOtpRef.current?.focus()}
+                style={styles.pasteOtpBtn}
+              >
+                <Text style={styles.pasteOtpTxt}>📩 SMS માંથી OTP લાવો</Text>
+              </Pressable>
+
+              {/* Hidden input for SMS OTP autofill (iOS oneTimeCode / Android sms-otp) */}
+              <TextInput
+                style={styles.hiddenOtpInput}
+                ref={hiddenOtpRef}
+                defaultValue=""
+                onChangeText={(text) => {
+                  const digits = text.replace(/\D/g, "").slice(0, OTP_LENGTH);
+                  if (digits.length >= OTP_LENGTH) {
+                    const arr = digits.split("").slice(0, OTP_LENGTH);
+                    setOtp(arr);
+                    setError("");
+                    arr.forEach((_, idx) => animateBoxFill(idx, 1));
+                    Keyboard.dismiss();
+                  }
+                }}
+                keyboardType="number-pad"
+                maxLength={OTP_LENGTH}
+                autoComplete="sms-otp"
+                textContentType="oneTimeCode"
+                caretHidden
+              />
 
               {/* OTP Boxes */}
               <Animated.View
@@ -564,7 +614,7 @@ export default function OTP() {
                             onKeyPress={({ nativeEvent }) =>
                               handleKey(nativeEvent.key, i)
                             }
-                            selectionColor={C.grad1}
+                            selectionColor={C.green700}
                             caretHidden
                           />
                         </Animated.View>
@@ -623,8 +673,8 @@ export default function OTP() {
                   <LinearGradient
                     colors={
                       isComplete
-                        ? [C.grad1, C.grad2, C.grad3]
-                        : ["#A8C8E0", "#BDD8EC"]
+                        ? [C.green700, C.green500, C.green400]
+                        : [C.green100, C.green50]
                     }
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
@@ -705,6 +755,7 @@ export default function OTP() {
               ))}
             </Animated.View>
           </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>
     </TouchableWithoutFeedback>
@@ -712,13 +763,13 @@ export default function OTP() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: C.bg },
   circle1: {
     position: "absolute",
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "#ffffff09",
+    backgroundColor: C.green100 + "80",
     top: -90,
     right: -70,
   },
@@ -727,14 +778,14 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: "#ffffff07",
+    backgroundColor: C.green100 + "50",
     bottom: 60,
     left: -50,
   },
 
   successOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(10,30,60,0.7)",
+    backgroundColor: "rgba(26,46,28,0.75)",
     zIndex: 99,
     justifyContent: "center",
     alignItems: "center",
@@ -746,12 +797,29 @@ const styles = StyleSheet.create({
   successSub: { fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 6 },
   confetti: { position: "absolute", fontSize: 22 },
 
+  scrollContent: { flexGrow: 1, justifyContent: "center", paddingVertical: 24, paddingBottom: 20 },
   inner: {
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 22,
     paddingBottom: 20,
     paddingTop: 50,
+  },
+  pasteOtpBtn: {
+    alignSelf: "center",
+    marginBottom: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: C.green50,
+  },
+  pasteOtpTxt: { fontSize: 13, color: C.green700, fontWeight: "700" },
+  hiddenOtpInput: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    opacity: 0,
+    zIndex: -1,
   },
 
   backBtn: {
@@ -762,55 +830,59 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 20,
-    backgroundColor: "#ffffff18",
+    backgroundColor: C.green50,
+    borderWidth: 1,
+    borderColor: C.green100,
     marginBottom: 10,
   },
-  backArrow: { fontSize: 18, color: C.white, fontWeight: "700" },
-  backTxt: { color: "rgba(255,255,255,0.9)", fontSize: 14, fontWeight: "600" },
+  backArrow: { fontSize: 18, color: C.green700, fontWeight: "700" },
+  backTxt: { color: C.textPrimary, fontSize: 14, fontWeight: "600" },
 
   heroBlock: { alignItems: "center", marginBottom: 22 },
   lockEmoji: { fontSize: 70, marginBottom: 10 },
   title: {
     fontSize: 28,
     fontWeight: "900",
-    color: C.white,
+    color: C.textPrimary,
     letterSpacing: 0.3,
   },
   subtitle: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.82)",
+    color: C.textSecondary,
     marginTop: 6,
     textAlign: "center",
   },
   phonePill: {
     marginTop: 10,
-    backgroundColor: "#ffffff22",
+    backgroundColor: C.surfaceGreen,
     paddingHorizontal: 18,
     paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#ffffff30",
+    borderColor: C.green100,
   },
-  phonePillTxt: { color: C.white, fontSize: 14, fontWeight: "700" },
+  phonePillTxt: { color: C.textPrimary, fontSize: 14, fontWeight: "700" },
 
   card: {
-    backgroundColor: C.white,
+    backgroundColor: C.surface,
     borderRadius: 28,
     paddingHorizontal: 22,
     paddingBottom: 22,
     paddingTop: 0,
-    elevation: 20,
+    elevation: 8,
     overflow: "hidden",
-    shadowColor: "#0D1B2A",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
+    shadowColor: "#1A2E1C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    borderWidth: 1,
+    borderColor: C.borderIdle,
   },
   cardBar: { height: 5, marginHorizontal: -22, marginBottom: 20 },
   cardTitle: {
     fontSize: 18,
     fontWeight: "900",
-    color: C.textDark,
+    color: C.textPrimary,
     marginBottom: 18,
   },
 
@@ -827,12 +899,12 @@ const styles = StyleSheet.create({
   otpInput: {
     fontSize: 26,
     fontWeight: "900",
-    color: C.textDark,
+    color: C.textPrimary,
     textAlign: "center",
     width: "100%",
     height: "100%",
   },
-  otpInputFilled: { color: C.grad1 },
+  otpInputFilled: { color: C.green700 },
 
   errorTxt: {
     color: C.error,
@@ -852,12 +924,12 @@ const styles = StyleSheet.create({
   timerBg: {
     flex: 1,
     height: 6,
-    backgroundColor: "#D0E8F8",
+    backgroundColor: C.green100,
     borderRadius: 3,
     overflow: "hidden",
   },
   timerFill: { height: "100%", borderRadius: 3 },
-  timerLbl: { fontSize: 13, color: C.textMid, fontWeight: "700", minWidth: 36 },
+  timerLbl: { fontSize: 13, color: C.textSecondary, fontWeight: "700", minWidth: 36 },
 
   verifyBtn: { borderRadius: 18, overflow: "hidden" },
   verifyGrad: {
@@ -882,7 +954,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   verifyCheck: { color: C.accentLight, fontSize: 22, fontWeight: "900" },
-  verifyTxtOff: { color: "#88B8D8" },
+  verifyTxtOff: { color: C.textMuted },
 
   divRow: {
     flexDirection: "row",
@@ -890,7 +962,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     gap: 10,
   },
-  divLine: { flex: 1, height: 1, backgroundColor: "#D8EDF8" },
+  divLine: { flex: 1, height: 1, backgroundColor: C.green100 },
   divLbl: { color: C.textMuted, fontSize: 12 },
 
   resendBtn: {
@@ -898,11 +970,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 4,
     borderRadius: 14,
-    backgroundColor: "#EEF6FF",
+    backgroundColor: C.surfaceGreen,
   },
   resendRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   resendIcon: { fontSize: 16 },
-  resendTxt: { color: C.grad2, fontSize: 16, fontWeight: "800" },
+  resendTxt: { color: C.green700, fontSize: 16, fontWeight: "800" },
   resendWait: {
     color: C.textMuted,
     fontSize: 13,
@@ -923,6 +995,6 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  dotOff: { backgroundColor: "rgba(255,255,255,0.3)" },
-  dotOn: { backgroundColor: C.white },
+  dotOff: { backgroundColor: C.green100 },
+  dotOn: { backgroundColor: C.green700 },
 });

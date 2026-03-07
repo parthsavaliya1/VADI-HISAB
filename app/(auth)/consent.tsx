@@ -90,7 +90,7 @@ export default function Consent() {
         setLoading(true);
         try {
             await saveConsent(selected);
-            router.replace("/(auth)/profile-setup");
+            router.replace("/(tabs)");
         } catch (err: any) {
             Alert.alert(t.errTitle, err.message);
         } finally {
@@ -105,7 +105,7 @@ export default function Consent() {
     ];
 
     return (
-        <LinearGradient colors={["#0D3B1E", "#1B5E20", "#2E7D32", "#43A047"]} locations={[0, 0.3, 0.65, 1]} style={styles.container}>
+        <LinearGradient colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]} style={styles.container} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <View style={styles.circle1} />
             <View style={styles.circle2} />
             <View style={styles.circle3} />
@@ -233,12 +233,12 @@ export default function Consent() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     inner: { flex: 1, justifyContent: "center", paddingHorizontal: 22, paddingBottom: 20, paddingTop: Platform.OS === "ios" ? 60 : 40 },
-    circle1: { position: "absolute", width: 280, height: 280, borderRadius: 140, backgroundColor: "rgba(255,255,255,0.04)", top: -80, right: -80 },
-    circle2: { position: "absolute", width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(255,255,255,0.05)", bottom: 100, left: -50 },
-    circle3: { position: "absolute", width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(255,255,255,0.06)", top: 200, left: 30 },
+    circle1: { position: "absolute", width: 280, height: 280, borderRadius: 140, backgroundColor: "rgba(200,230,201,0.5)", top: -80, right: -80 },
+    circle2: { position: "absolute", width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(200,230,201,0.35)", bottom: 100, left: -50 },
+    circle3: { position: "absolute", width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(200,230,201,0.4)", top: 200, left: 30 },
     heroEmoji: { fontSize: 70, marginBottom: 10 },
-    heading: { fontSize: 24, fontWeight: "900", color: "white", letterSpacing: 0.3 },
-    question: { fontSize: 14, color: "rgba(255,255,255,0.78)", marginTop: 8, textAlign: "center", lineHeight: 22 },
+    heading: { fontSize: 24, fontWeight: "900", color: "#1A2E1C", letterSpacing: 0.3 },
+    question: { fontSize: 14, color: "#3D5C40", marginTop: 8, textAlign: "center", lineHeight: 22 },
     card: { backgroundColor: "white", borderRadius: 28, padding: 22, elevation: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 20 },
     whyLabel: { fontSize: 12, fontWeight: "700", color: "#9E9E9E", letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 },
     featureRow: { flexDirection: "row", alignItems: "center", marginBottom: 14, gap: 14 },
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     proceedTextOff: { color: "#BDBDBD" },
     stepsRow: { flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 22 },
     stepDot: { height: 6, borderRadius: 3 },
-    stepDotActive: { width: 24, backgroundColor: "white" },
-    stepDotDone: { width: 10, backgroundColor: "rgba(255,255,255,0.8)" },
-    stepDotPending: { width: 10, backgroundColor: "rgba(255,255,255,0.3)" },
+    stepDotActive: { width: 24, backgroundColor: "#2E7D32" },
+    stepDotDone: { width: 10, backgroundColor: "#4CAF50" },
+    stepDotPending: { width: 10, backgroundColor: "#C8E6C9" },
 });

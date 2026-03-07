@@ -10,7 +10,7 @@ import axios from "axios";
 //           Phone & computer must be on SAME WiFi
 // 🚀 PROD:  Uncomment the render/production line
 
-const BASE_URL = "http://192.168.1.3:8000/api"; // 🔧 Change IP here
+const BASE_URL = "http://192.168.1.6:8000/api"; // 🔧 Change IP here
 // const BASE_URL = "https://vadi-backend.onrender.com/api"; // 🚀 Production
 
 // ─── Axios Instance ───────────────────────────
@@ -66,9 +66,7 @@ API.interceptors.response.use(
 
     if (error.code === "ECONNREFUSED") {
       return Promise.reject(
-        new Error(
-          "Connection refused — check server is running and port is correct",
-        ),
+        new Error("Connection refused — check server is running and port is correct"),
       );
     }
     if (error.code === "ENETUNREACH" || error.code === "ENOTFOUND") {
@@ -99,13 +97,16 @@ API.interceptors.response.use(
   },
 );
 
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📦 TYPES
+// 📦 SHARED / COMMON TYPES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export type LandUnit = "acre" | "bigha";
 export type WaterSource = "Rain" | "Borewell" | "Canal";
 export type LabourType = "Family" | "Hired" | "Mixed";
+/** Tractor services when tractor is available: Rotavator, RAP, Bagi, Savda, etc. */
+export type TractorService = "Rotavator" | "RAP" | "Bagi" | "Savda";
 export type District =
   | "Rajkot"
   | "Jamnagar"
@@ -116,6 +117,11 @@ export type District =
   | "Surendranagar"
   | "Other";
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🔐 AUTH TYPES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 export interface SendOtpResponse {
   message: string;
   sessionId: string;
@@ -125,6 +131,7 @@ export interface VerifyOtpResponse {
   token: string;
   isNewUser: boolean;
   isProfileCompleted: boolean;
+  /** false = show consent screen */
   consentGiven: boolean;
 }
 
@@ -133,27 +140,19 @@ export interface ConsentResponse {
   analyticsConsent: boolean;
 }
 
-export interface FarmerProfilePayload {
-  name: string;
-  village: string;
-  district: District;
-  totalLand: { value: number; unit: LandUnit };
-  waterSource: WaterSource;
-  tractorAvailable: boolean;
-  labourType: LabourType;
-}
-
-export interface FarmerProfile extends FarmerProfilePayload {
+/** Returned by GET /auth/me */
+export interface CurrentUser {
   _id: string;
-  user: string;
+  phone: string;
+  role: string;
+  isProfileCompleted: boolean;
+  /** null = not yet asked, true = agreed, false = declined */
+  analyticsConsent: boolean | null;
+  lastActiveAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ProfileResponse {
-  message: string;
-  profile: FarmerProfile;
-}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🔐 AUTH APIs
@@ -171,6 +170,9 @@ export const verifyOtp = async (
   otp: string,
   sessionId: string,
 ): Promise<VerifyOtpResponse> => {
+
+  console.log("verifyOtp: phone", phone, "otp", otp, "sessionId", sessionId);
+
   const res = await API.post<VerifyOtpResponse>("/auth/verify-otp", {
     phone,
     otp,
@@ -180,19 +182,63 @@ export const verifyOtp = async (
   return res.data;
 };
 
-/** POST /auth/consent */
-export const saveConsent = async (
-  consent: boolean,
-): Promise<ConsentResponse> => {
+/** POST /auth/consent — call once after first profile setup */
+export const saveConsent = async (consent: boolean): Promise<ConsentResponse> => {
   const res = await API.post<ConsentResponse>("/auth/consent", { consent });
   return res.data;
 };
+
+/**
+ * GET /auth/me
+ * Returns current user's account info.
+ * Use on app load to check consent & profile status.
+ */
+export const getMe = async (): Promise<CurrentUser> => {
+  const res = await API.get<{ user: CurrentUser }>("/auth/me");
+  return res.data.user;
+};
+
+/** Logout — clears JWT from AsyncStorage */
+export const logout = async (): Promise<void> => {
+  await TokenStore.clear();
+};
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 👤 PROFILE TYPES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export interface FarmerProfilePayload {
+  name: string;
+  district: District;
+  taluka: string;
+  village: string;
+  totalLand: { value: number; unit: LandUnit };
+  waterSources: WaterSource[];
+  tractorAvailable: boolean;
+  /** Services offered when tractor available: Rotavator, RAP, Bagi, Savda, etc. */
+  implementsAvailable?: TractorService[];
+  labourTypes: LabourType[];
+}
+
+export interface FarmerProfile extends FarmerProfilePayload {
+  _id: string;
+  user: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProfileResponse {
+  message: string;
+  profile: FarmerProfile;
+}
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 👤 PROFILE APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/** POST /profile/complete */
+/** POST /profile/complete — first-time setup only */
 export const completeProfile = async (
   payload: FarmerProfilePayload,
 ): Promise<ProfileResponse> => {
@@ -202,8 +248,8 @@ export const completeProfile = async (
 
 /** GET /profile/me */
 export const getMyProfile = async (): Promise<FarmerProfile> => {
-  const res = await API.get<FarmerProfile>("/profile/me");
-  return res.data;
+  const res = await API.get<{ profile: FarmerProfile }>("/profile/me");
+  return res.data.profile;
 };
 
 /** PUT /profile/update */
@@ -214,10 +260,6 @@ export const updateProfile = async (
   return res.data;
 };
 
-/** Logout — clears JWT from AsyncStorage */
-export const logout = async (): Promise<void> => {
-  await TokenStore.clear();
-};
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🌾 CROP TYPES
@@ -228,19 +270,30 @@ export type CropStatus = "Active" | "Harvested" | "Closed";
 export type AreaUnit = "Acre" | "Bigha" | "Hectare";
 
 export interface CropPayload {
-  userId?: string;
   season: CropSeason;
   cropName: string;
   cropEmoji?: string;
+  /** Variety/sub-type e.g. "Desi", "GW-496" */
+  subType?: string;
+  /** Distinguish same crop grown twice: "Batch 1", "Field A" */
+  batchLabel?: string;
+  year?: number;
   area: number;
   areaUnit?: AreaUnit;
+  sowingDate?: string | null;
+  harvestDate?: string | null;
   status?: CropStatus;
   notes?: string;
+  /** Farmer's expected harvest in kg — used for yield efficiency tracking */
+  expectedYieldKg?: number | null;
 }
 
 export interface Crop extends CropPayload {
   _id: string;
   userId: string;
+  actualYieldKg: number | null;
+  /** Virtual: (actualYieldKg / expectedYieldKg) * 100 */
+  yieldEfficiency: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -256,16 +309,59 @@ export interface CropListResponse {
   };
 }
 
+// ── Yearly report types ───────────────────────────────────────────────────────
+
+export interface CropReportRow extends Crop {
+  income: number;
+  expense: number;
+  profit: number;
+}
+
+export interface SeasonBreakdown {
+  income: number;
+  expense: number;
+  profit: number;
+  crops: number;
+  area: number;
+}
+
+export interface YearlyReportResponse {
+  success: boolean;
+  year: number;
+  crops: CropReportRow[];
+  seasonBreakdown: Record<CropSeason, SeasonBreakdown>;
+  summary: {
+    totalIncome: number;
+    totalExpense: number;
+    netProfit: number;
+    totalCrops: number;
+    totalArea: number;
+  };
+}
+
+export interface YearsResponse {
+  success: boolean;
+  /** Sorted newest first */
+  years: number[];
+}
+
+// ── Harvest patch types ───────────────────────────────────────────────────────
+
+export interface HarvestPayload {
+  /** ISO date string — defaults to today if omitted */
+  harvestDate?: string;
+  /** Actual yield in kg recorded at harvest */
+  actualYieldKg?: number;
+}
+
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🌾 CROP APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /** POST /crops */
 export const createCrop = async (payload: CropPayload): Promise<Crop> => {
-  const res = await API.post<{ success: boolean; data: Crop }>(
-    "/crops",
-    payload,
-  );
+  const res = await API.post<{ success: boolean; data: Crop }>("/crops", payload);
   return res.data.data;
 };
 
@@ -275,9 +371,10 @@ export const getCrops = async (
   limit = 20,
   season?: CropSeason,
   status?: CropStatus,
+  year?: number,
 ): Promise<CropListResponse> => {
   const res = await API.get<CropListResponse>("/crops", {
-    params: { page, limit, season, status },
+    params: { page, limit, season, status, year },
   });
   return res.data;
 };
@@ -291,12 +388,9 @@ export const getCropById = async (id: string): Promise<Crop> => {
 /** PUT /crops/:id */
 export const updateCrop = async (
   id: string,
-  payload: Partial<CropPayload>,
+  payload: Partial<CropPayload> & { actualYieldKg?: number | null },
 ): Promise<Crop> => {
-  const res = await API.put<{ success: boolean; data: Crop }>(
-    `/crops/${id}`,
-    payload,
-  );
+  const res = await API.put<{ success: boolean; data: Crop }>(`/crops/${id}`, payload);
   return res.data.data;
 };
 
@@ -312,10 +406,43 @@ export const updateCropStatus = async (
   return res.data.data;
 };
 
-/** DELETE /crops/:id */
+/**
+ * PATCH /crops/:id/harvest
+ * Marks crop as Harvested. Optionally records harvestDate and actualYieldKg.
+ */
+export const markCropHarvested = async (
+  id: string,
+  payload?: HarvestPayload,
+): Promise<Crop> => {
+  const res = await API.patch<{ success: boolean; data: Crop }>(
+    `/crops/${id}/harvest`,
+    payload ?? {},
+  );
+  return res.data.data;
+};
+
+/** DELETE /crops/:id — also deletes all linked expenses and income */
 export const deleteCrop = async (id: string): Promise<void> => {
   await API.delete(`/crops/${id}`);
 };
+
+/** GET /crops/report/years — which years have data for the current user */
+export const getCropYears = async (): Promise<number[]> => {
+  const res = await API.get<YearsResponse>("/crops/report/years");
+  return res.data.years;
+};
+
+/**
+ * GET /crops/report/yearly
+ * Full per-crop income/expense/profit breakdown for a given year.
+ */
+export const getYearlyReport = async (year?: number): Promise<YearlyReportResponse> => {
+  const res = await API.get<YearlyReportResponse>("/crops/report/yearly", {
+    params: { year },
+  });
+  return res.data;
+};
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 💰 EXPENSE TYPES
@@ -329,31 +456,10 @@ export type ExpenseCategory =
   | "Machinery";
 
 export type SeedType = "Company Brand" | "Local/Desi" | "Hybrid";
-export type FertilizerProduct =
-  | "Urea"
-  | "DAP"
-  | "NPK"
-  | "Organic"
-  | "Sulphur"
-  | "Micronutrients";
-export type PesticideCategory =
-  | "Insecticide"
-  | "Fungicide"
-  | "Herbicide"
-  | "Growth Booster";
-export type LabourTask =
-  | "Weeding"
-  | "Sowing"
-  | "Spraying"
-  | "Harvesting"
-  | "Irrigation";
-export type AdvanceReason =
-  | "Medical"
-  | "Grocery"
-  | "Mobile Recharge"
-  | "Festival"
-  | "Loan"
-  | "Other";
+export type FertilizerProduct = "Urea" | "DAP" | "NPK" | "Organic" | "Sulphur" | "Micronutrients";
+export type PesticideCategory = "Insecticide" | "Fungicide" | "Herbicide" | "Growth Booster";
+export type LabourTask = "Weeding" | "Sowing" | "Spraying" | "Harvesting" | "Irrigation";
+export type AdvanceReason = "Medical" | "Grocery" | "Mobile Recharge" | "Festival" | "Loan" | "Other";
 export type MachineryImplement =
   | "Rotavator"
   | "Plough"
@@ -362,6 +468,8 @@ export type MachineryImplement =
   | "Tractor Rental"
   | "બલૂન (Baluun)"
   | "રેપ (Rap)";
+
+// ── Sub-payload types (what you send) ─────────────────────────────────────────
 
 export interface SeedExpensePayload {
   seedType: SeedType;
@@ -401,7 +509,6 @@ export interface MachineryExpensePayload {
 }
 
 export interface ExpensePayload {
-  userId?: string;
   cropId: string;
   category: ExpenseCategory;
   date?: string;
@@ -414,21 +521,35 @@ export interface ExpensePayload {
   machinery?: MachineryExpensePayload;
 }
 
+// ── What the API returns (includes server-derived fields) ─────────────────────
+
 export interface SeedExpense extends SeedExpensePayload {
+  /** Server-computed: totalCost / quantityKg */
   ratePerKg?: number;
 }
+
 export interface LabourDailyExpense extends LabourDailyPayload {
+  /** Server-computed: numberOfPeople × days × dailyRate */
   totalCost: number;
 }
+
 export interface MachineryExpense extends MachineryExpensePayload {
+  /** Server-computed: hoursOrAcres × rate */
   totalCost: number;
 }
 
 export interface Expense {
   _id: string;
-  userId?: string;
+  userId: string;
   cropId: string;
   category: ExpenseCategory;
+  /**
+   * Top-level total cost — single source of truth for all report aggregations.
+   * Always set by server pre-save hook regardless of category.
+   */
+  amount: number;
+  /** Denormalized year (from date) — enables fast year filtering */
+  year: number;
   date: string;
   notes?: string;
   seed?: SeedExpense;
@@ -452,18 +573,28 @@ export interface ExpenseListResponse {
   };
 }
 
+export interface ExpenseSummaryItem {
+  /** ExpenseCategory value */
+  _id: string;
+  total: number;
+  count: number;
+}
+
+export interface ExpenseSummaryResponse {
+  success: boolean;
+  year: string | number;
+  summary: ExpenseSummaryItem[];
+  grandTotal: number;
+}
+
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 💰 EXPENSE APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /** POST /expenses */
-export const createExpense = async (
-  payload: ExpensePayload,
-): Promise<Expense> => {
-  const res = await API.post<{ success: boolean; data: Expense }>(
-    "/expenses",
-    payload,
-  );
+export const createExpense = async (payload: ExpensePayload): Promise<Expense> => {
+  const res = await API.post<{ success: boolean; data: Expense }>("/expenses", payload);
   return res.data.data;
 };
 
@@ -471,20 +602,35 @@ export const createExpense = async (
 export const getExpenses = async (
   cropId?: string,
   category?: ExpenseCategory,
+  year?: number,
   page = 1,
   limit = 100,
 ): Promise<ExpenseListResponse> => {
   const res = await API.get<ExpenseListResponse>("/expenses", {
-    params: { cropId, category, page, limit },
+    params: { cropId, category, year, page, limit },
+  });
+  return res.data;
+};
+
+/**
+ * GET /expenses/summary
+ * Returns total expenses grouped by category + grandTotal.
+ * @param year    e.g. 2025 — pass undefined for all-time
+ * @param cropId  filter to a specific crop
+ */
+export const getExpenseSummary = async (
+  year?: number,
+  cropId?: string,
+): Promise<ExpenseSummaryResponse> => {
+  const res = await API.get<ExpenseSummaryResponse>("/expenses/summary", {
+    params: { year, cropId },
   });
   return res.data;
 };
 
 /** GET /expenses/:id */
 export const getExpenseById = async (id: string): Promise<Expense> => {
-  const res = await API.get<{ success: boolean; data: Expense }>(
-    `/expenses/${id}`,
-  );
+  const res = await API.get<{ success: boolean; data: Expense }>(`/expenses/${id}`);
   return res.data.data;
 };
 
@@ -493,21 +639,42 @@ export const deleteExpense = async (id: string): Promise<void> => {
   await API.delete(`/expenses/${id}`);
 };
 
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🌱 INCOME TYPES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export type IncomeCategory =
-  | "Crop Sale"
-  | "Subsidy"
-  | "Rental Income"
+export type IncomeCategory = "Crop Sale" | "Subsidy" | "Rental Income" | "Other";
+
+export type SubsidySchemeType =
+  | "PM-KISAN"
+  | "Fasal Bima (Crop Insurance)"
+  | "Seed Subsidy"
+  | "Fertilizer Subsidy"
+  | "Irrigation Subsidy"
+  | "Equipment Subsidy"
+  | "Other Government Scheme";
+
+export type RentalAssetType =
+  | "Tractor"
+  | "Rotavator"
+  | "Thresher"
+  | "Land"
+  | "Water Pump"
+  | "Other Equipment";
+
+export type OtherIncomeSource =
+  | "Labour Work"
+  | "Animal Husbandry"
+  | "Dairy"
+  | "Part-time Work"
+  | "Loan Received"
   | "Other";
 
-// ── Sub-payload types (what you send to the API) ──────────────────────────────
+// ── Sub-payload types (what you send) ─────────────────────────────────────────
 
 export interface CropSalePayload {
-  /** If cropId is NOT passed at the top level, provide the crop name here */
-  cropName?: string;
+  // cropName removed — use cropId at the top level to link to the Crop document
   quantityKg: number;
   pricePerKg: number;
   buyerName?: string;
@@ -515,25 +682,39 @@ export interface CropSalePayload {
 }
 
 export interface SubsidyPayload {
-  schemeType: string;
+  schemeType: SubsidySchemeType;
   amount: number;
   referenceNumber?: string;
 }
 
 export interface RentalIncomePayload {
-  assetType: string;
+  assetType: RentalAssetType;
   rentedToName?: string;
   hoursOrDays: number;
   ratePerUnit: number;
 }
 
 export interface OtherIncomePayload {
-  source: string;
+  source: OtherIncomeSource;
   amount: number;
   description?: string;
 }
 
-// ── What the API returns (includes derived fields) ────────────────────────────
+// ── Full income payload sent to POST /income ──────────────────────────────────
+
+export interface IncomePayload {
+  /** Optional — links income to a specific crop (required for Crop Sale) */
+  cropId?: string;
+  category: IncomeCategory;
+  date?: string;
+  notes?: string;
+  cropSale?: CropSalePayload;
+  subsidy?: SubsidyPayload;
+  rentalIncome?: RentalIncomePayload;
+  otherIncome?: OtherIncomePayload;
+}
+
+// ── What the API returns (includes server-derived fields) ─────────────────────
 
 export interface CropSaleIncome extends CropSalePayload {
   /** Server-computed: quantityKg × pricePerKg */
@@ -545,26 +726,18 @@ export interface RentalIncomeIncome extends RentalIncomePayload {
   totalAmount?: number;
 }
 
-// ── Full income payload sent to POST /income ──────────────────────────────────
-export interface IncomePayload {
-  /** Optional — links income to a specific crop */
-  cropId?: string;
-  category: IncomeCategory;
-  date?: string;
-  notes?: string;
-  cropSale?: CropSalePayload;
-  subsidy?: SubsidyPayload;
-  rentalIncome?: RentalIncomePayload;
-  otherIncome?: OtherIncomePayload;
-}
-
-// ── Full income document returned by the API ─────────────────────────────────
 export interface Income {
   _id: string;
-  userId?: string;
-  /** Populated when ?populate=true or returned as object by backend */
+  userId: string;
   cropId?: string | { _id: string; cropName: string };
   category: IncomeCategory;
+  /**
+   * Top-level total amount — single source of truth for all report aggregations.
+   * Always set by server pre-save hook regardless of category.
+   */
+  amount: number;
+  /** Denormalized year (from date) — enables fast year filtering */
+  year: number;
   date: string;
   notes?: string;
   cropSale?: CropSaleIncome;
@@ -599,14 +772,43 @@ export interface IncomeSummaryResponse {
   grandTotal: number;
 }
 
+// ── Analytics response (GET /income/analytics) ────────────────────────────────
+
+export interface TopCropByIncome {
+  /** cropName from Crop document */
+  _id: string;
+  total: number;
+}
+
+export interface IncomeAnalyticsResponse {
+  success: boolean;
+  year: number;
+  /** This user's total income for the year */
+  myTotal: number;
+  /** Average income across all consenting users (filtered by district if passed) */
+  avgTotal: number;
+  /** % of farmers earning less than this user — null if not enough data */
+  percentileRank: number | null;
+  /** Top crop by Crop Sale income for this user this year */
+  topCropByIncome: TopCropByIncome | null;
+  /** Human-readable advice strings based on comparison */
+  advice: string[];
+  /** How many farmers were included in the benchmark */
+  sampleSize: number;
+}
+
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🌱 INCOME APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/**
- * GET /income
- * Supports: year, category, cropId, page, limit
- */
+/** POST /income */
+export const createIncome = async (payload: IncomePayload): Promise<Income> => {
+  const res = await API.post<{ success: boolean; data: Income }>("/income", payload);
+  return res.data.data;
+};
+
+/** GET /income — filter by year / category / cropId */
 export const getIncomes = async (
   page = 1,
   limit = 20,
@@ -622,12 +824,10 @@ export const getIncomes = async (
 
 /**
  * GET /income/summary
- * Returns totals grouped by category + grandTotal
- * @param year  e.g. 2024 — pass undefined for all-time
+ * Returns totals grouped by category + grandTotal.
+ * @param year  e.g. 2025 — pass undefined for all-time
  */
-export const getIncomeSummary = async (
-  year?: number,
-): Promise<IncomeSummaryResponse> => {
+export const getIncomeSummary = async (year?: number): Promise<IncomeSummaryResponse> => {
   const res = await API.get<IncomeSummaryResponse>("/income/summary", {
     params: { year },
   });
@@ -635,46 +835,43 @@ export const getIncomeSummary = async (
 };
 
 /**
- * GET /income/:id
- * Returns a single income document
+ * GET /income/analytics
+ * Compares this user's income to other consenting users.
+ * Returns percentile rank, avg income, and AI advice strings.
+ * Will return 403 if the user has not given analytics consent.
+ *
+ * @param year      defaults to current year
+ * @param district  narrow comparison to same district only
  */
-export const getIncomeById = async (id: string): Promise<Income> => {
-  const res = await API.get<{ success: boolean; data: Income }>(
-    `/income/${id}`,
-  );
-  return res.data.data;
+export const getIncomeAnalytics = async (
+  year?: number,
+  district?: District,
+): Promise<IncomeAnalyticsResponse> => {
+  const res = await API.get<IncomeAnalyticsResponse>("/income/analytics", {
+    params: { year, district },
+  });
+  return res.data;
 };
 
-/**
- * POST /income
- * Creates a new income entry; pre-save hook computes derived fields
- */
-export const createIncome = async (payload: IncomePayload): Promise<Income> => {
-  const res = await API.post<{ success: boolean; data: Income }>(
-    "/income",
-    payload,
-  );
+/** GET /income/:id */
+export const getIncomeById = async (id: string): Promise<Income> => {
+  const res = await API.get<{ success: boolean; data: Income }>(`/income/${id}`);
   return res.data.data;
 };
 
 /**
  * PUT /income/:id
- * Updates an income entry; pre-save hook re-computes derived fields
+ * Updates an income entry; server pre-save hook re-computes derived fields.
  */
 export const updateIncome = async (
   id: string,
   payload: Partial<IncomePayload>,
 ): Promise<Income> => {
-  const res = await API.put<{ success: boolean; data: Income }>(
-    `/income/${id}`,
-    payload,
-  );
+  const res = await API.put<{ success: boolean; data: Income }>(`/income/${id}`, payload);
   return res.data.data;
 };
 
-/**
- * DELETE /income/:id
- */
+/** DELETE /income/:id */
 export const deleteIncome = async (id: string): Promise<void> => {
   await API.delete(`/income/${id}`);
 };

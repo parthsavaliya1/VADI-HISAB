@@ -11,6 +11,7 @@ import {
     Platform,
     Pressable,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -24,13 +25,34 @@ import {
     type VillageItem,
 } from "@/data/gujarati-location";
 import translations from "@/translations.json";
-import { completeProfile } from "@/utils/api";
+import type { District, LabourType, TractorService, WaterSource } from "@/utils/api";
+import { completeProfile, getMe } from "@/utils/api";
 
 const LANG = "gu" as const;
 const t = translations[LANG].profile;
 
+// ─── Dashboard-matching palette ─────────────────────────────────────────────
+const C = {
+  green900: "#1B5E20",
+  green700: "#2E7D32",
+  green500: "#4CAF50",
+  green100: "#C8E6C9",
+  green50: "#E8F5E9",
+  bg: "#F5F7F2",
+  surface: "#FFFFFF",
+  surfaceGreen: "#F1F8F1",
+  textPrimary: "#1A2E1C",
+  textSecondary: "#3D5C40",
+  textMuted: "#7A9B7E",
+  border: "#C8E6C9",
+  borderLight: "#EAF4EA",
+  expense: "#C62828",
+  expensePale: "#FFEBEE",
+};
+
 const WATER_SOURCES = ["Rain", "Borewell", "Canal"];
 const LABOUR_TYPES = ["Family", "Hired", "Mixed"];
+const TRACTOR_SERVICES = ["Rotavator", "RAP", "Bagi", "Savda"];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -41,14 +63,15 @@ type DropdownItem = { value: string; label: string };
 // ✅ FormData only holds English keys — clean & simple
 type FormData = {
     name: string;
-    district: string;        // "Jamnagar"      → DB stores this
-    taluka: string;          // "Kalavad"       → DB stores this
-    village: string;         // "Khijadia"      → DB stores this
+    district: string;
+    taluka: string;
+    village: string;
     totalLandValue: string;
     totalLandUnit: "acre" | "bigha";
-    waterSource: string;     // "Rain"          → DB stores this
+    waterSources: string[];
     tractorAvailable: boolean | null;
-    labourType: string;      // "Family"        → DB stores this
+    implementsAvailable: string[];  // tractor services when tractor yes
+    labourTypes: string[];
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,7 +106,7 @@ const DropdownModal = ({
                             key={item.value}
                             style={[modalStyles.item, isSelected && modalStyles.itemSelected]}
                             onPress={() => { onSelect(item); onClose(); }}
-                            android_ripple={{ color: "#C8E6C9" }}
+                            android_ripple={{ color: C.green100 }}
                         >
                             <View style={modalStyles.itemInner}>
                                 {/* Gujarati label — big & prominent */}
@@ -130,7 +153,7 @@ const DropdownButton = ({
                 displayLabel ? styles.dropdownBtnFilled : null,
                 disabled ? styles.dropdownBtnDisabled : null,
             ]}
-            android_ripple={{ color: "#C8E6C9" }}
+            android_ripple={{ color: C.green100 }}
         >
             <Text
                 style={[styles.dropdownBtnText, !displayLabel && styles.dropdownBtnPlaceholder]}
@@ -180,11 +203,11 @@ const InputField = ({
                     value={value}
                     onChangeText={onChangeText}
                     placeholder={placeholder}
-                    placeholderTextColor="#BDBDBD"
+                    placeholderTextColor={C.textMuted}
                     keyboardType={keyboardType as any}
                     onFocus={() => setFocusedField(label)}
                     onBlur={() => setFocusedField(null)}
-                    selectionColor="#2E7D32"
+                    selectionColor={C.green700}
                 />
                 {value ? <Text style={styles.fieldCheck}>✓</Text> : null}
             </View>
@@ -193,37 +216,40 @@ const InputField = ({
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Chip Selector
+// Multi Chip Selector (multiple selection)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ChipSelector = ({
+const MultiChipSelector = ({
     label,
     options,
     labels,
-    value,
-    onSelect,
+    selected,
+    onToggle,
 }: {
     label: string;
     options: string[];
     labels: Record<string, string>;
-    value: string;
-    onSelect: (v: string) => void;
+    selected: string[];
+    onToggle: (opt: string) => void;
 }) => (
     <View style={styles.fieldGroup}>
         <Text style={styles.fieldLabel}>{label}</Text>
         <View style={styles.chipsWrap}>
-            {options.map((opt) => (
-                <Pressable
-                    key={opt}
-                    onPress={() => onSelect(opt)}
-                    style={[styles.chip, value === opt && styles.chipSelected]}
-                    android_ripple={{ color: "#C8E6C9", borderless: false }}
-                >
-                    <Text style={[styles.chipText, value === opt && styles.chipTextSelected]}>
-                        {labels[opt] ?? opt}
-                    </Text>
-                </Pressable>
-            ))}
+            {options.map((opt) => {
+                const isSelected = selected.includes(opt);
+                return (
+                    <Pressable
+                        key={opt}
+                        onPress={() => onToggle(opt)}
+                        style={[styles.chip, isSelected && styles.chipSelected]}
+                        android_ripple={{ color: "#C8E6C9", borderless: false }}
+                    >
+                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                            {labels[opt] ?? opt}
+                        </Text>
+                    </Pressable>
+                );
+            })}
         </View>
     </View>
 );
@@ -235,14 +261,15 @@ const ChipSelector = ({
 export default function ProfileSetup() {
     const [form, setForm] = useState<FormData>({
         name: "",
-        district: "",          // English: "Jamnagar"
-        taluka: "",            // English: "Kalavad"
-        village: "",           // English: "Khijadia"
+        district: "",
+        taluka: "",
+        village: "",
         totalLandValue: "",
         totalLandUnit: "acre",
-        waterSource: "",
+        waterSources: [],
         tractorAvailable: null,
-        labourType: "",
+        implementsAvailable: [],
+        labourTypes: [],
     });
     const [loading, setLoading] = useState(false);
     const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -259,15 +286,18 @@ export default function ProfileSetup() {
     const progressAnim = useRef(new Animated.Value(0)).current;
 
     const filledCount =
-        [form.name, form.district, form.taluka, form.village, form.totalLandValue, form.waterSource, form.labourType]
-            .filter(Boolean).length + (form.tractorAvailable !== null ? 1 : 0);
+        [form.name, form.district, form.taluka, form.village, form.totalLandValue]
+            .filter(Boolean).length
+        + (form.waterSources.length > 0 ? 1 : 0)
+        + (form.tractorAvailable !== null ? 1 : 0)
+        + (form.labourTypes.length > 0 ? 1 : 0);
     const totalFields = 8;
     const progress = filledCount / totalFields;
 
     const isValid =
         !!form.name && !!form.district && !!form.taluka && !!form.village &&
-        !!form.totalLandValue && !!form.waterSource &&
-        form.tractorAvailable !== null && !!form.labourType;
+        !!form.totalLandValue && form.waterSources.length > 0 &&
+        form.tractorAvailable !== null && form.labourTypes.length > 0;
 
     useEffect(() => {
         Animated.parallel([
@@ -296,6 +326,31 @@ export default function ProfileSetup() {
 
     const set = <K extends keyof FormData>(key: K, val: FormData[K]) =>
         setForm((prev) => ({ ...prev, [key]: val }));
+
+    const toggleWater = (opt: string) => {
+        setForm((prev) => ({
+            ...prev,
+            waterSources: prev.waterSources.includes(opt)
+                ? prev.waterSources.filter((x) => x !== opt)
+                : [...prev.waterSources, opt],
+        }));
+    };
+    const toggleLabour = (opt: string) => {
+        setForm((prev) => ({
+            ...prev,
+            labourTypes: prev.labourTypes.includes(opt)
+                ? prev.labourTypes.filter((x) => x !== opt)
+                : [...prev.labourTypes, opt],
+        }));
+    };
+    const toggleTractorService = (opt: string) => {
+        setForm((prev) => ({
+            ...prev,
+            implementsAvailable: prev.implementsAvailable.includes(opt)
+                ? prev.implementsAvailable.filter((x) => x !== opt)
+                : [...prev.implementsAvailable, opt],
+        }));
+    };
 
     // ── Location handlers — store only English key, reset downstream ──────
 
@@ -331,16 +386,21 @@ export default function ProfileSetup() {
         try {
             await completeProfile({
                 name: form.name,
-                // ✅ English keys stored in DB — no Gujarati unicode in DB
-                district: form.district,   // "Jamnagar"
-                taluka: form.taluka,       // "Kalavad"
-                village: form.village,     // "Khijadia"
+                district: form.district as District,
+                taluka: form.taluka,
+                village: form.village,
                 totalLand: { value: parseFloat(form.totalLandValue), unit: form.totalLandUnit },
-                waterSource: form.waterSource as any,
+                waterSources: form.waterSources as WaterSource[],
                 tractorAvailable: form.tractorAvailable!,
-                labourType: form.labourType as any,
+                implementsAvailable: form.tractorAvailable ? (form.implementsAvailable as TractorService[]) : [],
+                labourTypes: form.labourTypes as LabourType[],
             });
-            router.replace("/(tabs)");
+            const user = await getMe();
+            if (user.analyticsConsent === null) {
+                router.replace("/(auth)/consent");
+            } else {
+                router.replace("/(tabs)");
+            }
         } catch (err: any) {
             Alert.alert(t.errTitle, err.message);
         } finally {
@@ -349,7 +409,8 @@ export default function ProfileSetup() {
     };
 
     return (
-        <LinearGradient colors={["#0D3B1E", "#1B5E20", "#2E7D32"]} style={styles.container}>
+        <LinearGradient colors={[C.green50, "#EEF6EE", C.bg]} style={styles.container} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
             <View style={styles.circle1} />
             <View style={styles.circle2} />
 
@@ -440,9 +501,9 @@ export default function ProfileSetup() {
                                         value={form.totalLandValue}
                                         onChangeText={(v) => set("totalLandValue", v)}
                                         placeholder={t.landPH}
-                                        placeholderTextColor="#BDBDBD"
-                                        keyboardType="decimal-pad"
-                                        selectionColor="#2E7D32"
+                    placeholderTextColor={C.textMuted}
+                    keyboardType="decimal-pad"
+                    selectionColor={C.green700}
                                     />
                                 </View>
                                 <View style={styles.unitToggle}>
@@ -456,12 +517,12 @@ export default function ProfileSetup() {
                             </View>
                         </View>
 
-                        <ChipSelector
+                        <MultiChipSelector
                             label={t.water}
                             options={WATER_SOURCES}
                             labels={t.waterLabels}
-                            value={form.waterSource}
-                            onSelect={(v) => set("waterSource", v)}
+                            selected={form.waterSources}
+                            onToggle={toggleWater}
                         />
 
                         {/* ── Section 3: Resources ── */}
@@ -473,23 +534,33 @@ export default function ProfileSetup() {
                         <View style={styles.fieldGroup}>
                             <Text style={styles.fieldLabel}>{t.tractor}</Text>
                             <View style={styles.toggleRow}>
-                                <Pressable onPress={() => set("tractorAvailable", true)} style={[styles.toggleBtn, form.tractorAvailable === true && styles.toggleBtnYes]}>
+                                <Pressable onPress={() => setForm((prev) => ({ ...prev, tractorAvailable: true }))} style={[styles.toggleBtn, form.tractorAvailable === true && styles.toggleBtnYes]}>
                                     <Text style={styles.toggleEmoji}>🚜</Text>
                                     <Text style={[styles.toggleText, form.tractorAvailable === true && styles.toggleTextActive]}>{t.tractorYes}</Text>
                                 </Pressable>
-                                <Pressable onPress={() => set("tractorAvailable", false)} style={[styles.toggleBtn, form.tractorAvailable === false && styles.toggleBtnNo]}>
+                                <Pressable onPress={() => setForm((prev) => ({ ...prev, tractorAvailable: false, implementsAvailable: [] }))} style={[styles.toggleBtn, form.tractorAvailable === false && styles.toggleBtnNo]}>
                                     <Text style={styles.toggleEmoji}>🚫</Text>
                                     <Text style={[styles.toggleText, form.tractorAvailable === false && styles.toggleTextActive]}>{t.tractorNo}</Text>
                                 </Pressable>
                             </View>
                         </View>
 
-                        <ChipSelector
+                        {form.tractorAvailable === true && (
+                            <MultiChipSelector
+                                label={t.tractorServices ?? "ટ્રેક્ટર સેવાઓ"}
+                                options={TRACTOR_SERVICES}
+                                labels={t.tractorServiceLabels ?? {}}
+                                selected={form.implementsAvailable}
+                                onToggle={toggleTractorService}
+                            />
+                        )}
+
+                        <MultiChipSelector
                             label={t.labour}
                             options={LABOUR_TYPES}
                             labels={t.labourLabels}
-                            value={form.labourType}
-                            onSelect={(v) => set("labourType", v)}
+                            selected={form.labourTypes}
+                            onToggle={toggleLabour}
                         />
 
                         {/* ── Submit ── */}
@@ -502,7 +573,7 @@ export default function ProfileSetup() {
                                 disabled={!isValid || loading}
                             >
                                 <LinearGradient
-                                    colors={isValid ? ["#1B5E20", "#2E7D32", "#43A047"] : ["#E0E0E0", "#E0E0E0"]}
+                                    colors={isValid ? [C.green700, C.green500, "#66BB6A"] : [C.borderLight, C.borderLight]}
                                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                                     style={styles.submitGradient}
                                 >
@@ -548,71 +619,71 @@ export default function ProfileSetup() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    circle1: { position: "absolute", width: 250, height: 250, borderRadius: 125, backgroundColor: "rgba(255,255,255,0.04)", top: -60, right: -60 },
-    circle2: { position: "absolute", width: 150, height: 150, borderRadius: 75, backgroundColor: "rgba(255,255,255,0.04)", top: 80, left: -60 },
+    container: { flex: 1, backgroundColor: C.bg },
+    circle1: { position: "absolute", width: 250, height: 250, borderRadius: 125, backgroundColor: C.green100 + "80", top: -60, right: -60 },
+    circle2: { position: "absolute", width: 150, height: 150, borderRadius: 75, backgroundColor: C.green100 + "50", top: 80, left: -60 },
     stickyHeader: { paddingHorizontal: 22, paddingTop: Platform.OS === "ios" ? 58 : 38, paddingBottom: 14, zIndex: 10 },
     headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
-    headerTitle: { fontSize: 24, fontWeight: "900", color: "white", letterSpacing: 0.3 },
-    headerSubtitle: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 },
+    headerTitle: { fontSize: 24, fontWeight: "900", color: C.textPrimary, letterSpacing: 0.3 },
+    headerSubtitle: { fontSize: 13, color: C.textSecondary, marginTop: 2 },
     tractorEmoji: { fontSize: 40 },
-    progressBg: { height: 6, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 3, overflow: "hidden" },
-    progressFill: { height: "100%", backgroundColor: "#A5D6A7", borderRadius: 3 },
-    progressLabel: { fontSize: 11, color: "rgba(255,255,255,0.65)", marginTop: 6 },
+    progressBg: { height: 6, backgroundColor: C.green100, borderRadius: 3, overflow: "hidden" },
+    progressFill: { height: "100%", backgroundColor: C.green500, borderRadius: 3 },
+    progressLabel: { fontSize: 11, color: C.textMuted, marginTop: 6 },
     scrollContent: { paddingHorizontal: 22, paddingBottom: 40, paddingTop: 10 },
-    card: { backgroundColor: "white", borderRadius: 28, padding: 22, elevation: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16 },
+    card: { backgroundColor: C.surface, borderRadius: 28, padding: 22, elevation: 8, shadowColor: "#1A2E1C", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, borderWidth: 1, borderColor: C.borderLight },
     sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 10 },
-    sectionBadge: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#2E7D32", justifyContent: "center", alignItems: "center" },
+    sectionBadge: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.green700, justifyContent: "center", alignItems: "center" },
     sectionBadgeText: { color: "white", fontWeight: "800", fontSize: 13 },
-    sectionTitle: { fontSize: 15, fontWeight: "700", color: "#212121" },
+    sectionTitle: { fontSize: 15, fontWeight: "700", color: C.textPrimary },
     fieldGroup: { marginBottom: 16 },
-    fieldLabel: { fontSize: 13, fontWeight: "700", color: "#424242", marginBottom: 8, letterSpacing: 0.2 },
-    dropdownBtn: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 2, borderRadius: 14, borderColor: "#E0E0E0", backgroundColor: "#FAFAFA", paddingHorizontal: 14, paddingVertical: 14 },
-    dropdownBtnFilled: { borderColor: "#81C784" },
-    dropdownBtnDisabled: { opacity: 0.4, backgroundColor: "#F0F0F0" },
-    dropdownBtnText: { fontSize: 15, color: "#212121", fontWeight: "600", flex: 1 },
-    dropdownBtnPlaceholder: { color: "#BDBDBD", fontWeight: "400" },
-    dropdownArrow: { fontSize: 16, color: "#2E7D32", marginLeft: 8, fontWeight: "700" },
-    textInputWrap: { flexDirection: "row", alignItems: "center", borderWidth: 2, borderRadius: 14, borderColor: "#E0E0E0", backgroundColor: "#FAFAFA", paddingHorizontal: 14 },
-    textInputWrapFocused: { borderColor: "#2E7D32", backgroundColor: "#F1F8F1" },
-    textInputWrapFilled: { borderColor: "#81C784" },
-    textInput: { flex: 1, fontSize: 15, color: "#212121", paddingVertical: 13 },
-    fieldCheck: { fontSize: 18, color: "#2E7D32", fontWeight: "900" },
+    fieldLabel: { fontSize: 13, fontWeight: "700", color: C.textSecondary, marginBottom: 8, letterSpacing: 0.2 },
+    dropdownBtn: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 2, borderRadius: 14, borderColor: C.borderLight, backgroundColor: C.surfaceGreen, paddingHorizontal: 14, paddingVertical: 14 },
+    dropdownBtnFilled: { borderColor: C.green500 },
+    dropdownBtnDisabled: { opacity: 0.4, backgroundColor: C.borderLight },
+    dropdownBtnText: { fontSize: 15, color: C.textPrimary, fontWeight: "600", flex: 1 },
+    dropdownBtnPlaceholder: { color: C.textMuted, fontWeight: "400" },
+    dropdownArrow: { fontSize: 16, color: C.green700, marginLeft: 8, fontWeight: "700" },
+    textInputWrap: { flexDirection: "row", alignItems: "center", borderWidth: 2, borderRadius: 14, borderColor: C.borderLight, backgroundColor: C.surfaceGreen, paddingHorizontal: 14 },
+    textInputWrapFocused: { borderColor: C.green700, backgroundColor: C.surfaceGreen },
+    textInputWrapFilled: { borderColor: C.green500 },
+    textInput: { flex: 1, fontSize: 15, color: C.textPrimary, paddingVertical: 13 },
+    fieldCheck: { fontSize: 18, color: C.green700, fontWeight: "900" },
     chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 2, borderColor: "#E0E0E0", backgroundColor: "#FAFAFA" },
-    chipSelected: { borderColor: "#2E7D32", backgroundColor: "#E8F5E9" },
-    chipText: { fontSize: 13, fontWeight: "600", color: "#757575" },
-    chipTextSelected: { color: "#1B5E20", fontWeight: "800" },
+    chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 2, borderColor: C.borderLight, backgroundColor: C.surfaceGreen },
+    chipSelected: { borderColor: C.green700, backgroundColor: C.green50 },
+    chipText: { fontSize: 13, fontWeight: "600", color: C.textMuted },
+    chipTextSelected: { color: C.green900, fontWeight: "800" },
     landRow: { flexDirection: "row", gap: 10, alignItems: "center" },
-    unitToggle: { flexDirection: "row", borderWidth: 2, borderColor: "#E0E0E0", borderRadius: 12, overflow: "hidden" },
-    unitBtn: { paddingHorizontal: 14, paddingVertical: 12, backgroundColor: "#FAFAFA" },
-    unitBtnActive: { backgroundColor: "#2E7D32" },
-    unitBtnText: { fontSize: 13, fontWeight: "700", color: "#9E9E9E" },
+    unitToggle: { flexDirection: "row", borderWidth: 2, borderColor: C.borderLight, borderRadius: 12, overflow: "hidden" },
+    unitBtn: { paddingHorizontal: 14, paddingVertical: 12, backgroundColor: C.surfaceGreen },
+    unitBtnActive: { backgroundColor: C.green700 },
+    unitBtnText: { fontSize: 13, fontWeight: "700", color: C.textMuted },
     unitBtnTextActive: { color: "white" },
     toggleRow: { flexDirection: "row", gap: 12 },
-    toggleBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 14, borderRadius: 14, borderWidth: 2, borderColor: "#E0E0E0", backgroundColor: "#FAFAFA", gap: 6 },
-    toggleBtnYes: { borderColor: "#2E7D32", backgroundColor: "#E8F5E9" },
-    toggleBtnNo: { borderColor: "#D32F2F", backgroundColor: "#FFEBEE" },
+    toggleBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 14, borderRadius: 14, borderWidth: 2, borderColor: C.borderLight, backgroundColor: C.surfaceGreen, gap: 6 },
+    toggleBtnYes: { borderColor: C.green700, backgroundColor: C.green50 },
+    toggleBtnNo: { borderColor: C.expense, backgroundColor: C.expensePale },
     toggleEmoji: { fontSize: 20 },
-    toggleText: { fontSize: 14, fontWeight: "700", color: "#9E9E9E" },
-    toggleTextActive: { color: "#212121" },
+    toggleText: { fontSize: 14, fontWeight: "700", color: C.textMuted },
+    toggleTextActive: { color: C.textPrimary },
     submitBtn: { borderRadius: 16, overflow: "hidden", marginTop: 8 },
     submitBtnDisabled: {},
     submitGradient: { paddingVertical: 18, alignItems: "center" },
     submitText: { color: "white", fontSize: 17, fontWeight: "800", letterSpacing: 0.4 },
-    submitTextOff: { color: "#BDBDBD" },
+    submitTextOff: { color: C.textMuted },
 });
 
 const modalStyles = StyleSheet.create({
     backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)" },
-    sheet: { backgroundColor: "white", borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 20, paddingBottom: Platform.OS === "ios" ? 36 : 24, maxHeight: "65%" },
-    handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "#E0E0E0", alignSelf: "center", marginTop: 12, marginBottom: 6 },
-    title: { fontSize: 17, fontWeight: "800", color: "#212121", textAlign: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F5F5F5", marginBottom: 4 },
-    item: { flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F5F5F5", paddingHorizontal: 4 },
-    itemSelected: { backgroundColor: "#F1F8F1", borderRadius: 10, paddingHorizontal: 8 },
+    sheet: { backgroundColor: C.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 20, paddingBottom: Platform.OS === "ios" ? 36 : 24, maxHeight: "65%" },
+    handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: "center", marginTop: 12, marginBottom: 6 },
+    title: { fontSize: 17, fontWeight: "800", color: C.textPrimary, textAlign: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.borderLight, marginBottom: 4 },
+    item: { flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight, paddingHorizontal: 4 },
+    itemSelected: { backgroundColor: C.surfaceGreen, borderRadius: 10, paddingHorizontal: 8 },
     itemInner: { flex: 1 },
-    itemLabel: { fontSize: 16, color: "#212121", fontWeight: "600" },
-    itemLabelSelected: { color: "#1B5E20", fontWeight: "800" },
-    itemSub: { fontSize: 11, color: "#BDBDBD", marginTop: 2 },
-    itemCheck: { fontSize: 18, color: "#2E7D32", fontWeight: "900", marginLeft: 8 },
+    itemLabel: { fontSize: 16, color: C.textPrimary, fontWeight: "600" },
+    itemLabelSelected: { color: C.green900, fontWeight: "800" },
+    itemSub: { fontSize: 11, color: C.textMuted, marginTop: 2 },
+    itemCheck: { fontSize: 18, color: C.green700, fontWeight: "900", marginLeft: 8 },
 });

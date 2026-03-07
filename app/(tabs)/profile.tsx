@@ -1,3 +1,4 @@
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
     getDistrictItems,
     getTalukaItems,
@@ -78,6 +79,9 @@ const T = {
     landPH: "જમીન",
     farmer: "ખેડૂત",
     version: "VADI-Hisaab v1.0.0",
+    language: "ભાષા",
+    gujarati: "ગુજરાતી",
+    english: "અંગ્રેજી",
 };
 
 // ─── English key → Gujarati label lookup maps ────────────────────────────────
@@ -93,10 +97,22 @@ const LABOUR_OPTIONS = [
     { key: "Hired", label: "👷 ભાડે" },
     { key: "Mixed", label: "🤝 મિશ્ર" },
 ];
+const TRACTOR_SERVICE_OPTIONS = [
+    { key: "Rotavator", label: "રોટાવેટર" },
+    { key: "RAP", label: "RAP" },
+    { key: "Bagi", label: "બગી" },
+    { key: "Savda", label: "સવડા" },
+];
 
 /** Look up Gujarati label from English key in any options array */
 function toLabel(options: { key: string; label: string }[], key: string) {
     return options.find((o) => o.key === key)?.label ?? key;
+}
+
+/** Format multiple keys as labels joined by comma */
+function toLabels(options: { key: string; label: string }[], keys: string[]) {
+    if (!keys || keys.length === 0) return "—";
+    return keys.map((k) => toLabel(options, k)).join(", ");
 }
 
 /**
@@ -126,35 +142,40 @@ function getLocationLabel(type: "district" | "taluka" | "village", keys: {
 
 interface ProfileDraft {
     name: string;
-    district: string;        // "Jamnagar"
-    taluka: string;          // "Kalavad"
-    village: string;         // "Khijadia"
+    district: string;
+    taluka: string;
+    village: string;
     totalLand: string;
     totalLandUnit: "acre" | "bigha";
-    waterSource: string;     // "Rain"
+    waterSources: string[];
     tractorAvailable: boolean;
-    labourType: string;      // "Family"
+    implementsAvailable: string[];
+    labourTypes: string[];
     dataSharing: boolean;
 }
 
 function apiToDraft(p: APIFarmerProfile | null): ProfileDraft {
-    if (!p) return { name: "", district: "", taluka: "", village: "", totalLand: "", totalLandUnit: "acre", waterSource: "", tractorAvailable: false, labourType: "", dataSharing: false };
+    if (!p) return { name: "", district: "", taluka: "", village: "", totalLand: "", totalLandUnit: "acre", waterSources: [], tractorAvailable: false, implementsAvailable: [], labourTypes: [], dataSharing: false };
+    const waterSources = Array.isArray((p as any).waterSources) ? (p as any).waterSources : ((p as any).waterSource != null ? [(p as any).waterSource] : []);
+    const labourTypes = Array.isArray((p as any).labourTypes) ? (p as any).labourTypes : ((p as any).labourType != null ? [(p as any).labourType] : []);
+    const implementsAvailable = Array.isArray((p as any).implementsAvailable) ? (p as any).implementsAvailable : [];
     return {
         name: p.name,
-        district: p.district,    // "Jamnagar" from DB
+        district: p.district,
         taluka: (p as any).taluka ?? "",
-        village: p.village,      // "Khijadia" from DB
+        village: p.village,
         totalLand: String(p.totalLand?.value ?? ""),
         totalLandUnit: p.totalLand?.unit ?? "acre",
-        waterSource: p.waterSource,   // "Rain" from DB
+        waterSources,
         tractorAvailable: p.tractorAvailable,
-        labourType: p.labourType,     // "Family" from DB
+        implementsAvailable,
+        labourTypes,
         dataSharing: (p as any).analyticsConsent ?? false,
     };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Chip Picker (edit mode)
+// Chip Picker single (edit mode) — kept for any single-select if needed
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ChipPicker({ options, selected, onSelect }: {
@@ -176,6 +197,36 @@ function ChipPicker({ options, selected, onSelect }: {
                     </Text>
                 </Pressable>
             ))}
+        </View>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Multi Chip Picker (edit mode)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function MultiChipPicker({ options, selected, onToggle }: {
+    options: { key: string; label: string }[];
+    selected: string[];
+    onToggle: (k: string) => void;
+}) {
+    return (
+        <View style={editStyles.chipsWrap}>
+            {options.map((opt) => {
+                const isSelected = selected.includes(opt.key);
+                return (
+                    <Pressable
+                        key={opt.key}
+                        onPress={() => onToggle(opt.key)}
+                        style={[editStyles.chip, isSelected && editStyles.chipActive]}
+                        android_ripple={{ color: "#A7F3D0" }}
+                    >
+                        <Text style={[editStyles.chipText, isSelected && editStyles.chipTextActive]}>
+                            {opt.label}
+                        </Text>
+                    </Pressable>
+                );
+            })}
         </View>
     );
 }
@@ -378,14 +429,20 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
 
                             <View style={editStyles.inputGroup}>
                                 <Text style={editStyles.inputLabel}>{T.waterSource}</Text>
-                                {/* Chips store English key "Rain", show "🌧 વરસાદ" */}
-                                <ChipPicker options={WATER_OPTIONS} selected={draft.waterSource} onSelect={(v) => set("waterSource", v)} />
+                                <MultiChipPicker
+                                    options={WATER_OPTIONS}
+                                    selected={draft.waterSources}
+                                    onToggle={(k) => set("waterSources", draft.waterSources.includes(k) ? draft.waterSources.filter((x) => x !== k) : [...draft.waterSources, k])}
+                                />
                             </View>
 
                             <View style={editStyles.inputGroup}>
                                 <Text style={editStyles.inputLabel}>{T.labourType}</Text>
-                                {/* Chips store English key "Family", show "👨‍👩‍👧 પારિવારિક" */}
-                                <ChipPicker options={LABOUR_OPTIONS} selected={draft.labourType} onSelect={(v) => set("labourType", v)} />
+                                <MultiChipPicker
+                                    options={LABOUR_OPTIONS}
+                                    selected={draft.labourTypes}
+                                    onToggle={(k) => set("labourTypes", draft.labourTypes.includes(k) ? draft.labourTypes.filter((x) => x !== k) : [...draft.labourTypes, k])}
+                                />
                             </View>
 
                             <View style={editStyles.switchRow}>
@@ -395,6 +452,17 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
                                 </View>
                                 <Switch value={draft.tractorAvailable} onValueChange={(v) => set("tractorAvailable", v)} trackColor={{ false: "#E5E7EB", true: "#A7F3D0" }} thumbColor={draft.tractorAvailable ? "#059669" : "#D1D5DB"} />
                             </View>
+
+                            {draft.tractorAvailable && (
+                                <View style={editStyles.inputGroup}>
+                                    <Text style={editStyles.inputLabel}>ટ્રેક્ટર સેવાઓ</Text>
+                                    <MultiChipPicker
+                                        options={TRACTOR_SERVICE_OPTIONS}
+                                        selected={draft.implementsAvailable}
+                                        onToggle={(k) => set("implementsAvailable", draft.implementsAvailable.includes(k) ? draft.implementsAvailable.filter((x) => x !== k) : [...draft.implementsAvailable, k])}
+                                    />
+                                </View>
+                            )}
 
                             {/* Privacy */}
                             <Text style={editStyles.groupLabel}>🔐 {T.sectionPrivacy}</Text>
@@ -486,6 +554,7 @@ function CardHeader({ emoji, title }: { emoji: string; title: string }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function Profile() {
+    const { lang, setLang, t } = useLanguage();
     const [apiProfile, setApiProfile] = useState<APIFarmerProfile | null>(null);
     const [draft, setDraft] = useState<ProfileDraft | null>(null);
     const [phone, setPhone] = useState<string>("");
@@ -541,14 +610,14 @@ export default function Profile() {
         try {
             const updated = await updateProfile({
                 name: draft.name,
-                // ✅ Send English keys — DB stores "Jamnagar", not "જામનગર"
                 district: draft.district,
                 taluka: draft.taluka,
                 village: draft.village,
                 totalLand: { value: parseFloat(draft.totalLand), unit: draft.totalLandUnit },
-                waterSource: draft.waterSource as any,
+                waterSources: draft.waterSources as any,
                 tractorAvailable: draft.tractorAvailable,
-                labourType: draft.labourType as any,
+                implementsAvailable: draft.implementsAvailable,
+                labourTypes: draft.labourTypes as any,
             });
             setApiProfile(updated.profile);
             setEditVisible(false);
@@ -592,8 +661,12 @@ export default function Profile() {
     const districtDisplay = getLocationLabel("district", { district: p.district });
     const talukaDisplay = taluka ? getLocationLabel("taluka", { district: p.district, taluka }) : "—";
     const villageDisplay = p.village ? getLocationLabel("village", { district: p.district, taluka, village: p.village }) : "—";
-    const waterDisplay = toLabel(WATER_OPTIONS, p.waterSource);
-    const labourDisplay = toLabel(LABOUR_OPTIONS, p.labourType);
+    const waterSources = Array.isArray((p as any).waterSources) ? (p as any).waterSources : ((p as any).waterSource != null ? [(p as any).waterSource] : []);
+    const labourTypes = Array.isArray((p as any).labourTypes) ? (p as any).labourTypes : ((p as any).labourType != null ? [(p as any).labourType] : []);
+    const implementsAvailable = Array.isArray((p as any).implementsAvailable) ? (p as any).implementsAvailable : [];
+    const waterDisplay = toLabels(WATER_OPTIONS, waterSources);
+    const labourDisplay = toLabels(LABOUR_OPTIONS, labourTypes);
+    const tractorServicesDisplay = implementsAvailable.length > 0 ? toLabels(TRACTOR_SERVICE_OPTIONS, implementsAvailable) : null;
 
     return (
         <View style={styles.container}>
@@ -621,6 +694,17 @@ export default function Profile() {
                         </Animated.View>
                         <Text style={styles.heroName}>{p.name}</Text>
                         <Text style={styles.heroRole}>🌾 {T.farmer}</Text>
+                        <View style={styles.langRow}>
+                            <Text style={styles.langLabel}>{t("common", "language")}</Text>
+                            <View style={styles.langChips}>
+                                <Pressable style={[styles.langChip, lang === "gu" && styles.langChipActive]} onPress={() => setLang("gu")}>
+                                    <Text style={[styles.langChipText, lang === "gu" && styles.langChipTextActive]}>{t("common", "gujarati")}</Text>
+                                </Pressable>
+                                <Pressable style={[styles.langChip, lang === "en" && styles.langChipActive]} onPress={() => setLang("en")}>
+                                    <Text style={[styles.langChipText, lang === "en" && styles.langChipTextActive]}>{t("common", "english")}</Text>
+                                </Pressable>
+                            </View>
+                        </View>
                         <View style={styles.heroBadgeRow}>
                             <View style={styles.heroBadge}><Ionicons name="location-sharp" size={11} color="#A7F3D0" /><Text style={styles.heroBadgeText}>{villageDisplay}</Text></View>
                             <View style={styles.heroBadgeDot} />
@@ -658,7 +742,7 @@ export default function Profile() {
                         <InfoRow icon="resize-outline" label={T.totalLand} value={landDisplay} />
                         <InfoRow icon="water-outline" label={T.waterSource} value={waterDisplay} />
                         <InfoRow icon="people-outline" label={T.labourType} value={labourDisplay} />
-                        <InfoRow icon="car-outline" label={T.tractor} value={p.tractorAvailable ? "✅ ઉપલબ્ધ" : "❌ ઉપલબ્ધ નથી"} last />
+                        <InfoRow icon="car-outline" label={T.tractor} value={p.tractorAvailable ? (tractorServicesDisplay ? `✅ ઉપલબ્ધ (${tractorServicesDisplay})` : "✅ ઉપલબ્ધ") : "❌ ઉપલબ્ધ નથી"} last />
                     </Card>
 
                     {/* Privacy */}
@@ -721,6 +805,13 @@ const styles = StyleSheet.create({
     avatarInitials: { fontSize: 30, fontWeight: "900", color: "#065F46" },
     heroName: { fontSize: 22, fontWeight: "900", color: "#fff", letterSpacing: 0.3, marginBottom: 2 },
     heroRole: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginBottom: 10 },
+    langRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 },
+    langLabel: { fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: "600" },
+    langChips: { flexDirection: "row", gap: 8 },
+    langChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.2)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" },
+    langChipActive: { backgroundColor: "rgba(255,255,255,0.35)", borderColor: "#A7F3D0" },
+    langChipText: { fontSize: 13, color: "rgba(255,255,255,0.9)", fontWeight: "600" },
+    langChipTextActive: { color: "#fff", fontWeight: "700" },
     heroBadgeRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20, flexWrap: "wrap", justifyContent: "center" },
     heroBadge: { flexDirection: "row", alignItems: "center", gap: 3 },
     heroBadgeText: { fontSize: 11, color: "#A7F3D0", fontWeight: "600" },

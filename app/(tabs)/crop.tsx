@@ -1,9 +1,10 @@
 import {
-  Crop,
-  CropStatus,
   deleteCrop,
   getCrops,
+  markCropHarvested,
   updateCropStatus,
+  type Crop,
+  type CropStatus,
 } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -28,7 +29,7 @@ import {
 const { width: SCREEN_W } = Dimensions.get("window");
 const SWIPE_THRESHOLD = -80;
 
-// ─── Color system — matches dashboard exactly ─────────────────────────────────
+// ─── Color system ─────────────────────────────────────────────────────────────
 const C = {
   green900: "#1B5E20",
   green700: "#2E7D32",
@@ -36,48 +37,31 @@ const C = {
   green400: "#66BB6A",
   green100: "#C8E6C9",
   green50: "#E8F5E9",
-
   bg: "#F5F7F2",
   surface: "#FFFFFF",
   surfaceGreen: "#F1F8F1",
-
   textPrimary: "#1A2E1C",
   textSecondary: "#3D5C40",
   textMuted: "#7A9B7E",
-
   income: "#2E7D32",
   incomePale: "#E8F5E9",
   expense: "#C62828",
   expensePale: "#FFEBEE",
-
   gold: "#F9A825",
-  goldLight: "#FBBF24",
   goldPale: "#FFFDE7",
-
   border: "#C8E6C9",
   borderLight: "#EAF4EA",
 };
 
 // ─── Season & Status config ───────────────────────────────────────────────────
-const SEASON_META: Record<
-  string,
-  { label: string; icon: string; color: string; pale: string }
-> = {
+const SEASON_META: Record<string, { label: string; icon: string; color: string; pale: string }> = {
   Kharif: { label: "ખરીફ", icon: "☔", color: "#0EA5E9", pale: "#E0F2FE" },
   Rabi: { label: "રવી", icon: "❄️", color: "#6366F1", pale: "#EEF2FF" },
   Summer: { label: "ઉનાળો", icon: "☀️", color: "#F59E0B", pale: "#FEF3C7" },
 };
 
-const STATUS_META: Record<
-  string,
-  { label: string; bg: string; text: string; dot: string }
-> = {
-  Active: {
-    label: "સક્રિય",
-    bg: C.incomePale,
-    text: C.green700,
-    dot: C.green500,
-  },
+const STATUS_META: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  Active: { label: "સક્રિય", bg: C.incomePale, text: C.green700, dot: C.green500 },
   Harvested: { label: "લણણી", bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
   Closed: { label: "બંધ", bg: C.expensePale, text: C.expense, dot: "#EF4444" },
 };
@@ -95,11 +79,13 @@ function CropCard({
   index,
   onDelete,
   onStatusChange,
+  onHarvest,
 }: {
   item: Crop;
   index: number;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: CropStatus) => void;
+  onHarvest: (id: string) => void;
 }) {
   const translateX = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.95)).current;
@@ -110,18 +96,8 @@ function CropCard({
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(cardScale, {
-        toValue: 1,
-        duration: 300,
-        delay: index * 55,
-        useNativeDriver: true,
-      }),
-      Animated.timing(cardOpacity, {
-        toValue: 1,
-        duration: 300,
-        delay: index * 55,
-        useNativeDriver: true,
-      }),
+      Animated.timing(cardScale, { toValue: 1, duration: 300, delay: index * 55, useNativeDriver: true }),
+      Animated.timing(cardOpacity, { toValue: 1, duration: 300, delay: index * 55, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -134,16 +110,10 @@ function CropCard({
       },
       onPanResponderRelease: (_, g) => {
         if (g.dx < SWIPE_THRESHOLD) {
-          Animated.spring(translateX, {
-            toValue: -120,
-            useNativeDriver: true,
-          }).start();
+          Animated.spring(translateX, { toValue: -120, useNativeDriver: true }).start();
           setSwiped(true);
         } else {
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
+          Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
           setSwiped(false);
         }
       },
@@ -158,19 +128,17 @@ function CropCard({
   const toggleMenu = () => {
     const next = !menuOpen;
     setMenuOpen(next);
-    Animated.spring(menuAnim, {
-      toValue: next ? 1 : 0,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(menuAnim, { toValue: next ? 1 : 0, useNativeDriver: true }).start();
   };
 
-  const season = SEASON_META[item.season] ?? {
-    label: item.season,
-    icon: "🌾",
-    color: C.textMuted,
-    pale: C.green50,
-  };
+  const season = SEASON_META[item.season ?? ""] ?? { label: item.season, icon: "🌾", color: C.textMuted, pale: C.green50 };
   const status = STATUS_META[item.status ?? "Active"] ?? STATUS_META.Active;
+
+  // ── Yield efficiency badge (only shown after harvest if both values exist) ──
+  const showYieldBadge =
+    item.status === "Harvested" &&
+    item.yieldEfficiency !== null &&
+    item.yieldEfficiency !== undefined;
 
   return (
     <Animated.View
@@ -181,29 +149,33 @@ function CropCard({
     >
       {/* Swipe action buttons */}
       <View style={styles.swipeActions}>
-        <TouchableOpacity
-          style={[styles.swipeBtn, { backgroundColor: C.green700 }]}
-          onPress={() => {
-            closeSwipe();
-            const next: CropStatus =
-              item.status === "Active"
-                ? "Harvested"
-                : item.status === "Harvested"
-                  ? "Closed"
-                  : "Active";
-            onStatusChange(item._id, next);
-          }}
-        >
-          <Ionicons name="swap-horizontal" size={20} color="#fff" />
-          <Text style={styles.swipeBtnText}>સ્ટેટ</Text>
-        </TouchableOpacity>
+        {/* Harvest shortcut — only for Active crops */}
+        {item.status === "Active" ? (
+          <TouchableOpacity
+            style={[styles.swipeBtn, { backgroundColor: "#B45309" }]}
+            onPress={() => { closeSwipe(); onHarvest(item._id); }}
+          >
+            <Ionicons name="leaf" size={20} color="#fff" />
+            <Text style={styles.swipeBtnText}>લણણી</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.swipeBtn, { backgroundColor: C.green700 }]}
+            onPress={() => {
+              closeSwipe();
+              const next: CropStatus =
+                item.status === "Harvested" ? "Closed" : "Active";
+              onStatusChange(item._id, next);
+            }}
+          >
+            <Ionicons name="swap-horizontal" size={20} color="#fff" />
+            <Text style={styles.swipeBtnText}>સ્ટેટ</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={[styles.swipeBtn, { backgroundColor: "#0284C7" }]}
-          onPress={() => {
-            closeSwipe();
-            router.push(`/crop/add-crop?id=${item._id}`);
-          }}
+          onPress={() => { closeSwipe(); router.push(`/crop/add-crop?id=${item._id}`); }}
         >
           <Ionicons name="create-outline" size={20} color="#fff" />
           <Text style={styles.swipeBtnText}>ફેરફાર</Text>
@@ -211,10 +183,7 @@ function CropCard({
 
         <TouchableOpacity
           style={[styles.swipeBtn, { backgroundColor: C.expense }]}
-          onPress={() => {
-            closeSwipe();
-            onDelete(item._id);
-          }}
+          onPress={() => { closeSwipe(); onDelete(item._id); }}
         >
           <Ionicons name="trash-outline" size={20} color="#fff" />
           <Text style={styles.swipeBtnText}>કાઢો</Text>
@@ -227,32 +196,24 @@ function CropCard({
         {...panResponder.panHandlers}
       >
         {/* Top accent bar — season colour */}
-        <View
-          style={[styles.cardAccentBar, { backgroundColor: season.color }]}
-        />
+        <View style={[styles.cardAccentBar, { backgroundColor: season.color }]} />
 
         <View style={styles.cardInner}>
           {/* Top row */}
           <View style={styles.cardTop}>
-            <View
-              style={[styles.cropEmojiWrap, { backgroundColor: season.pale }]}
-            >
+            <View style={[styles.cropEmojiWrap, { backgroundColor: season.pale }]}>
               <Text style={styles.cropEmoji}>{item.cropEmoji ?? "🌱"}</Text>
             </View>
 
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.cropName}>{item.cropName}</Text>
 
-              {/* subType + batchLabel */}
-              {(item as any).subType || (item as any).batchLabel ? (
+              {/* subType + batchLabel — NEW fields shown here */}
+              {(item.subType || item.batchLabel) ? (
                 <Text style={styles.cropSubInfo}>
-                  {(item as any).subType ? `🏷️ ${(item as any).subType}` : ""}
-                  {(item as any).subType && (item as any).batchLabel
-                    ? "  ·  "
-                    : ""}
-                  {(item as any).batchLabel
-                    ? `🔢 ${(item as any).batchLabel}`
-                    : ""}
+                  {item.subType ? `🏷️ ${item.subType}` : ""}
+                  {item.subType && item.batchLabel ? "  ·  " : ""}
+                  {item.batchLabel ? `🔢 ${item.batchLabel}` : ""}
                 </Text>
               ) : null}
 
@@ -262,19 +223,18 @@ function CropCard({
                     {season.icon} {season.label}
                   </Text>
                 </View>
-                {(item as any).year ? (
+
+                {/* year — NEW field */}
+                {item.year ? (
                   <View style={[styles.tag, { backgroundColor: C.green50 }]}>
                     <Text style={[styles.tagText, { color: C.green700 }]}>
-                      📅 {(item as any).year}
+                      📅 {item.year}
                     </Text>
                   </View>
                 ) : null}
-                <View
-                  style={[styles.statusBadge, { backgroundColor: status.bg }]}
-                >
-                  <View
-                    style={[styles.statusDot, { backgroundColor: status.dot }]}
-                  />
+
+                <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+                  <View style={[styles.statusDot, { backgroundColor: status.dot }]} />
                   <Text style={[styles.statusText, { color: status.text }]}>
                     {status.label}
                   </Text>
@@ -283,11 +243,7 @@ function CropCard({
             </View>
 
             <TouchableOpacity onPress={toggleMenu} style={styles.menuTrigger}>
-              <Ionicons
-                name="ellipsis-vertical"
-                size={18}
-                color={C.textMuted}
-              />
+              <Ionicons name="ellipsis-vertical" size={18} color={C.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -302,68 +258,49 @@ function CropCard({
               {(["Active", "Harvested", "Closed"] as CropStatus[]).map((s) => (
                 <TouchableOpacity
                   key={s}
-                  style={[
-                    styles.dropMenuItem,
-                    item.status === s && styles.dropMenuItemActive,
-                  ]}
-                  onPress={() => {
-                    toggleMenu();
-                    onStatusChange(item._id, s);
-                  }}
+                  style={[styles.dropMenuItem, item.status === s && styles.dropMenuItemActive]}
+                  onPress={() => { toggleMenu(); onStatusChange(item._id, s); }}
                 >
-                  <View
-                    style={[
-                      styles.statusDot,
-                      { backgroundColor: STATUS_META[s].dot },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.dropMenuText,
-                      item.status === s && {
-                        color: C.green700,
-                        fontWeight: "700",
-                      },
-                    ]}
-                  >
+                  <View style={[styles.statusDot, { backgroundColor: STATUS_META[s].dot }]} />
+                  <Text style={[styles.dropMenuText, item.status === s && { color: C.green700, fontWeight: "700" }]}>
                     {STATUS_META[s].label}
                   </Text>
                   {item.status === s && (
-                    <Ionicons
-                      name="checkmark"
-                      size={14}
-                      color={C.green700}
-                      style={{ marginLeft: "auto" }}
-                    />
+                    <Ionicons name="checkmark" size={14} color={C.green700} style={{ marginLeft: "auto" }} />
                   )}
                 </TouchableOpacity>
               ))}
+
+              {/* Quick harvest option in dropdown for Active crops */}
+              {item.status === "Active" && (
+                <>
+                  <View style={styles.dropDivider} />
+                  <TouchableOpacity
+                    style={styles.dropMenuItem}
+                    onPress={() => { toggleMenu(); onHarvest(item._id); }}
+                  >
+                    <Ionicons name="leaf-outline" size={14} color="#B45309" />
+                    <Text style={[styles.dropMenuText, { color: "#B45309" }]}>
+                      લણણી + ઉત્પાદન નોંધો
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
               <View style={styles.dropDivider} />
               <TouchableOpacity
                 style={styles.dropMenuItem}
-                onPress={() => {
-                  toggleMenu();
-                  router.push(`/crop/add-crop?id=${item._id}`);
-                }}
+                onPress={() => { toggleMenu(); router.push(`/crop/add-crop?id=${item._id}`); }}
               >
-                <Ionicons
-                  name="create-outline"
-                  size={14}
-                  color={C.textSecondary}
-                />
+                <Ionicons name="create-outline" size={14} color={C.textSecondary} />
                 <Text style={styles.dropMenuText}>ફેરફાર કરો</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.dropMenuItem}
-                onPress={() => {
-                  toggleMenu();
-                  onDelete(item._id);
-                }}
+                onPress={() => { toggleMenu(); onDelete(item._id); }}
               >
                 <Ionicons name="trash-outline" size={14} color={C.expense} />
-                <Text style={[styles.dropMenuText, { color: C.expense }]}>
-                  કાઢી નાખો
-                </Text>
+                <Text style={[styles.dropMenuText, { color: C.expense }]}>કાઢી નાખો</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -376,18 +313,42 @@ function CropCard({
                 {item.area} {item.areaUnit ?? "Bigha"}
               </Text>
             </View>
-            {item.notes ? (
+
+            {/* sowingDate — NEW field */}
+            {item.sowingDate ? (
               <View style={styles.footerItem}>
-                <Ionicons
-                  name="document-text-outline"
-                  size={13}
-                  color={C.textMuted}
-                />
-                <Text style={styles.footerText} numberOfLines={1}>
-                  {item.notes}
+                <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
+                <Text style={styles.footerText}>
+                  {new Date(item.sowingDate).toLocaleDateString("gu-IN", { day: "numeric", month: "short" })}
                 </Text>
               </View>
             ) : null}
+
+            {/* Yield efficiency badge — NEW, shown after harvest */}
+            {showYieldBadge ? (
+              <View style={[styles.yieldBadge, {
+                backgroundColor: (item.yieldEfficiency ?? 0) >= 80 ? C.incomePale : C.expensePale,
+              }]}>
+                <Ionicons
+                  name="analytics-outline"
+                  size={11}
+                  color={(item.yieldEfficiency ?? 0) >= 80 ? C.income : C.expense}
+                />
+                <Text style={[styles.yieldBadgeText, {
+                  color: (item.yieldEfficiency ?? 0) >= 80 ? C.income : C.expense,
+                }]}>
+                  {item.yieldEfficiency}%
+                </Text>
+              </View>
+            ) : null}
+
+            {item.notes && !showYieldBadge ? (
+              <View style={styles.footerItem}>
+                <Ionicons name="document-text-outline" size={13} color={C.textMuted} />
+                <Text style={styles.footerText} numberOfLines={1}>{item.notes}</Text>
+              </View>
+            ) : null}
+
             {index === 0 && !swiped && (
               <View style={styles.swipeHint}>
                 <Ionicons name="chevron-back" size={10} color={C.green100} />
@@ -401,7 +362,7 @@ function CropCard({
   );
 }
 
-// ─── Stats header — light green, matches dashboard ────────────────────────────
+// ─── Stats header ─────────────────────────────────────────────────────────────
 function StatsBar({ crops }: { crops: Crop[] }) {
   const active = crops.filter((c) => c.status === "Active").length;
   const harvested = crops.filter((c) => c.status === "Harvested").length;
@@ -410,11 +371,7 @@ function StatsBar({ crops }: { crops: Crop[] }) {
 
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(anim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
   }, []);
 
   const paddingTop = Platform.OS === "ios" ? 50 : 36;
@@ -433,9 +390,7 @@ function StatsBar({ crops }: { crops: Crop[] }) {
         <View style={styles.statsTitleRow}>
           <View>
             <Text style={styles.statsGreeting}>🌾 મારી પાક સૂચિ</Text>
-            <Text style={styles.statsSubtitle}>
-              {crops.length} પાક નોંધાયેલ છે
-            </Text>
+            <Text style={styles.statsSubtitle}>{crops.length} પાક નોંધાયેલ છે</Text>
           </View>
           <TouchableOpacity
             style={styles.statsAddBtn}
@@ -447,48 +402,14 @@ function StatsBar({ crops }: { crops: Crop[] }) {
 
         <View style={styles.statsGrid}>
           {[
-            {
-              label: "સક્રિય",
-              value: active,
-              color: C.income,
-              bg: C.incomePale,
-              icon: "leaf-outline",
-            },
-            {
-              label: "લણણી",
-              value: harvested,
-              color: "#B45309",
-              bg: "#FEF3C7",
-              icon: "checkmark-circle-outline",
-            },
-            {
-              label: "બંધ",
-              value: closed,
-              color: C.expense,
-              bg: C.expensePale,
-              icon: "close-circle-outline",
-            },
-            {
-              label: "કુલ વીઘા",
-              value: totalArea,
-              color: C.green700,
-              bg: C.green50,
-              icon: "resize-outline",
-            },
+            { label: "સક્રિય", value: active, color: C.income, bg: C.incomePale, icon: "leaf-outline" },
+            { label: "લણણી", value: harvested, color: "#B45309", bg: "#FEF3C7", icon: "checkmark-circle-outline" },
+            { label: "બંધ", value: closed, color: C.expense, bg: C.expensePale, icon: "close-circle-outline" },
+            { label: "કુલ વીઘા", value: totalArea, color: C.green700, bg: C.green50, icon: "resize-outline" },
           ].map((s) => (
-            <View
-              key={s.label}
-              style={[styles.statBox, { backgroundColor: s.bg }]}
-            >
-              <Ionicons
-                name={s.icon as any}
-                size={16}
-                color={s.color}
-                style={{ marginBottom: 4 }}
-              />
-              <Text style={[styles.statValue, { color: s.color }]}>
-                {s.value}
-              </Text>
+            <View key={s.label} style={[styles.statBox, { backgroundColor: s.bg }]}>
+              <Ionicons name={s.icon as any} size={16} color={s.color} style={{ marginBottom: 4 }} />
+              <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
               <Text style={styles.statLabel}>{s.label}</Text>
             </View>
           ))}
@@ -517,27 +438,12 @@ function FilterTabs({
           onPress={() => onChange(t.key)}
           activeOpacity={0.75}
         >
-          <Text
-            style={[
-              styles.filterTabText,
-              active === t.key && styles.filterTabTextActive,
-            ]}
-          >
+          <Text style={[styles.filterTabText, active === t.key && styles.filterTabTextActive]}>
             {t.label}
           </Text>
           {counts[t.key] !== undefined && (
-            <View
-              style={[
-                styles.filterBadge,
-                active === t.key && styles.filterBadgeActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.filterBadgeText,
-                  active === t.key && { color: "#fff" },
-                ]}
-              >
+            <View style={[styles.filterBadge, active === t.key && styles.filterBadgeActive]}>
+              <Text style={[styles.filterBadgeText, active === t.key && { color: "#fff" }]}>
                 {counts[t.key]}
               </Text>
             </View>
@@ -555,9 +461,7 @@ function EmptyState({ filter }: { filter: string }) {
     Animated.spring(anim, { toValue: 1, useNativeDriver: true }).start();
   }, []);
   return (
-    <Animated.View
-      style={[styles.empty, { opacity: anim, transform: [{ scale: anim }] }]}
-    >
+    <Animated.View style={[styles.empty, { opacity: anim, transform: [{ scale: anim }] }]}>
       <View style={styles.emptyIconWrap}>
         <Text style={styles.emptyEmoji}>🌱</Text>
       </View>
@@ -603,16 +507,16 @@ export default function CropScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchCrops();
-  }, []);
+  useEffect(() => { fetchCrops(); }, []);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchCrops();
   }, []);
 
+  // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = (id: string) => {
-    Alert.alert("ખાતરી કરો", "શું તમે આ પાક કાઢવા માંગો છો?", [
+    Alert.alert("ખાતરી કરો", "શું તમે આ પાક કાઢવા માંગો છો?\nબધા સંબંધિત ખર્ચ અને આવક પણ કાઢવામાં આવશે.", [
       { text: "રદ કરો", style: "cancel" },
       {
         text: "કાઢી નાખો",
@@ -629,19 +533,61 @@ export default function CropScreen() {
     ]);
   };
 
+  // ── Status change ─────────────────────────────────────────────────────────
   const handleStatusChange = async (id: string, status: CropStatus) => {
     try {
       await updateCropStatus(id, status);
-      setCrops((prev) =>
-        prev.map((c) => (c._id === id ? { ...c, status } : c)),
-      );
+      setCrops((prev) => prev.map((c) => (c._id === id ? { ...c, status } : c)));
     } catch (err: any) {
       Alert.alert("ભૂલ", err.message);
     }
   };
 
+  // ── Harvest — asks for actualYieldKg before marking harvested ─────────────
+  // Uses the new markCropHarvested API which accepts actualYieldKg
+  const handleHarvest = (id: string) => {
+    Alert.prompt(
+      "🌾 લણણી",
+      "વ્યવહારિક ઉત્પાદન (કિ.ગ્રા.) દાખલ કરો (વૈકલ્પિક):",
+      [
+        { text: "રદ કરો", style: "cancel" },
+        {
+          text: "લણણી",
+          onPress: async (value: any) => {
+            try {
+              const actualYieldKg =
+                value && !isNaN(Number(value)) && Number(value) > 0
+                  ? Number(value)
+                  : undefined;
+              const updated = await markCropHarvested(id, { actualYieldKg });
+              setCrops((prev) =>
+                prev.map((c) =>
+                  c._id === id
+                    ? {
+                      ...c,
+                      status: updated.status,
+                      harvestDate: updated.harvestDate,
+                      actualYieldKg: updated.actualYieldKg,
+                      yieldEfficiency: updated.yieldEfficiency,
+                    }
+                    : c,
+                ),
+              );
+            } catch (err: any) {
+              Alert.alert("ભૂલ", err.message);
+            }
+          },
+        },
+      ],
+      "plain-text",
+      "",
+      "numeric",
+    );
+  };
+
   const filtered =
     filter === "all" ? crops : crops.filter((c) => c.status === filter);
+
   const counts: Record<string, number> = {
     all: crops.length,
     Active: crops.filter((c) => c.status === "Active").length,
@@ -678,6 +624,7 @@ export default function CropScreen() {
               index={index}
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
+              onHarvest={handleHarvest}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -715,16 +662,9 @@ export default function CropScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
-
-  loaderWrap: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: C.bg,
-  },
+  loaderWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: C.bg },
   loadingText: { marginTop: 12, fontSize: 14, color: C.textMuted },
 
-  // Stats header
   statsGrad: {
     paddingHorizontal: 20,
     paddingBottom: 20,
@@ -733,272 +673,141 @@ const styles = StyleSheet.create({
     borderBottomColor: C.borderLight,
   },
   decorCircle1: {
-    position: "absolute",
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "#C8E6C980",
-    top: -40,
-    right: -30,
+    position: "absolute", width: 160, height: 160, borderRadius: 80,
+    backgroundColor: "#C8E6C980", top: -40, right: -30,
   },
   decorCircle2: {
-    position: "absolute",
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "#C8E6C950",
-    bottom: 8,
-    left: 16,
+    position: "absolute", width: 90, height: 90, borderRadius: 45,
+    backgroundColor: "#C8E6C950", bottom: 8, left: 16,
   },
   statsTitleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "flex-start", marginBottom: 16,
   },
   statsGreeting: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
   statsSubtitle: { fontSize: 13, color: C.textMuted, marginTop: 3 },
   statsAddBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: C.green50,
-    borderWidth: 1.5,
-    borderColor: C.green100,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: C.green50, borderWidth: 1.5, borderColor: C.green100,
+    justifyContent: "center", alignItems: "center",
   },
   statsGrid: { flexDirection: "row", gap: 8 },
   statBox: {
-    flex: 1,
-    borderRadius: 14,
-    padding: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#00000006",
+    flex: 1, borderRadius: 14, padding: 12, alignItems: "center",
+    borderWidth: 1, borderColor: "#00000006",
   },
   statValue: { fontSize: 20, fontWeight: "900", marginBottom: 2 },
-  statLabel: {
-    fontSize: 10,
-    color: C.textMuted,
-    fontWeight: "600",
-    textAlign: "center",
-  },
+  statLabel: { fontSize: 10, color: C.textMuted, fontWeight: "600", textAlign: "center" },
 
-  // Filter tabs
   filterRow: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-    backgroundColor: C.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderLight,
+    flexDirection: "row", paddingHorizontal: 16, paddingVertical: 12,
+    gap: 8, backgroundColor: C.surface,
+    borderBottomWidth: 1, borderBottomColor: C.borderLight,
   },
   filterTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    backgroundColor: C.bg,
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+    borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg,
   },
   filterTabActive: { borderColor: C.green700, backgroundColor: C.green50 },
   filterTabText: { fontSize: 12, fontWeight: "600", color: C.textMuted },
   filterTabTextActive: { color: C.green700 },
   filterBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: C.borderLight,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
+    minWidth: 18, height: 18, borderRadius: 9,
+    backgroundColor: C.borderLight, justifyContent: "center",
+    alignItems: "center", paddingHorizontal: 4,
   },
   filterBadgeActive: { backgroundColor: C.green700 },
   filterBadgeText: { fontSize: 10, fontWeight: "700", color: C.textMuted },
 
-  // List
   listContent: { padding: 14, paddingBottom: 110 },
 
-  // Card wrapper
   cardWrapper: { marginBottom: 12 },
-
-  // Swipe actions
   swipeActions: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    flexDirection: "row",
-    borderRadius: 18,
-    overflow: "hidden",
+    position: "absolute", right: 0, top: 0, bottom: 0,
+    flexDirection: "row", borderRadius: 18, overflow: "hidden",
   },
-  swipeBtn: {
-    width: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 3,
-  },
+  swipeBtn: { width: 40, justifyContent: "center", alignItems: "center", gap: 3 },
   swipeBtnText: { fontSize: 8, color: "#fff", fontWeight: "700" },
 
-  // Card
   card: {
-    backgroundColor: C.surface,
-    borderRadius: 18,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: C.borderLight,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: C.surface, borderRadius: 18, overflow: "hidden",
+    borderWidth: 1, borderColor: C.borderLight,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
   },
   cardAccentBar: { height: 4 },
   cardInner: { padding: 14 },
-
   cardTop: { flexDirection: "row", alignItems: "flex-start", marginBottom: 10 },
-  cropEmojiWrap: {
-    width: 50,
-    height: 50,
-    borderRadius: 15,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  cropEmojiWrap: { width: 50, height: 50, borderRadius: 15, justifyContent: "center", alignItems: "center" },
   cropEmoji: { fontSize: 26 },
-  cropName: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: C.textPrimary,
-    marginBottom: 3,
-  },
-  cropSubInfo: {
-    fontSize: 11,
-    color: C.textSecondary,
-    fontWeight: "600",
-    marginBottom: 5,
-  },
+  cropName: { fontSize: 16, fontWeight: "800", color: C.textPrimary, marginBottom: 3 },
+  cropSubInfo: { fontSize: 11, color: C.textSecondary, fontWeight: "600", marginBottom: 5 },
   tagsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   tagText: { fontSize: 11, fontWeight: "600" },
   statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 11, fontWeight: "700" },
 
   menuTrigger: { padding: 4, marginLeft: 4 },
   dropMenu: {
-    backgroundColor: C.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.borderLight,
-    marginTop: 8,
-    marginBottom: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
-    overflow: "hidden",
+    backgroundColor: C.surface, borderRadius: 14,
+    borderWidth: 1, borderColor: C.borderLight,
+    marginTop: 8, marginBottom: 4,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 12, elevation: 6, overflow: "hidden",
   },
   dropMenuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 14, paddingVertical: 11,
   },
   dropMenuItemActive: { backgroundColor: C.green50 },
   dropMenuText: { fontSize: 13, color: C.textSecondary },
-  dropDivider: {
-    height: 1,
-    backgroundColor: C.borderLight,
-    marginHorizontal: 10,
-  },
+  dropDivider: { height: 1, backgroundColor: C.borderLight, marginHorizontal: 10 },
 
   cardFooter: {
-    flexDirection: "row",
-    gap: 14,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: C.borderLight,
-    marginTop: 4,
-    alignItems: "center",
+    flexDirection: "row", gap: 14, paddingTop: 10,
+    borderTopWidth: 1, borderTopColor: C.borderLight,
+    marginTop: 4, alignItems: "center",
   },
   footerItem: { flexDirection: "row", alignItems: "center", gap: 4, flex: 1 },
   footerText: { fontSize: 12, color: C.textMuted },
+
+  // Yield efficiency badge — shown on harvested crops
+  yieldBadge: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8,
+  },
+  yieldBadgeText: { fontSize: 11, fontWeight: "700" },
+
   swipeHint: { flexDirection: "row", alignItems: "center", marginLeft: "auto" },
   swipeHintText: { fontSize: 10, color: C.green100 },
 
-  empty: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
+  empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
   emptyIconWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: C.green50,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: C.green100,
+    width: 96, height: 96, borderRadius: 48,
+    backgroundColor: C.green50, justifyContent: "center", alignItems: "center",
+    marginBottom: 16, borderWidth: 2, borderColor: C.green100,
   },
   emptyEmoji: { fontSize: 44 },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: C.textPrimary,
-    marginBottom: 6,
-  },
-  emptyDesc: {
-    fontSize: 13,
-    color: C.textMuted,
-    textAlign: "center",
-    marginBottom: 20,
-  },
+  emptyTitle: { fontSize: 18, fontWeight: "800", color: C.textPrimary, marginBottom: 6 },
+  emptyDesc: { fontSize: 13, color: C.textMuted, textAlign: "center", marginBottom: 20 },
   emptyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: C.green50,
-    borderRadius: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderWidth: 1.5,
-    borderColor: C.green100,
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: C.green50, borderRadius: 14,
+    paddingHorizontal: 20, paddingVertical: 12,
+    borderWidth: 1.5, borderColor: C.green100,
   },
   emptyBtnText: { fontSize: 14, fontWeight: "800", color: C.green700 },
 
   fab: {
-    position: "absolute",
-    bottom: 28,
-    right: 20,
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: C.green700,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    position: "absolute", bottom: 28, right: 20, borderRadius: 20, overflow: "hidden",
+    shadowColor: C.green700, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
   },
-  fabGrad: {
-    width: 58,
-    height: 58,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  fabGrad: { width: 58, height: 58, justifyContent: "center", alignItems: "center" },
 });

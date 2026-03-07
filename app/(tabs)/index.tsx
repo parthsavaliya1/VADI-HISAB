@@ -1,20 +1,13 @@
-/**
- * FILE: app/(tabs)/index.tsx
- *
- * ✅ Uses api.ts — axios instance with token, interceptors & typed responses
- * ✅ getMyProfile, getCrops, getExpenses from api.ts
- * ✅ getIncomes added via same API axios instance
- * ✅ Light fresh green palette
- * ✅ "આવક ઉમેરો" → /income/add-income
- * ✅ Pull-to-refresh, dynamic transactions, animated counter
- */
 
+
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import {
   API,
   getCrops,
   getExpenses,
   getMyProfile,
+  getYearlyReport,
   type Crop,
   type Expense,
   type ExpenseCategory,
@@ -149,11 +142,11 @@ interface Transaction {
   category: string;
 }
 
-function formatRelativeDate(iso: string): string {
+function formatRelativeDate(iso: string, t: (s: string, k: string) => string): string {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (diff === 0) return "આજે";
-  if (diff === 1) return "ગઈ કાલે";
-  if (diff < 7) return `${diff} દિવસ`;
+  if (diff === 0) return t("dashboard", "today");
+  if (diff === 1) return t("dashboard", "yesterday");
+  if (diff < 7) return t("dashboard", "daysAgo").replace("{n}", String(diff));
   return new Date(iso).toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -234,6 +227,7 @@ function incomeIcon(cat: IncomeCategory): string {
 function buildTransactions(
   expenses: Expense[],
   incomes: Income[],
+  t: (s: string, k: string) => string,
 ): Transaction[] {
   const expTxns: Transaction[] = expenses.map((e) => ({
     _id: e._id,
@@ -241,7 +235,7 @@ function buildTransactions(
     label: expenseLabel(e),
     crop: getCropName(e.cropId as any),
     amount: -expenseAmount(e),
-    date: formatRelativeDate(e.date),
+    date: formatRelativeDate(e.date, t),
     rawDate: e.date,
     icon: expenseIcon(e.category),
     category: e.category,
@@ -253,7 +247,7 @@ function buildTransactions(
     label: incomeLabel(i),
     crop: getCropName(i.cropId),
     amount: incomeAmount(i),
-    date: formatRelativeDate(i.date),
+    date: formatRelativeDate(i.date, t),
     rawDate: i.date,
     icon: incomeIcon(i.category),
     category: i.category,
@@ -385,12 +379,14 @@ function PressableCard({
 // 🌾 Crop Picker Modal
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function CropPickerModal({
+  t,
   visible,
   crops,
   onSelect,
   onClose,
   type,
 }: {
+  t: (s: string, k: string) => string;
   visible: boolean;
   crops: Crop[];
   onSelect: (c: Crop) => void;
@@ -430,9 +426,9 @@ function CropPickerModal({
         <View style={styles.sheetHeader}>
           <View>
             <Text style={styles.sheetTitle}>
-              {isExpense ? "💸 ખર્ચ ઉમેરો" : "💰 આવક ઉમેરો"}
+              {isExpense ? `💸 ${t("dashboard", "addExpense")}` : `💰 ${t("dashboard", "addIncome")}`}
             </Text>
-            <Text style={styles.sheetSubtitle}>પહેલા પાક પસંદ કરો</Text>
+            <Text style={styles.sheetSubtitle}>{t("dashboard", "selectCropFirst")}</Text>
           </View>
           <TouchableOpacity style={styles.sheetCloseBtn} onPress={onClose}>
             <Ionicons name="close" size={20} color={C.textMuted} />
@@ -442,7 +438,7 @@ function CropPickerModal({
         {crops.length === 0 ? (
           <View style={styles.sheetEmpty}>
             <Text style={{ fontSize: 50, marginBottom: 12 }}>🌱</Text>
-            <Text style={styles.sheetEmptyText}>કોઈ પાક નથી</Text>
+            <Text style={styles.sheetEmptyText}>{t("dashboard", "noCrops")}</Text>
             <TouchableOpacity
               style={[styles.sheetEmptyBtn, { backgroundColor: accentPale }]}
               onPress={() => {
@@ -451,7 +447,7 @@ function CropPickerModal({
               }}
             >
               <Text style={[styles.sheetEmptyBtnText, { color: accentColor }]}>
-                + નવો પાક ઉમેરો
+                + {t("dashboard", "addNewCrop")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -541,15 +537,17 @@ function CropPickerModal({
 // ⚡ Quick Actions
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function QuickActions({
+  t,
   onAddExpense,
   onAddIncome,
 }: {
+  t: (s: string, k: string) => string;
   onAddExpense: () => void;
   onAddIncome: () => void;
 }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>⚡ ઝડપી કામ</Text>
+      <Text style={styles.sectionTitle}>⚡ {t("dashboard", "quickActions")}</Text>
       <View style={{ height: 14 }} />
       <View style={styles.qaRow}>
         <PressableCard onPress={onAddExpense} style={styles.qaHalf}>
@@ -568,9 +566,9 @@ function QuickActions({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.qaLabel, { color: C.expense }]}>
-                ખર્ચ ઉમેરો
+                {t("dashboard", "addExpense")}
               </Text>
-              <Text style={styles.qaSub}>પાક પ્રમાણે</Text>
+              <Text style={styles.qaSub}>{t("dashboard", "byCrop")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={15} color={C.expense} />
           </View>
@@ -589,9 +587,9 @@ function QuickActions({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.qaLabel, { color: C.income }]}>
-                આવક ઉમેરો
+                {t("dashboard", "addIncome")}
               </Text>
-              <Text style={styles.qaSub}>પાક પ્રમાણે</Text>
+              <Text style={styles.qaSub}>{t("dashboard", "byCrop")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={15} color={C.income} />
           </View>
@@ -613,9 +611,9 @@ function QuickActions({
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.qaLabel, { color: C.green700 }]}>
-              નવો પાક ઉમેરો
+              {t("dashboard", "addNewCrop")}
             </Text>
-            <Text style={styles.qaSub}>નામ, સીઝન, વિસ્તાર</Text>
+            <Text style={styles.qaSub}>{t("dashboard", "nameSeasonArea")}</Text>
           </View>
           <Ionicons name="chevron-forward" size={15} color={C.green700} />
         </View>
@@ -628,21 +626,23 @@ function QuickActions({
 // 🧾 Recent Transactions
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function RecentTransactions({
+  t,
   transactions,
   loading,
 }: {
+  t: (s: string, k: string) => string;
   transactions: Transaction[];
   loading: boolean;
 }) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>🧾 તાજા વ્યવહાર</Text>
+        <Text style={styles.sectionTitle}>🧾 {t("dashboard", "recentTxns")}</Text>
         <TouchableOpacity
           style={styles.seeAllBtn}
           onPress={() => router.push("/expense" as any)}
         >
-          <Text style={styles.seeAll}>બધા જુઓ</Text>
+          <Text style={styles.seeAll}>{t("dashboard", "seeAll")}</Text>
           <Ionicons name="chevron-forward" size={14} color={C.green700} />
         </TouchableOpacity>
       </View>
@@ -651,7 +651,7 @@ function RecentTransactions({
           <View style={{ padding: 24, alignItems: "center" }}>
             <ActivityIndicator color={C.green500} size="small" />
             <Text style={{ color: C.textMuted, marginTop: 8, fontSize: 13 }}>
-              લોડ થઈ રહ્યું છે...
+              {t("dashboard", "loading")}
             </Text>
           </View>
         ) : transactions.length === 0 ? (
@@ -660,10 +660,10 @@ function RecentTransactions({
             <Text
               style={{ color: C.textMuted, fontSize: 14, fontWeight: "600" }}
             >
-              કોઈ વ્યવહાર નથી
+              {t("dashboard", "noTxns")}
             </Text>
             <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>
-              ખર્ચ અથવા આવક ઉમેરો
+              {t("dashboard", "addExpenseOrIncome")}
             </Text>
           </View>
         ) : (
@@ -734,8 +734,10 @@ function RecentTransactions({
 // 🏠 Main Dashboard
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function Dashboard() {
+  const { t } = useLanguage();
   const { profile, setProfile } = useProfile();
   const [crops, setCrops] = useState<Crop[]>([]);
+  const [summary, setSummary] = useState<{ totalIncome: number; totalExpense: number; netProfit: number }>({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
   const [transactions, setTxns] = useState<Transaction[]>([]);
   const [selectedCrop, setSelected] = useState(0);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -752,29 +754,26 @@ export default function Dashboard() {
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      // Profile + crops in parallel (both use API axios instance)
-      const [prof, cropRes] = await Promise.all([
-        getMyProfile(), // from api.ts — GET /profile/me
-        getCrops(), // from api.ts — GET /crops
+      const currentYear = new Date().getFullYear();
+      const [prof, cropRes, yearlyReport, expRes, incRes] = await Promise.all([
+        getMyProfile(),
+        getCrops(),
+        getYearlyReport(currentYear),
+        getExpenses(undefined, undefined, 1, 5),
+        getIncomes(1, 5),
       ]);
       setProfile(prof);
       setCrops(cropRes.data);
-
-      // Transactions: last 5 expenses + last 5 incomes in parallel
-      const [expRes, incRes] = await Promise.all([
-        getExpenses(undefined, undefined, 1, 5), // from api.ts — GET /expenses
-        getIncomes(1, 5), // local fn using API — GET /income
-      ]);
-      setTxns(buildTransactions(expRes.data, incRes.data));
+      setSummary(yearlyReport.summary);
+      setTxns(buildTransactions(expRes.data, incRes.data, t));
     } catch (err) {
-      // api.ts interceptors already console.log the error details
       console.log("[Dashboard] loadData error:", (err as Error).message);
     } finally {
       setLoadingProfile(false);
       setLoadingTxns(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadData();
@@ -792,15 +791,14 @@ export default function Dashboard() {
     ]).start();
   }, []);
 
-  // ── Derived totals from crop data ─────────────────────────────────────────────
-  const totalIncome = crops.reduce((s, c) => s + ((c as any).income ?? 0), 0);
-  const totalExpense = crops.reduce((s, c) => s + ((c as any).expense ?? 0), 0);
-  const totalProfit = totalIncome - totalExpense;
+  const totalIncome = summary.totalIncome;
+  const totalExpense = summary.totalExpense;
+  const totalProfit = summary.netProfit;
 
   const farmerName = profile?.name ?? "";
   const farmerVillage = profile?.village ?? "";
   const farmerLand = profile?.totalLand
-    ? `${profile.totalLand.value} ${profile.totalLand.unit === "bigha" ? "વીઘા" : "એકર"}`
+    ? `${profile.totalLand.value} ${profile.totalLand.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`
     : "";
   const avatarChar = farmerName.trim().charAt(0) || "🌾";
 
@@ -856,7 +854,7 @@ export default function Dashboard() {
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarText}>{avatarChar}</Text>
             </View>
-            <Text style={styles.stickyName}>{farmerName || "ડૅશબોર્ડ"}</Text>
+            <Text style={styles.stickyName}>{farmerName || t("dashboard", "farmer")}</Text>
           </View>
           <TouchableOpacity style={styles.notifBtn}>
             <Ionicons
@@ -882,7 +880,7 @@ export default function Dashboard() {
           <Animated.View style={{ opacity: headerOpacity }}>
             <View style={styles.headerTop}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.greetingSmall}>🌅 સ્વાગત છે</Text>
+                <Text style={styles.greetingSmall}>🌅 {t("dashboard", "greeting")}</Text>
                 {loadingProfile ? (
                   <SkeletonLine
                     width={180}
@@ -891,7 +889,7 @@ export default function Dashboard() {
                   />
                 ) : (
                   <Text style={styles.farmerName} numberOfLines={1}>
-                    {farmerName || "ખેડૂત"}
+                    {farmerName || t("dashboard", "farmer")}
                   </Text>
                 )}
                 {loadingProfile ? (
@@ -997,7 +995,7 @@ export default function Dashboard() {
                 ]}
               />
               <View style={{ flex: 1 }}>
-                <Text style={styles.profitLabel}>⚖️ કુલ ચોખ્ખો નફો</Text>
+                <Text style={styles.profitLabel}>⚖️ {t("dashboard", "netProfit")}</Text>
                 <View style={styles.profitAmountRow}>
                   <Text
                     style={[
@@ -1014,7 +1012,7 @@ export default function Dashboard() {
                     [
                       {
                         icon: "arrow-up-circle-outline",
-                        label: "આવક",
+                        label: t("dashboard", "income"),
                         value: totalIncome,
                         color: C.income,
                         bg: C.incomePale,
@@ -1022,7 +1020,7 @@ export default function Dashboard() {
                       },
                       {
                         icon: "arrow-down-circle-outline",
-                        label: "ખર્ચ",
+                        label: t("dashboard", "expense"),
                         value: totalExpense,
                         color: C.expense,
                         bg: C.expensePale,
@@ -1030,7 +1028,7 @@ export default function Dashboard() {
                       },
                       {
                         icon: "leaf-outline",
-                        label: "પાક",
+                        label: t("dashboard", "crops"),
                         value: crops.length,
                         color: C.green700,
                         bg: C.green50,
@@ -1066,8 +1064,8 @@ export default function Dashboard() {
           </PressableCard>
         </Animated.View>
 
-        {/* ── 1. ⚡ ઝડપી કામ ── */}
         <QuickActions
+          t={t}
           onAddExpense={openExpensePicker}
           onAddIncome={openIncomePicker}
         />
@@ -1075,12 +1073,12 @@ export default function Dashboard() {
         {/* ── 2. 🌱 મારા પાક ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🌱 મારા પાક</Text>
+            <Text style={styles.sectionTitle}>🌱 {t("dashboard", "myCrops")}</Text>
             <TouchableOpacity
               style={styles.seeAllBtn}
               onPress={() => router.push("/crop" as any)}
             >
-              <Text style={styles.seeAll}>બધા જુઓ</Text>
+              <Text style={styles.seeAll}>{t("dashboard", "seeAll")}</Text>
               <Ionicons name="chevron-forward" size={14} color={C.green700} />
             </TouchableOpacity>
           </View>
@@ -1091,10 +1089,10 @@ export default function Dashboard() {
               style={styles.emptyCropCard}
             >
               <Text style={{ fontSize: 44, marginBottom: 8 }}>🌱</Text>
-              <Text style={styles.emptyCropText}>કોઈ પાક નથી</Text>
+              <Text style={styles.emptyCropText}>{t("dashboard", "noCrops")}</Text>
               <View style={styles.emptyCropBtn}>
                 <Ionicons name="add" size={15} color={C.green700} />
-                <Text style={styles.emptyCropBtnText}>નવો પાક ઉમેરો</Text>
+                <Text style={styles.emptyCropBtnText}>{t("dashboard", "addNewCrop")}</Text>
               </View>
             </PressableCard>
           ) : (
@@ -1226,21 +1224,21 @@ export default function Dashboard() {
                       {
                         icon: "💰",
                         val: inc,
-                        label: "કુલ આવક",
+                        label: t("dashboard", "totalIncome"),
                         color: C.income,
                         bg: C.incomePale,
                       },
                       {
                         icon: "📉",
                         val: exp,
-                        label: "કુલ ખર્ચ",
+                        label: t("dashboard", "totalExpense"),
                         color: C.expense,
                         bg: C.expensePale,
                       },
                       {
                         icon: profit >= 0 ? "📈" : "⚠️",
                         val: profit,
-                        label: "ચોખ્ખો નફો",
+                        label: t("dashboard", "profit"),
                         color: profit >= 0 ? C.neutral : "#E65100",
                         bg: profit >= 0 ? C.neutralPale : "#FFF3E0",
                       },
@@ -1284,10 +1282,9 @@ export default function Dashboard() {
                       <Text
                         style={[styles.detailBtnText, { color: C.expense }]}
                       >
-                        ખર્ચ ઉમેરો
+                        {t("dashboard", "addExpense")}
                       </Text>
                     </PressableCard>
-                    {/* ✅ Income route */}
                     <PressableCard
                       onPress={() =>
                         router.push(`/income/add-income?cropId=${c._id}` as any)
@@ -1306,7 +1303,7 @@ export default function Dashboard() {
                         color={C.income}
                       />
                       <Text style={[styles.detailBtnText, { color: C.income }]}>
-                        આવક ઉમેરો
+                        {t("dashboard", "addIncome")}
                       </Text>
                     </PressableCard>
                   </View>
@@ -1315,13 +1312,13 @@ export default function Dashboard() {
             );
           })()}
 
-        {/* ── 3. 🧾 તાજા વ્યવહાર ── */}
-        <RecentTransactions transactions={transactions} loading={loadingTxns} />
+        <RecentTransactions t={t} transactions={transactions} loading={loadingTxns} />
 
         <View style={{ height: 120 }} />
       </Animated.ScrollView>
 
       <CropPickerModal
+        t={t}
         visible={pickerVisible}
         crops={crops}
         type={pickerType}
