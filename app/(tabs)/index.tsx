@@ -412,6 +412,7 @@ function CropPickerModal({
   onSelect,
   onClose,
   type,
+  onSelectGeneralExpense,
 }: {
   t: (s: string, k: string) => string;
   visible: boolean;
@@ -419,6 +420,7 @@ function CropPickerModal({
   onSelect: (c: Crop) => void;
   onClose: () => void;
   type: "expense" | "income";
+  onSelectGeneralExpense?: () => void;
 }) {
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
   const isExpense = type === "expense";
@@ -462,7 +464,7 @@ function CropPickerModal({
           </TouchableOpacity>
         </View>
 
-        {crops.length === 0 ? (
+        {crops.length === 0 && !onSelectGeneralExpense ? (
           <View style={styles.sheetEmpty}>
             <Text style={{ fontSize: 58, marginBottom: 14 }}>🌱</Text>
             <Text style={styles.sheetEmptyText}>{t("dashboard", "noCrops")}</Text>
@@ -480,6 +482,25 @@ function CropPickerModal({
           </View>
         ) : (
           <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+            {isExpense && onSelectGeneralExpense && (
+              <TouchableOpacity
+                style={[styles.sheetCropRow, styles.sheetGeneralRow]}
+                onPress={() => {
+                  onSelectGeneralExpense();
+                  onClose();
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.sheetCropEmojiBg, { backgroundColor: C.expensePale }]}>
+                  <Ionicons name="receipt-outline" size={30} color={C.expense} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sheetCropName}>સામાન્ય ખર્ચ / અન્ય ખર્ચ</Text>
+                  <Text style={styles.sheetCropMeta}>કોઈ પાક સંલગ્ન નહીં</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            )}
             {crops.map((crop, i) => {
               const colors = CROP_COLORS[i % CROP_COLORS.length];
               return (
@@ -1380,6 +1401,14 @@ export default function Dashboard() {
         type={pickerType}
         onSelect={handleCropSelected}
         onClose={() => setPickerVisible(false)}
+        onSelectGeneralExpense={
+          pickerType === "expense"
+            ? () => {
+                setPickerVisible(false);
+                router.push("/expense/add-expense" as any);
+              }
+            : undefined
+        }
       />
     </View>
   );
@@ -1891,6 +1920,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: C.borderLight,
+  },
+  sheetGeneralRow: {
+    backgroundColor: C.surfaceGreen,
+    borderBottomWidth: 2,
+    borderBottomColor: C.green100,
   },
   sheetCropEmojiBg: {
     width: 50,

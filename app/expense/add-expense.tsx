@@ -1,7 +1,9 @@
 import { useProfile } from "@/contexts/ProfileContext";
 import {
   createExpense,
+  getCrops,
   type AdvanceReason,
+  type Crop,
   type ExpenseCategory,
   type FertilizerProduct,
   type LabourTask,
@@ -9,12 +11,13 @@ import {
   type PesticideCategory,
   type SeedType,
 } from "@/utils/api";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Dimensions,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -25,6 +28,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const { width: SCREEN_W } = Dimensions.get("window");
+const CAT_GRID_PAD = 16;
+const CAT_GRID_GAP = 12;
+// 3 in first row (Seed, Fertilizer, Pesticide), 2 in second row (Labour, Machinery)
+const CAT_CARD_WIDTH = (SCREEN_W - CAT_GRID_PAD * 2 - CAT_GRID_GAP * 2) / 3;
 
 // ─── Color system — matches dashboard exactly ─────────────────────────────────
 const C = {
@@ -51,49 +60,20 @@ const C = {
   borderLight: "#EAF4EA",
 };
 
-// ─── Categories ───────────────────────────────────────────────────────────────
+// ─── Categories — icons: seed, fertilizer (not bag), spray pump, people, tractor ─────
 const CATEGORIES: {
   value: ExpenseCategory;
   label: string;
-  icon: string;
+  iconSet: "ionicons" | "mci";
+  iconName: string;
   color: string;
   pale: string;
 }[] = [
-  {
-    value: "Seed",
-    label: "બિયારણ",
-    icon: "🌱",
-    color: "#16A34A",
-    pale: "#DCFCE7",
-  },
-  {
-    value: "Fertilizer",
-    label: "ખાતર",
-    icon: "🧪",
-    color: "#0891B2",
-    pale: "#E0F2FE",
-  },
-  {
-    value: "Pesticide",
-    label: "જંતુ.",
-    icon: "🧴",
-    color: "#DC2626",
-    pale: "#FEE2E2",
-  },
-  {
-    value: "Labour",
-    label: "મજૂરી",
-    icon: "👷",
-    color: "#D97706",
-    pale: "#FEF3C7",
-  },
-  {
-    value: "Machinery",
-    label: "મશીન",
-    icon: "🚜",
-    color: "#7C3AED",
-    pale: "#EDE9FE",
-  },
+  { value: "Seed", label: "બિયારણ", iconSet: "mci", iconName: "sprout", color: "#16A34A", pale: "#DCFCE7" },
+  { value: "Fertilizer", label: "ખાતર", iconSet: "ionicons", iconName: "flask-outline", color: "#0891B2", pale: "#E0F2FE" },
+  { value: "Pesticide", label: "જંતુનાશક", iconSet: "mci", iconName: "spray", color: "#DC2626", pale: "#FEE2E2" },
+  { value: "Labour", label: "મજૂરી", iconSet: "ionicons", iconName: "people-outline", color: "#D97706", pale: "#FEF3C7" },
+  { value: "Machinery", label: "ટ્રેક્ટર/મશીન", iconSet: "mci", iconName: "tractor-variant", color: "#7C3AED", pale: "#EDE9FE" },
 ];
 
 const SEED_TYPES: { value: SeedType; label: string }[] = [
@@ -240,17 +220,34 @@ function NumericInput({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AddExpense() {
-  const params = useLocalSearchParams<{ cropId: string }>();
-  const cropId = Array.isArray(params.cropId)
+  const params = useLocalSearchParams<{ cropId?: string }>();
+  const paramCropId = Array.isArray(params.cropId)
     ? params.cropId[0]
     : params.cropId;
   const { profile } = useProfile();
+
+  const [crops, setCrops] = useState<Crop[]>([]);
+  const [selectedCropId, setSelectedCropId] = useState<string | "">("");
+  const cropId = paramCropId ?? (selectedCropId || undefined);
+
+  useEffect(() => {
+    if (!paramCropId) {
+      getCrops().then((r) => setCrops(r.data ?? [])).catch(() => setCrops([]));
+    }
+  }, [paramCropId]);
 
   const [category, setCategory] = useState<ExpenseCategory | "">("");
   const [saving, setSaving] = useState(false);
   const [seedType, setSeedType] = useState<SeedType | "">("");
   const [seedQty, setSeedQty] = useState("");
-  const [seedCost, setSeedCost] = useState("");
+  const [seedQtyUnit, setSeedQtyUnit] = useState<"man" | "kg">("man");
+  const [seedUnitRate, setSeedUnitRate] = useState("");
+  const seedCost = (() => {
+    const q = Number(seedQty);
+    const r = Number(seedUnitRate);
+    if (q > 0 && r >= 0) return String(q * r);
+    return "";
+  })();
   const [fertProduct, setFertProduct] = useState<FertilizerProduct | "">("");
   const [fertBags, setFertBags] = useState("");
   const [fertCost, setFertCost] = useState("");
@@ -276,17 +273,24 @@ export default function AddExpense() {
       : null;
   const machineTotal =
     machineQty && machineRate ? Number(machineQty) * Number(machineRate) : null;
+  const seedQuantityKg =
+    seedQty && Number(seedQty) > 0
+      ? seedQtyUnit === "man"
+        ? Number(seedQty) * 20
+        : Number(seedQty)
+      : 0;
   const seedRatePerKg =
-    seedQty && seedCost && Number(seedQty) > 0
-      ? (Number(seedCost) / Number(seedQty)).toFixed(2)
+    seedQuantityKg > 0 && seedCost && Number(seedCost) > 0
+      ? (Number(seedCost) / seedQuantityKg).toFixed(2)
       : null;
 
   const validate = (): string | null => {
-    if (!cropId) return "cropId મળ્યો નથી — પાછળ જઈ ફરીથી પ્રયાસ કરો.";
+    if (!cropId) return "કૃપા કરીને પાક પસંદ કરો અથવા સામાન્ય ખર્ચ માટે કોઈ પાક પસંદ કરો.";
     if (!category) return "કૃપા કરીને ખર્ચ પ્રકાર પસંદ કરો.";
     if (category === "Seed") {
       if (!seedType) return "બિયારણ પ્રકાર જરૂરી છે.";
-      if (!seedCost || Number(seedCost) <= 0) return "ખર્ચ 0 ન હોઈ શકે.";
+      if (!seedQty || Number(seedQty) <= 0) return "જથ્થો દાખલ કરો.";
+      if (!seedUnitRate || Number(seedUnitRate) < 0) return "દર (₹/એકમ) દાખલ કરો.";
     }
     if (category === "Fertilizer") {
       if (!fertProduct) return "ઉત્પાદનનું નામ જરૂરી છે.";
@@ -330,7 +334,7 @@ export default function AddExpense() {
         ...(category === "Seed" && {
           seed: {
             seedType: seedType as SeedType,
-            quantityKg: Number(seedQty),
+            quantityKg: seedQuantityKg,
             totalCost: Number(seedCost),
           },
         }),
@@ -385,11 +389,13 @@ export default function AddExpense() {
 
   const activeCat = CATEGORIES.find((c) => c.value === category);
   const paddingTop = Platform.OS === "ios" ? 50 : 36;
+  const scrollRef = useRef<ScrollView>(null);
 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
@@ -410,11 +416,22 @@ export default function AddExpense() {
             <Ionicons name="arrow-back" size={20} color={C.green700} />
           </TouchableOpacity>
           <View style={{ alignItems: "center" }}>
-            <Text style={styles.headerTitle}>
-              {activeCat
-                ? `${activeCat.icon} ${activeCat.label} ખર્ચ`
-                : "💰 ખર્ચ ઉમેરો"}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              {activeCat ? (
+                <>
+                  <View style={[styles.headerIconWrap, { backgroundColor: activeCat.pale }]}>
+                    {activeCat.iconSet === "mci" ? (
+                      <MaterialCommunityIcons name={activeCat.iconName as any} size={20} color={activeCat.color} />
+                    ) : (
+                      <Ionicons name={activeCat.iconName as any} size={20} color={activeCat.color} />
+                    )}
+                  </View>
+                  <Text style={styles.headerTitle}>{activeCat.label} ખર્ચ</Text>
+                </>
+              ) : (
+                <Text style={styles.headerTitle}>ખર્ચ ઉમેરો</Text>
+              )}
+            </View>
             <Text style={styles.headerSub}>
               {activeCat ? "વિગત ભરો અને સાચવો" : "ખર્ચ પ્રકાર પસંદ કરો"}
             </Text>
@@ -424,59 +441,83 @@ export default function AddExpense() {
       </LinearGradient>
 
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1, backgroundColor: C.bg }}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 360 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
       >
-        {/* ── Category chips ── */}
-        <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: 20 }}
-        >
+        {/* ── General expense: no crop in params — show crop selector ── */}
+        {!paramCropId && (
+          <View style={styles.generalExpenseCard}>
+            <Text style={styles.generalExpenseTitle}>સામાન્ય ખર્ચ / અન્ય ખર્ચ</Text>
+            {crops.length > 0 ? (
+              <>
+                <SectionLabel text="આ ખર્ચ કયા પાક સાથે જોડવો? (સામાન્ય માટે કોઈ પણ પાક પસંદ કરો)" />
+                <SelectPicker
+                  options={crops.map((c) => ({ value: c._id, label: `${c.cropEmoji ?? "🌱"} ${c.cropName}` }))}
+                  selected={selectedCropId}
+                  onSelect={setSelectedCropId}
+                  placeholder="પાક પસંદ કરો..."
+                />
+              </>
+            ) : (
+              <Text style={styles.generalExpenseNote}>કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો, પછી ખર્ચ ઉમેરો.</Text>
+            )}
+          </View>
+        )}
+
+        {/* ── Row 1: Seed, Fertilizer, Pesticide — Row 2: Labour, Machinery ── */}
+        <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર પસંદ કરો</Text>
+        <View style={styles.catGrid}>
           {CATEGORIES.map((cat) => {
             const active = category === cat.value;
             return (
               <TouchableOpacity
                 key={cat.value}
                 onPress={() => setCategory(cat.value)}
-                activeOpacity={0.8}
-                style={{ marginRight: 10 }}
+                activeOpacity={0.85}
+                style={styles.catGridItem}
               >
                 <View
                   style={[
-                    styles.catChip,
+                    styles.catCard,
+                    !active && styles.catCardInactive,
                     active && {
                       backgroundColor: cat.pale,
                       borderColor: cat.color,
-                      borderWidth: 2,
+                      borderWidth: 2.5,
                     },
                   ]}
                 >
-                  <Text style={styles.catIcon}>{cat.icon}</Text>
+                  <View style={[styles.catCardIconWrap, { backgroundColor: cat.pale }]}>
+                    {cat.iconSet === "mci" ? (
+                      <MaterialCommunityIcons name={cat.iconName as any} size={28} color={cat.color} />
+                    ) : (
+                      <Ionicons name={cat.iconName as any} size={28} color={cat.color} />
+                    )}
+                  </View>
                   <Text
                     style={[
-                      styles.catLabel,
+                      styles.catCardLabel,
+                      !active && styles.catCardLabelInactive,
                       active && { color: cat.color, fontWeight: "800" },
                     ]}
+                    numberOfLines={2}
                   >
                     {cat.label}
                   </Text>
                   {active && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={14}
-                      color={cat.color}
-                      style={{ marginLeft: 2 }}
-                    />
+                    <View style={[styles.catCardCheck, { backgroundColor: cat.color }]}>
+                      <Ionicons name="checkmark" size={12} color="#fff" />
+                    </View>
                   )}
                 </View>
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
 
         {/* ── SEED ── */}
         {category === "Seed" && (
@@ -491,25 +532,43 @@ export default function AddExpense() {
               onSelect={setSeedType}
               placeholder="પ્રકાર પસંદ કરો..."
             />
-            <SectionLabel text="જથ્થો (કિ.ગ્રા.)" />
+            <SectionLabel text="જથ્થો" />
+            <View style={styles.seedQtyRow}>
+              <View style={{ flex: 1 }}>
+                <NumericInput
+                  value={seedQty}
+                  onChange={setSeedQty}
+                  placeholder="0"
+                />
+              </View>
+              <View style={styles.unitToggle}>
+                <TouchableOpacity
+                  style={[styles.unitToggleBtn, seedQtyUnit === "man" && styles.unitToggleBtnActive]}
+                  onPress={() => setSeedQtyUnit("man")}
+                >
+                  <Text style={[styles.unitToggleText, seedQtyUnit === "man" && styles.unitToggleTextActive]}>મણ</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.unitToggleBtn, seedQtyUnit === "kg" && styles.unitToggleBtnActive]}
+                  onPress={() => setSeedQtyUnit("kg")}
+                >
+                  <Text style={[styles.unitToggleText, seedQtyUnit === "kg" && styles.unitToggleTextActive]}>કિ.ગ્રા.</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <SectionLabel text={`દર (₹ પ્રતિ ${seedQtyUnit === "man" ? "મણ" : "કિ.ગ્રા."}) *`} />
             <NumericInput
-              value={seedQty}
-              onChange={setSeedQty}
-              placeholder="0"
-              suffix="કિ.ગ્રા."
-            />
-            <SectionLabel text="કુલ ખર્ચ (₹) *" />
-            <NumericInput
-              value={seedCost}
-              onChange={setSeedCost}
+              value={seedUnitRate}
+              onChange={setSeedUnitRate}
               placeholder="0"
               prefix="₹"
             />
-            {seedRatePerKg && (
+            {Number(seedQty) > 0 && Number(seedUnitRate) >= 0 && (
               <View style={styles.derivedBox}>
-                <Ionicons name="calculator" size={14} color={C.green700} />
+                <Ionicons name="calculator" size={16} color={C.green700} />
                 <Text style={styles.derivedText}>
-                  દર: ₹{seedRatePerKg} / કિ.ગ્રા.
+                  કુલ ખર્ચ: ₹{Number(seedCost).toLocaleString("en-IN")}
+                  {seedRatePerKg && ` · દર ₹${seedRatePerKg}/કિ.ગ્રા.`}
                 </Text>
               </View>
             )}
@@ -863,36 +922,129 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 16, fontWeight: "800", color: C.textPrimary },
-  headerSub: { fontSize: 11, color: C.textMuted, marginTop: 2 },
+  headerIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: { fontSize: 19, fontWeight: "800", color: C.textPrimary },
+  headerSub: { fontSize: 13, color: C.textMuted, marginTop: 2 },
 
-  scroll: { padding: 18 },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: C.textSecondary,
+  scroll: { padding: CAT_GRID_PAD },
+  generalExpenseCard: {
+    backgroundColor: C.surfaceGreen,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: C.green100,
+  },
+  generalExpenseTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: C.textPrimary,
     marginBottom: 12,
   },
+  generalExpenseNote: {
+    fontSize: 15,
+    color: C.textMuted,
+    lineHeight: 22,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: C.textPrimary,
+    marginBottom: 14,
+  },
 
-  // Category chips
-  catChip: {
+  // Category grid — 3 in first row, 2 in second (Labour, Machinery)
+  catGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: CAT_GRID_GAP,
+    marginBottom: 20,
+  },
+  catGridItem: {
+    width: CAT_CARD_WIDTH,
+  },
+  catCard: {
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    justifyContent: "center",
+    minHeight: 72,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: C.border,
+    borderWidth: 2,
+    borderColor: C.borderLight,
     backgroundColor: C.surface,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  catIcon: { fontSize: 18 },
-  catLabel: { fontSize: 13, fontWeight: "600", color: C.textSecondary },
+  catCardInactive: {
+    opacity: 0.72,
+    backgroundColor: C.bg,
+  },
+  catCardIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  catCardLabel: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: C.textPrimary,
+    textAlign: "center",
+  },
+  catCardLabelInactive: {
+    color: C.textMuted,
+  },
+  catCardCheck: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  seedQtyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
+  },
+  unitToggle: {
+    flexDirection: "row",
+    borderWidth: 1.5,
+    borderColor: C.border,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  unitToggleBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: C.surfaceGreen,
+  },
+  unitToggleBtnActive: {
+    backgroundColor: C.green700,
+  },
+  unitToggleText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.textSecondary,
+  },
+  unitToggleTextActive: {
+    color: "#fff",
+  },
 
   // Card
   card: {
@@ -909,10 +1061,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cardTitleRow: { borderLeftWidth: 3, paddingLeft: 10, marginBottom: 16 },
-  cardTitle: { fontSize: 15, fontWeight: "800", color: C.textPrimary },
+  cardTitle: { fontSize: 18, fontWeight: "800", color: C.textPrimary },
 
   label: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: "700",
     color: C.textMuted,
     marginBottom: 6,
@@ -932,7 +1084,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.surfaceGreen,
   },
   selectBtnOpen: { borderColor: C.green700, backgroundColor: C.surface },
-  selectText: { fontSize: 14, color: C.textPrimary },
+  selectText: { fontSize: 17, color: C.textPrimary },
   dropList: {
     borderWidth: 1.5,
     borderColor: C.green100,
@@ -956,7 +1108,7 @@ const styles = StyleSheet.create({
     borderBottomColor: C.borderLight,
   },
   dropItemActive: { backgroundColor: C.green50 },
-  dropItemText: { fontSize: 14, color: C.textSecondary },
+  dropItemText: { fontSize: 16, color: C.textSecondary },
   dropItemTextActive: { fontWeight: "700", color: C.green700 },
 
   // Numeric input
@@ -970,12 +1122,12 @@ const styles = StyleSheet.create({
     backgroundColor: C.surfaceGreen,
     marginBottom: 4,
   },
-  numAffix: { fontSize: 14, color: C.textMuted, marginHorizontal: 4 },
+  numAffix: { fontSize: 16, color: C.textMuted, marginHorizontal: 4 },
   numInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 18,
     color: C.textPrimary,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
 
   // Derived / info boxes
@@ -990,7 +1142,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.green100,
   },
-  derivedText: { fontSize: 12, fontWeight: "600", color: C.green700 },
+  derivedText: { fontSize: 16, fontWeight: "700", color: C.green700 },
 
   totalBox: {
     flexDirection: "row",
@@ -1003,8 +1155,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: C.green100,
   },
-  totalLabel: { fontSize: 13, color: C.textSecondary, fontWeight: "700" },
-  totalValue: { fontSize: 20, color: C.green700, fontWeight: "900" },
+  totalLabel: { fontSize: 16, color: C.textSecondary, fontWeight: "700" },
+  totalValue: { fontSize: 22, color: C.green700, fontWeight: "900" },
 
   // Info / warn notes
   infoNote: {
@@ -1016,7 +1168,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     alignItems: "flex-start",
   },
-  infoNoteText: { fontSize: 11, color: "#0369A1", flex: 1, lineHeight: 16 },
+  infoNoteText: { fontSize: 14, color: "#0369A1", flex: 1, lineHeight: 20 },
   warnNote: {
     flexDirection: "row",
     gap: 6,
@@ -1026,7 +1178,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     alignItems: "flex-start",
   },
-  warnNoteText: { fontSize: 11, color: "#92400E", flex: 1, lineHeight: 16 },
+  warnNoteText: { fontSize: 14, color: "#92400E", flex: 1, lineHeight: 20 },
 
   // Toggle
   toggleRow: {
@@ -1052,8 +1204,8 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  toggleText: { fontSize: 13, fontWeight: "600", color: C.textMuted },
-  toggleTextActive: { fontSize: 13, fontWeight: "800", color: C.green700 },
+  toggleText: { fontSize: 16, fontWeight: "600", color: C.textMuted },
+  toggleTextActive: { fontSize: 16, fontWeight: "800", color: C.green700 },
 
   multiRow: {
     flexDirection: "row",
@@ -1069,7 +1221,7 @@ const styles = StyleSheet.create({
   },
 
   notesInput: {
-    fontSize: 13,
+    fontSize: 16,
     color: C.textPrimary,
     borderWidth: 1.5,
     borderColor: C.border,
