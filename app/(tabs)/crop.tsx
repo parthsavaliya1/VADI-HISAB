@@ -758,11 +758,11 @@ const styles = StyleSheet.create({
   emptyDesc: { fontSize: 13, color: C.textMuted, textAlign: "center", marginBottom: 20 },
   emptyBtn: {
     flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: C.green50, borderRadius: 14,
+    backgroundColor: "#FFF8E1", borderRadius: 14,
     paddingHorizontal: 20, paddingVertical: 12,
-    borderWidth: 1.5, borderColor: C.green100,
+    borderWidth: 2, borderColor: "#FFE082",
   },
-  emptyBtnText: { fontSize: 14, fontWeight: "800", color: C.green700 },
+  emptyBtnText: { fontSize: 14, fontWeight: "800", color: "#5D4037" },
 
   fab: {
     position: "absolute", bottom: 28, right: 20, borderRadius: 20, overflow: "hidden",
