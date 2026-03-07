@@ -220,21 +220,22 @@ function NumericInput({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AddExpense() {
-  const params = useLocalSearchParams<{ cropId?: string }>();
-  const paramCropId = Array.isArray(params.cropId)
-    ? params.cropId[0]
-    : params.cropId;
+  const params = useLocalSearchParams<{ cropId?: string; general?: string }>();
+  const paramCropId = Array.isArray(params.cropId) ? params.cropId[0] : params.cropId;
+  const isGeneralExpense = (Array.isArray(params.general) ? params.general[0] : params.general) === "1";
   const { profile } = useProfile();
 
   const [crops, setCrops] = useState<Crop[]>([]);
   const [selectedCropId, setSelectedCropId] = useState<string | "">("");
+  const [generalDescription, setGeneralDescription] = useState("");
+  const [generalAmount, setGeneralAmount] = useState("");
   const cropId = paramCropId ?? (selectedCropId || undefined);
 
   useEffect(() => {
-    if (!paramCropId) {
+    if (!paramCropId || isGeneralExpense) {
       getCrops().then((r) => setCrops(r.data ?? [])).catch(() => setCrops([]));
     }
-  }, [paramCropId]);
+  }, [paramCropId, isGeneralExpense]);
 
   const [category, setCategory] = useState<ExpenseCategory | "">("");
   const [saving, setSaving] = useState(false);
@@ -250,7 +251,11 @@ export default function AddExpense() {
   })();
   const [fertProduct, setFertProduct] = useState<FertilizerProduct | "">("");
   const [fertBags, setFertBags] = useState("");
-  const [fertCost, setFertCost] = useState("");
+  const [fertUnitCost, setFertUnitCost] = useState("");
+  const fertTotal =
+    fertBags && fertUnitCost && Number(fertBags) > 0 && Number(fertUnitCost) >= 0
+      ? Number(fertBags) * Number(fertUnitCost)
+      : null;
   const [pestCategory, setPestCategory] = useState<PesticideCategory | "">("");
   const [pestDosage, setPestDosage] = useState("");
   const [pestCost, setPestCost] = useState("");
@@ -262,7 +267,7 @@ export default function AddExpense() {
   const [advanceReason, setAdvanceReason] = useState<AdvanceReason | "">("");
   const [advanceAmount, setAdvanceAmount] = useState("");
   const [machineImpl, setMachineImpl] = useState<MachineryImplement | "">("");
-  const [machineIsContract, setMachineIsContract] = useState(false);
+  const [machineUnitType, setMachineUnitType] = useState<"hour" | "vigha">("vigha");
   const [machineQty, setMachineQty] = useState("");
   const [machineRate, setMachineRate] = useState("");
   const [notes, setNotes] = useState("");
@@ -285,6 +290,11 @@ export default function AddExpense() {
       : null;
 
   const validate = (): string | null => {
+    if (isGeneralExpense) {
+      if (!crops.length) return "સામાન્ય ખર્ચ માટે પહેલા ઓછામાં ઓછો એક પાક ઉમેરો.";
+      if (!generalAmount || Number(generalAmount) <= 0) return "ખર્ચની રકમ દાખલ કરો.";
+      return null;
+    }
     if (!cropId) return "કૃપા કરીને પાક પસંદ કરો અથવા સામાન્ય ખર્ચ માટે કોઈ પાક પસંદ કરો.";
     if (!category) return "કૃપા કરીને ખર્ચ પ્રકાર પસંદ કરો.";
     if (category === "Seed") {
@@ -294,7 +304,8 @@ export default function AddExpense() {
     }
     if (category === "Fertilizer") {
       if (!fertProduct) return "ઉત્પાદનનું નામ જરૂરી છે.";
-      if (!fertCost || Number(fertCost) <= 0) return "ખર્ચ 0 ન હોઈ શકે.";
+      if (!fertBags || Number(fertBags) <= 0) return "બૅગ સંખ્યા દાખલ કરો.";
+      if (!fertUnitCost || Number(fertUnitCost) < 0) return "દર દર બૅગ (₹) દાખલ કરો.";
     }
     if (category === "Pesticide") {
       if (!pestCategory) return "કેટેગરી પસંદ કરો.";
@@ -326,6 +337,22 @@ export default function AddExpense() {
     }
     try {
       setSaving(true);
+      if (isGeneralExpense && crops[0]) {
+        await createExpense({
+          userId: profile?._id,
+          cropId: crops[0]._id,
+          category: "Labour",
+          notes: generalDescription.trim() || undefined,
+          labourContract: {
+            advanceReason: "Other",
+            amountGiven: Number(generalAmount),
+          },
+        });
+        Alert.alert("✅ સફળ!", "સામાન્ય ખર્ચ સાચવ્યો.", [
+          { text: "ઠીક છે", onPress: () => router.back() },
+        ]);
+        return;
+      }
       await createExpense({
         userId: profile?._id,
         cropId: cropId as string,
@@ -342,7 +369,7 @@ export default function AddExpense() {
           fertilizer: {
             productName: fertProduct as FertilizerProduct,
             numberOfBags: Number(fertBags),
-            totalCost: Number(fertCost),
+            totalCost: Number(fertBags) * Number(fertUnitCost),
           },
         }),
         ...(category === "Pesticide" && {
@@ -371,7 +398,7 @@ export default function AddExpense() {
         ...(category === "Machinery" && {
           machinery: {
             implement: machineImpl as MachineryImplement,
-            isContract: machineIsContract,
+            isContract: false,
             hoursOrAcres: Number(machineQty),
             rate: Number(machineRate),
           },
@@ -417,7 +444,9 @@ export default function AddExpense() {
           </TouchableOpacity>
           <View style={{ alignItems: "center" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              {activeCat ? (
+              {isGeneralExpense ? (
+                <Text style={styles.headerTitle}>સામાન્ય ખર્ચ</Text>
+              ) : activeCat ? (
                 <>
                   <View style={[styles.headerIconWrap, { backgroundColor: activeCat.pale }]}>
                     {activeCat.iconSet === "mci" ? (
@@ -433,7 +462,7 @@ export default function AddExpense() {
               )}
             </View>
             <Text style={styles.headerSub}>
-              {activeCat ? "વિગત ભરો અને સાચવો" : "ખર્ચ પ્રકાર પસંદ કરો"}
+              {isGeneralExpense ? "વિવરણ અને રકમ દાખલ કરો" : activeCat ? "વિગત ભરો અને સાચવો" : "ખર્ચ પ્રકાર પસંદ કરો"}
             </Text>
           </View>
           <View style={{ width: 36 }} />
@@ -448,6 +477,55 @@ export default function AddExpense() {
         showsVerticalScrollIndicator={false}
         keyboardDismissMode="on-drag"
       >
+        {/* ── General expense only: description + amount, then save ── */}
+        {isGeneralExpense ? (
+          <View style={styles.card}>
+            {crops.length === 0 ? (
+              <Text style={styles.generalExpenseNote}>સામાન્ય ખર્ચ માટે પહેલા ડેશબોર્ડથી ઓછામાં ઓછો એક પાક ઉમેરો.</Text>
+            ) : (
+              <>
+                <SectionLabel text="વિવરણ (ઓપ્શનલ)" />
+                <TextInput
+                  style={styles.notesInput}
+                  value={generalDescription}
+                  onChangeText={setGeneralDescription}
+                  placeholder="દા.ત. સામાન્ય ખર્ચ, ભાડું..."
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                />
+                <SectionLabel text="ખર્ચ રકમ (₹) *" />
+                <NumericInput
+                  value={generalAmount}
+                  onChange={setGeneralAmount}
+                  placeholder="0"
+                  prefix="₹"
+                />
+                <TouchableOpacity
+                  style={styles.saveBtn}
+                  onPress={handleSave}
+                  disabled={saving || !generalAmount || Number(generalAmount) <= 0}
+                >
+                  <LinearGradient
+                    colors={["#2E7D32", "#4CAF50"]}
+                    style={styles.btnGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    {saving ? (
+                      <Text style={styles.btnText}>સાચવી રહ્યા છીએ...</Text>
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={22} color="#fff" />
+                        <Text style={styles.btnText}>સાચવો</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        ) : (
+          <>
         {/* ── General expense: no crop in params — show crop selector ── */}
         {!paramCropId && (
           <View style={styles.generalExpenseCard}>
@@ -473,6 +551,7 @@ export default function AddExpense() {
         <View style={styles.catGrid}>
           {CATEGORIES.map((cat) => {
             const active = category === cat.value;
+            const hasSelection = category !== "";
             return (
               <TouchableOpacity
                 key={cat.value}
@@ -483,7 +562,7 @@ export default function AddExpense() {
                 <View
                   style={[
                     styles.catCard,
-                    !active && styles.catCardInactive,
+                    hasSelection && !active && styles.catCardInactive,
                     active && {
                       backgroundColor: cat.pale,
                       borderColor: cat.color,
@@ -501,7 +580,7 @@ export default function AddExpense() {
                   <Text
                     style={[
                       styles.catCardLabel,
-                      !active && styles.catCardLabelInactive,
+                      hasSelection && !active && styles.catCardLabelInactive,
                       active && { color: cat.color, fontWeight: "800" },
                     ]}
                     numberOfLines={2}
@@ -532,7 +611,7 @@ export default function AddExpense() {
               onSelect={setSeedType}
               placeholder="પ્રકાર પસંદ કરો..."
             />
-            <SectionLabel text="જથ્થો" />
+            <SectionLabel text="જથ્થો (૧ મણ = ૨૦ કિ.ગ્રા.)" />
             <View style={styles.seedQtyRow}>
               <View style={{ flex: 1 }}>
                 <NumericInput
@@ -588,20 +667,28 @@ export default function AddExpense() {
               onSelect={setFertProduct}
               placeholder="ખાતર પસંદ કરો..."
             />
-            <SectionLabel text="બૅગ સંખ્યા" />
+            <SectionLabel text="બૅગ સંખ્યા *" />
             <NumericInput
               value={fertBags}
               onChange={setFertBags}
               placeholder="0"
               suffix="બૅગ"
             />
-            <SectionLabel text="કુલ ખર્ચ (₹) *" />
+            <SectionLabel text="દર દર બૅગ (₹) *" />
             <NumericInput
-              value={fertCost}
-              onChange={setFertCost}
+              value={fertUnitCost}
+              onChange={setFertUnitCost}
               placeholder="0"
               prefix="₹"
             />
+            {fertTotal !== null && fertTotal >= 0 && (
+              <View style={styles.totalBox}>
+                <Text style={styles.totalLabel}>કુલ = બૅગ × દર</Text>
+                <Text style={styles.totalValue}>
+                  ₹ {fertTotal.toLocaleString("en-IN")}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -757,58 +844,60 @@ export default function AddExpense() {
         {category === "Machinery" && (
           <View style={styles.card}>
             <View style={[styles.cardTitleRow, { borderLeftColor: "#7C3AED" }]}>
-              <Text style={styles.cardTitle}>🚜 મશીનરી ખર્ચ</Text>
+              <Text style={styles.cardTitle}>🚜 ટ્રેક્ટર ભાડું</Text>
             </View>
-            <View style={styles.toggleRow}>
-              <TouchableOpacity
-                style={[
-                  styles.toggleBtn,
-                  !machineIsContract && styles.toggleBtnActive,
-                ]}
-                onPress={() => setMachineIsContract(false)}
-              >
-                <Text
-                  style={
-                    !machineIsContract
-                      ? styles.toggleTextActive
-                      : styles.toggleText
-                  }
-                >
-                  ભાડું
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.toggleBtn,
-                  machineIsContract && styles.toggleBtnActive,
-                ]}
-                onPress={() => setMachineIsContract(true)}
-              >
-                <Text
-                  style={
-                    machineIsContract
-                      ? styles.toggleTextActive
-                      : styles.toggleText
-                  }
-                >
-                  કોન્ટ્રાક્ટ
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <SectionLabel text="મશીન / ઓજાર *" />
+            <SectionLabel text="ઓજાર / હળ *" />
             <SelectPicker
               options={MACHINERY_IMPLEMENTS}
               selected={machineImpl}
               onSelect={setMachineImpl}
-              placeholder="પ્રકાર પસંદ કરો..."
+              placeholder="હળ અથવા ઓજાર પસંદ કરો..."
             />
-            <SectionLabel text="કલાક / એકર" />
+            <SectionLabel text="દરનો એકમ" />
+            <View style={styles.toggleRow}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleBtn,
+                  machineUnitType === "vigha" && styles.toggleBtnActive,
+                ]}
+                onPress={() => setMachineUnitType("vigha")}
+              >
+                <Text
+                  style={
+                    machineUnitType === "vigha"
+                      ? styles.toggleTextActive
+                      : styles.toggleText
+                  }
+                >
+                  વીઘા
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleBtn,
+                  machineUnitType === "hour" && styles.toggleBtnActive,
+                ]}
+                onPress={() => setMachineUnitType("hour")}
+              >
+                <Text
+                  style={
+                    machineUnitType === "hour"
+                      ? styles.toggleTextActive
+                      : styles.toggleText
+                  }
+                >
+                  કલાક
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <SectionLabel text={machineUnitType === "vigha" ? "વીઘા *" : "કલાક *"} />
             <NumericInput
               value={machineQty}
               onChange={setMachineQty}
               placeholder="0"
+              suffix={machineUnitType === "vigha" ? "વીઘા" : "કલાક"}
             />
-            <SectionLabel text="દર (₹)" />
+            <SectionLabel text="દર (₹) *" />
             <NumericInput
               value={machineRate}
               onChange={setMachineRate}
@@ -817,7 +906,9 @@ export default function AddExpense() {
             />
             {machineTotal !== null && (
               <View style={styles.totalBox}>
-                <Text style={styles.totalLabel}>કુલ =</Text>
+                <Text style={styles.totalLabel}>
+                  કુલ = {machineUnitType === "vigha" ? "વીઘા" : "કલાક"} × દર
+                </Text>
                 <Text style={styles.totalValue}>
                   ₹ {machineTotal.toLocaleString("en-IN")}
                 </Text>
@@ -848,9 +939,12 @@ export default function AddExpense() {
         )}
 
         <View style={{ height: 120 }} />
+          </>
+        )}
       </ScrollView>
 
-      {/* ── Bottom bar ── */}
+      {/* ── Bottom bar (hidden for general expense) ── */}
+      {!isGeneralExpense && (
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={[styles.saveBtn, saving && { opacity: 0.65 }]}
@@ -875,6 +969,7 @@ export default function AddExpense() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

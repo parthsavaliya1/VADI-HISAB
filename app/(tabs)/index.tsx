@@ -482,25 +482,6 @@ function CropPickerModal({
           </View>
         ) : (
           <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-            {isExpense && onSelectGeneralExpense && (
-              <TouchableOpacity
-                style={[styles.sheetCropRow, styles.sheetGeneralRow]}
-                onPress={() => {
-                  onSelectGeneralExpense();
-                  onClose();
-                }}
-                activeOpacity={0.75}
-              >
-                <View style={[styles.sheetCropEmojiBg, { backgroundColor: C.expensePale }]}>
-                  <Ionicons name="receipt-outline" size={30} color={C.expense} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.sheetCropName}>સામાન્ય ખર્ચ / અન્ય ખર્ચ</Text>
-                  <Text style={styles.sheetCropMeta}>કોઈ પાક સંલગ્ન નહીં</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: 6 }} />
-              </TouchableOpacity>
-            )}
             {crops.map((crop, i) => {
               const colors = CROP_COLORS[i % CROP_COLORS.length];
               return (
@@ -573,6 +554,25 @@ function CropPickerModal({
                 </TouchableOpacity>
               );
             })}
+            {isExpense && onSelectGeneralExpense && (
+              <TouchableOpacity
+                style={[styles.sheetCropRow, styles.sheetGeneralRow]}
+                onPress={() => {
+                  onSelectGeneralExpense();
+                  onClose();
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.sheetCropEmojiBg, { backgroundColor: C.expensePale }]}>
+                  <Ionicons name="receipt-outline" size={30} color={C.expense} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sheetCropName}>સામાન્ય ખર્ચ / અન્ય ખર્ચ</Text>
+                  <Text style={styles.sheetCropMeta}>કોઈ પાક સંલગ્ન નહીં</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            )}
             <View style={{ height: 20 }} />
           </ScrollView>
         )}
@@ -1405,7 +1405,7 @@ export default function Dashboard() {
           pickerType === "expense"
             ? () => {
                 setPickerVisible(false);
-                router.push("/expense/add-expense" as any);
+                router.push("/expense/add-expense?general=1" as any);
               }
             : undefined
         }
@@ -1881,7 +1881,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
-    maxHeight: SCREEN_H * 0.75,
+    maxHeight: SCREEN_H * 0.9,
     paddingHorizontal: 20,
     paddingBottom: Platform.OS === "ios" ? 36 : 20,
   },

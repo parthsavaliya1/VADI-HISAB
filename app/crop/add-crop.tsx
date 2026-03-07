@@ -58,6 +58,8 @@ const SEASONS: {
   sublabel: string;
   icon: string;
   colors: [string, string];
+  selectedColors: [string, string]; // darker when selected
+  inactiveBg: [string, string];
 }[] = [
   {
     value: "Kharif",
@@ -65,6 +67,8 @@ const SEASONS: {
     sublabel: "જૂન – ઓક્ટોબર",
     icon: "☔",
     colors: ["#0EA5E9", "#0369A1"],
+    selectedColors: ["#0284C7", "#075985"],
+    inactiveBg: ["#E0F2FE", "#BAE6FD"],
   },
   {
     value: "Rabi",
@@ -72,6 +76,8 @@ const SEASONS: {
     sublabel: "નવેમ્બર – માર્ચ",
     icon: "❄️",
     colors: ["#6366F1", "#4338CA"],
+    selectedColors: ["#4F46E5", "#3730A3"],
+    inactiveBg: ["#E0E7FF", "#C7D2FE"],
   },
   {
     value: "Summer",
@@ -79,6 +85,8 @@ const SEASONS: {
     sublabel: "એપ્રિલ – જૂન",
     icon: "☀️",
     colors: ["#F59E0B", "#B45309"],
+    selectedColors: ["#D97706", "#92400E"],
+    inactiveBg: ["#FEF3C7", "#FDE68A"],
   },
 ];
 
@@ -91,7 +99,7 @@ const CROPS: {
   {
     value: "Cotton",
     label: "કપાસ",
-    emoji: "🌿",
+    emoji: "☁️",
     subtypes: ["Bt-Cotton", "Shankar-6", "RCH-2", "MRC-7017"],
   },
   {
@@ -103,7 +111,7 @@ const CROPS: {
   {
     value: "Jeera",
     label: "જીરું",
-    emoji: "🌱",
+    emoji: "🌿",
     subtypes: ["GJ Jeera-2", "RZ-19", "RZ-209", "GCU-1"],
   },
   {
@@ -121,7 +129,7 @@ const CROPS: {
   {
     value: "Chana",
     label: "ચણા",
-    emoji: "🫘",
+    emoji: "🌰",
     subtypes: ["GG-1", "GG-2", "Desi", "Kabuli"],
   },
   {
@@ -252,6 +260,79 @@ function Chip({
           size={14}
           color={C.green700}
           style={{ marginLeft: 3 }}
+        />
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// Large crop card for step 1 — 3 per row, icon + label, highlight only when selected
+function CropCard({
+  label,
+  emoji,
+  selected,
+  onPress,
+}: {
+  label: string;
+  emoji: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.cropCard, selected && styles.cropCardActive]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <Text style={styles.cropCardEmoji}>{emoji}</Text>
+      <Text
+        style={[styles.cropCardLabel, selected && styles.cropCardLabelActive]}
+        numberOfLines={2}
+      >
+        {label}
+      </Text>
+      {selected && (
+        <View style={styles.cropCardCheck}>
+          <Ionicons name="checkmark-circle" size={22} color={C.green700} />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// Large subtype card for step 2 — icon left, label right, highlight only
+function SubTypeCard({
+  label,
+  cropEmoji,
+  selected,
+  onPress,
+}: {
+  label: string;
+  cropEmoji: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.subTypeCard, selected && styles.subTypeCardActive]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={styles.subTypeIconWrap}>
+        <Text style={styles.subTypeEmoji}>{cropEmoji}</Text>
+      </View>
+      <Text
+        style={[styles.subTypeLabel, selected && styles.subTypeLabelActive]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+      {selected && (
+        <Ionicons
+          name="checkmark-circle"
+          size={22}
+          color={C.green700}
+          style={{ marginLeft: "auto" }}
         />
       )}
     </TouchableOpacity>
@@ -584,130 +665,144 @@ export default function AddCrop() {
         <Animated.View
           style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
         >
-          {/* ══ STEP 0 — Season + Year ══ */}
+          {/* ══ STEP 0 — Season + Year (seasonal screen) ══ */}
           {step === 0 && (
-            <View>
-              <Text style={styles.stepTitle}>સિઝન અને વર્ષ પસંદ કરો</Text>
-              <Text style={styles.stepDesc}>પાક ક્યા વર્ષ અને સિઝનનો છે? (જૂન થી જૂન)</Text>
+            <LinearGradient
+              colors={["#F0F9FF", "#E0F2FE", "#F5F3FF", "#FEFCE8"]}
+              style={styles.seasonStepWrapper}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.seasonStepInner}>
+                <Text style={styles.stepTitle}>સિઝન અને વર્ષ પસંદ કરો</Text>
+                <Text style={styles.stepDesc}>પાક ક્યા વર્ષ અને સિઝનનો છે? (જૂન થી જૂન)</Text>
 
-              {/* Financial year selector — 2025-26 = June 2025 to May 2026 */}
-              <Text style={styles.fieldLabel}>📅 વર્ષ (જૂન – જૂન)</Text>
-              <View style={styles.yearRow}>
-                {YEAR_OPTIONS.map((y) => (
-                  <TouchableOpacity
-                    key={y}
-                    style={[
-                      styles.yearChip,
-                      form.year === y && styles.yearChipActive,
-                    ]}
-                    onPress={() => set("year", y)}
-                  >
-                    <Text
-                      style={[
-                        styles.yearChipText,
-                        form.year === y && styles.yearChipTextActive,
-                      ]}
-                    >
-                      {y}
-                    </Text>
-                    {form.year === y && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={14}
-                        color={C.green700}
-                        style={{ marginLeft: 4 }}
-                      />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Season selector */}
-              <Text style={[styles.fieldLabel, { marginTop: 20 }]}>
-                🌦️ સિઝન
-              </Text>
-              <View style={styles.seasonGrid}>
-                {SEASONS.map((s) => {
-                  const active = form.season === s.value;
-                  return (
+                {/* Financial year selector — 2025-26 = June 2025 to May 2026 */}
+                <Text style={styles.fieldLabel}>📅 વર્ષ (જૂન – જૂન)</Text>
+                <View style={styles.yearRow}>
+                  {YEAR_OPTIONS.map((y) => (
                     <TouchableOpacity
-                      key={s.value}
+                      key={y}
                       style={[
-                        styles.seasonCard,
-                        active && styles.seasonCardActive,
+                        styles.yearChip,
+                        form.year === y && styles.yearChipActive,
                       ]}
-                      onPress={() => set("season", s.value)}
-                      activeOpacity={0.85}
+                      onPress={() => set("year", y)}
                     >
-                      <LinearGradient
-                        colors={active ? s.colors : ["#F9FAFB", "#F3F4F6"]}
-                        style={styles.seasonGrad}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
+                      <Text
+                        style={[
+                          styles.yearChipText,
+                          form.year === y && styles.yearChipTextActive,
+                        ]}
                       >
-                        <Text style={styles.seasonIcon}>{s.icon}</Text>
-                        <Text
-                          style={[
-                            styles.seasonLabel,
-                            active && { color: "#fff" },
-                          ]}
-                        >
-                          {s.label}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.seasonSub,
-                            active && { color: "#ffffff99" },
-                          ]}
-                        >
-                          {s.sublabel}
-                        </Text>
-                        {active && (
-                          <View style={styles.seasonCheck}>
-                            <Ionicons
-                              name="checkmark-circle"
-                              size={22}
-                              color="#fff"
-                            />
-                          </View>
-                        )}
-                      </LinearGradient>
+                        {y}
+                      </Text>
+                      {form.year === y && (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={14}
+                          color={C.green700}
+                          style={{ marginLeft: 4 }}
+                        />
+                      )}
                     </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {form.season && (
-                <View style={styles.infoBox}>
-                  <Ionicons
-                    name="information-circle"
-                    size={16}
-                    color={C.green700}
-                  />
-                  <Text style={styles.infoText}>
-                    <Text style={{ fontWeight: "700" }}>{form.year}</Text> વર્ષ
-                    ·{" "}
-                    <Text style={{ fontWeight: "700" }}>
-                      {SEASONS.find((s) => s.value === form.season)?.label}
-                    </Text>{" "}
-                    સિઝન પસંદ થઈ.
-                  </Text>
+                  ))}
                 </View>
-              )}
-            </View>
+
+                {/* Season selector — icon left, label right; selected = zoom + darker */}
+                <Text style={[styles.fieldLabel, { marginTop: 20 }]}>
+                  🌦️ સિઝન
+                </Text>
+                <View style={styles.seasonGrid}>
+                  {SEASONS.map((s) => {
+                    const active = form.season === s.value;
+                    return (
+                      <TouchableOpacity
+                        key={s.value}
+                        style={[
+                          styles.seasonCard,
+                          active && styles.seasonCardActive,
+                          { transform: [{ scale: active ? 1.04 : 1 }] },
+                        ]}
+                        onPress={() => set("season", s.value)}
+                        activeOpacity={0.85}
+                      >
+                        <LinearGradient
+                          colors={active ? s.selectedColors : s.inactiveBg}
+                          style={styles.seasonGrad}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
+                          <View style={styles.seasonRow}>
+                            <View style={styles.seasonIconWrap}>
+                              <Text style={styles.seasonIcon}>{s.icon}</Text>
+                            </View>
+                            <View style={styles.seasonTextWrap}>
+                              <Text
+                                style={[
+                                  styles.seasonLabel,
+                                  active && styles.seasonLabelActive,
+                                ]}
+                              >
+                                {s.label}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.seasonSub,
+                                  active && styles.seasonSubActive,
+                                ]}
+                              >
+                                {s.sublabel}
+                              </Text>
+                            </View>
+                            {active && (
+                              <View style={styles.seasonCheck}>
+                                <Ionicons
+                                  name="checkmark-circle"
+                                  size={26}
+                                  color="#fff"
+                                />
+                              </View>
+                            )}
+                          </View>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {form.season && (
+                  <View style={styles.infoBox}>
+                    <Ionicons
+                      name="information-circle"
+                      size={16}
+                      color={C.green700}
+                    />
+                    <Text style={styles.infoText}>
+                      <Text style={{ fontWeight: "700" }}>{form.year}</Text> વર્ષ
+                      ·{" "}
+                      <Text style={{ fontWeight: "700" }}>
+                        {SEASONS.find((s) => s.value === form.season)?.label}
+                      </Text>{" "}
+                      સિઝન પસંદ થઈ.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </LinearGradient>
           )}
 
-          {/* ══ STEP 1 — Crop ══ */}
+          {/* ══ STEP 1 — Crop (3 per row, large icons, highlight only) ══ */}
           {step === 1 && (
             <View>
               <Text style={styles.stepTitle}>પાક પસંદ કરો</Text>
               <Text style={styles.stepDesc}>
                 {SEASONS.find((s) => s.value === form.season)?.label} સિઝનના
-                સામાન્ય પાક
+                સામાન્ય પાક — એક પાક પસંદ કરો
               </Text>
-              <View style={styles.chipWrap}>
+              <View style={styles.cropGrid}>
                 {CROPS.map((c) => (
-                  <Chip
+                  <CropCard
                     key={c.value}
                     label={c.label}
                     emoji={c.emoji}
@@ -755,51 +850,25 @@ export default function AddCrop() {
                   </TouchableOpacity>
                 )}
               </View>
-              {(form.cropValue || form.customCrop) && (
-                <View style={styles.previewBox}>
-                  <Text style={{ fontSize: 26 }}>{finalCropEmoji}</Text>
-                  <View>
-                    <Text style={styles.previewSmall}>પસંદ થયેલ પાક</Text>
-                    <Text style={styles.previewBig}>{finalCropLabel}</Text>
-                  </View>
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={22}
-                    color={C.green700}
-                    style={{ marginLeft: "auto" }}
-                  />
-                </View>
-              )}
             </View>
           )}
 
-          {/* ══ STEP 2 — Sub Type only ══ */}
+          {/* ══ STEP 2 — Sub Type (large cards, highlight only) ══ */}
           {step === 2 && (
             <View>
-              <Text style={styles.stepTitle}>પ્રકાર</Text>
+              <Text style={styles.stepTitle}>બીજ / જાત પસંદ કરો</Text>
               <Text style={styles.stepDesc}>
-                {finalCropEmoji} {finalCropLabel} નો ચોક્કસ પ્રકાર (વૈકલ્પિક)
+                {finalCropEmoji} {finalCropLabel} નો ચોક્કસ પ્રકાર — એક પસંદ કરો અથવા ટાઈપ કરો
               </Text>
 
               <View style={styles.fieldCard}>
-                <View style={styles.fieldCardHeader}>
-                  <Text style={styles.fieldCardIcon}>🏷️</Text>
-                  <View>
-                    <Text style={styles.fieldCardTitle}>જાત / પ્રકાર</Text>
-                    <Text style={styles.fieldCardSub}>
-                      {currentCropSubtypes.length > 0
-                        ? "નીચેથી પસંદ કરો અથવા કસ્ટમ ટાઈપ કરો"
-                        : "પ્રકાર ટાઈપ કરો (વૈકલ્પિક)"}
-                    </Text>
-                  </View>
-                </View>
-
                 {currentCropSubtypes.length > 0 && (
-                  <View style={styles.chipWrap}>
+                  <View style={styles.subTypeGrid}>
                     {currentCropSubtypes.map((st) => (
-                      <Chip
+                      <SubTypeCard
                         key={st}
                         label={st}
+                        cropEmoji={finalCropEmoji}
                         selected={form.subType === st && !form.customSubType}
                         onPress={() =>
                           setForm((p) => ({
@@ -840,40 +909,30 @@ export default function AddCrop() {
                     </TouchableOpacity>
                   )}
                 </View>
-
-                {finalSubType ? (
-                  <View style={styles.previewBox}>
-                    <Text style={{ fontSize: 20 }}>🏷️</Text>
-                    <View>
-                      <Text style={styles.previewSmall}>પ્રકાર</Text>
-                      <Text style={styles.previewBig}>{finalSubType}</Text>
-                    </View>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color={C.green700}
-                      style={{ marginLeft: "auto" }}
-                    />
-                  </View>
-                ) : null}
               </View>
             </View>
           )}
 
-          {/* ══ STEP 3 — Farm + Area ══ */}
+          {/* ══ STEP 3 — Farm + Area (large vadi/vigha cards + crop summary) ══ */}
           {step === 3 && (
             <View>
               <Text style={styles.stepTitle}>વાડી અને વિસ્તાર</Text>
               <Text style={styles.stepDesc}>વાડી પસંદ કરો અને વીઘામાં વિસ્તાર દાખલ કરો</Text>
-              <View style={styles.miniSummary}>
-                <Text style={styles.miniSummaryText}>
-                  {finalCropEmoji} {finalCropLabel}
-                  {finalSubType ? ` · ${finalSubType}` : ""}
-                  {" · "}
-                  {SEASONS.find((s) => s.value === form.season)?.label}{" "}
-                  {form.year}
-                </Text>
+
+              {/* Crop summary card — graphical */}
+              <View style={styles.cropSummaryCard}>
+                <View style={styles.cropSummaryIconRow}>
+                  <Text style={styles.cropSummaryEmoji}>{finalCropEmoji}</Text>
+                  <View style={styles.cropSummaryTextWrap}>
+                    <Text style={styles.cropSummaryCrop}>{finalCropLabel}</Text>
+                    <Text style={styles.cropSummaryMeta}>
+                      {finalSubType ? `${finalSubType} · ` : ""}
+                      {SEASONS.find((s) => s.value === form.season)?.label} {form.year}
+                    </Text>
+                  </View>
+                </View>
               </View>
+
               {profile?.farms && profile.farms.length > 0 && (
                 <>
                   <Text style={styles.myFarmsLabel}>વાડી પસંદ કરો *</Text>
@@ -890,7 +949,7 @@ export default function AddCrop() {
                             setSelectedFarm(farm);
                             setForm((p) => ({ ...p, area: "" }));
                           }}
-                          activeOpacity={0.75}
+                          activeOpacity={0.85}
                         >
                           <Text style={[styles.farmChipName, isSelected && styles.farmChipNameActive]}>
                             {farm.name}
@@ -1204,19 +1263,19 @@ const styles = StyleSheet.create({
 
   scroll: { padding: 18 },
   stepTitle: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: "800",
     color: C.textPrimary,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   stepDesc: {
-    fontSize: 13,
+    fontSize: 16,
     color: C.textMuted,
     marginBottom: 20,
-    lineHeight: 18,
+    lineHeight: 22,
   },
   fieldLabel: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "700",
     color: C.textSecondary,
     marginBottom: 8,
@@ -1239,30 +1298,56 @@ const styles = StyleSheet.create({
   yearChipText: { fontSize: 16, fontWeight: "700", color: C.textMuted },
   yearChipTextActive: { color: C.green700 },
 
-  // Season
-  seasonGrid: { gap: 10 },
-  seasonCard: {
-    borderRadius: 16,
+  // Step 0 seasonal screen wrapper
+  seasonStepWrapper: {
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 8,
     overflow: "hidden",
-    borderWidth: 2,
+  },
+  seasonStepInner: {},
+
+  // Season — icon left, label right (horizontal); selected = zoom + darker
+  seasonGrid: { gap: 16 },
+  seasonCard: {
+    borderRadius: 20,
+    overflow: "hidden",
+    borderWidth: 2.5,
     borderColor: "transparent",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  seasonCardActive: { borderColor: C.green700 },
-  seasonGrad: { padding: 18, position: "relative" },
-  seasonIcon: { fontSize: 30, marginBottom: 6 },
+  seasonCardActive: { borderColor: "#fff", borderWidth: 2.5 },
+  seasonGrad: {
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    position: "relative",
+    minHeight: 88,
+  },
+  seasonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  seasonIconWrap: {
+    width: 64,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  seasonIcon: { fontSize: 48 },
+  seasonTextWrap: { flex: 1, justifyContent: "center", paddingLeft: 8 },
   seasonLabel: {
-    fontSize: 18,
+    fontSize: 26,
     fontWeight: "800",
     color: "#374151",
     marginBottom: 2,
   },
-  seasonSub: { fontSize: 12, color: "#9CA3AF" },
-  seasonCheck: { position: "absolute", top: 14, right: 14 },
+  seasonLabelActive: { color: "#fff" },
+  seasonSub: { fontSize: 16, color: "#6B7280" },
+  seasonSubActive: { color: "rgba(255,255,255,0.9)" },
+  seasonCheck: { marginLeft: "auto" },
 
   infoBox: {
     flexDirection: "row",
@@ -1335,6 +1420,79 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   leaseAddText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+
+  // Crop grid — 3 per row, large icons
+  cropGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 16,
+  },
+  cropCard: {
+    width: "31%",
+    minWidth: 100,
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 2.5,
+    borderColor: C.borderLight,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 100,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cropCardActive: {
+    borderColor: C.green700,
+    backgroundColor: C.green50,
+  },
+  cropCardEmoji: { fontSize: 36, marginBottom: 6 },
+  cropCardLabel: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: C.textPrimary,
+    textAlign: "center",
+  },
+  cropCardLabelActive: { color: C.green900 },
+  cropCardCheck: { position: "absolute", top: 8, right: 8 },
+
+  // SubType — large cards, icon left, label right
+  subTypeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 16,
+  },
+  subTypeCard: {
+    width: "48%",
+    minWidth: 140,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: C.surface,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderWidth: 2.5,
+    borderColor: C.borderLight,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  subTypeCardActive: { borderColor: C.green700, backgroundColor: C.green50 },
+  subTypeIconWrap: { width: 44, alignItems: "center" },
+  subTypeEmoji: { fontSize: 28 },
+  subTypeLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.textPrimary,
+  },
+  subTypeLabelActive: { color: C.green900 },
 
   // Chips
   chipWrap: {
@@ -1420,7 +1578,27 @@ const styles = StyleSheet.create({
   fieldCardTitle: { fontSize: 15, fontWeight: "800", color: C.textPrimary },
   fieldCardSub: { fontSize: 12, color: C.textMuted, marginTop: 2 },
 
-  // Mini summary pill
+  // Crop summary card (step 3) — graphical
+  cropSummaryCard: {
+    backgroundColor: C.surface,
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: C.green100,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cropSummaryIconRow: { flexDirection: "row", alignItems: "center" },
+  cropSummaryEmoji: { fontSize: 40, marginRight: 14 },
+  cropSummaryTextWrap: { flex: 1 },
+  cropSummaryCrop: { fontSize: 20, fontWeight: "800", color: C.textPrimary, marginBottom: 2 },
+  cropSummaryMeta: { fontSize: 14, fontWeight: "600", color: C.green700 },
+
+  // Mini summary pill (legacy, kept for any other use)
   miniSummary: {
     alignSelf: "flex-start",
     backgroundColor: C.green50,
@@ -1472,38 +1650,49 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   myFarmsLabel: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "800",
     color: C.textSecondary,
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  farmChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 },
+  farmChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 18 },
   farmChip: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 2,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    borderWidth: 2.5,
     borderColor: C.borderLight,
     backgroundColor: C.surface,
-    minWidth: 80,
+    minWidth: 100,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   farmChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
-  farmChipName: { fontSize: 13, fontWeight: "700", color: C.textPrimary },
+  farmChipName: { fontSize: 16, fontWeight: "800", color: C.textPrimary },
   farmChipNameActive: { color: C.green900 },
-  farmChipArea: { fontSize: 11, color: C.textMuted, marginTop: 2 },
+  farmChipArea: { fontSize: 13, color: C.textMuted, marginTop: 4 },
   farmChipAreaActive: { color: C.green700 },
-  presetRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  presetRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 8 },
   presetChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 2.5,
     borderColor: C.border,
     backgroundColor: C.surface,
+    minWidth: 72,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   presetChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
-  presetText: { fontSize: 12, fontWeight: "600", color: C.textMuted },
-  presetTextActive: { color: C.green700 },
+  presetText: { fontSize: 15, fontWeight: "700", color: C.textMuted },
+  presetTextActive: { color: C.green700, fontWeight: "800" },
   presetChipDisabled: { opacity: 0.5 },
   presetTextDisabled: { color: C.textMuted },
   availableHint: {
@@ -1513,36 +1702,36 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
 
-  // Summary card — white with green accents
+  // Summary card (step 4) — large graphical crop summary
   summaryCard: {
     backgroundColor: C.surface,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 14,
-    borderWidth: 1.5,
+    borderRadius: 20,
+    padding: 22,
+    marginBottom: 18,
+    borderWidth: 2,
     borderColor: C.green100,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  summaryCardHeader: { marginBottom: 10 },
-  summaryCardTitle: { fontSize: 14, fontWeight: "800", color: C.green700 },
+  summaryCardHeader: { marginBottom: 14 },
+  summaryCardTitle: { fontSize: 18, fontWeight: "800", color: C.green700 },
   summaryDivider: {
-    height: 1,
-    backgroundColor: C.borderLight,
-    marginBottom: 12,
+    height: 2,
+    backgroundColor: C.green100,
+    marginBottom: 14,
   },
   summaryRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 10,
+    gap: 12,
+    marginBottom: 14,
   },
-  summaryIcon: { fontSize: 20, width: 28 },
-  summaryTitle: { fontSize: 10, color: C.textMuted, marginBottom: 1 },
-  summaryValue: { fontSize: 14, fontWeight: "700", color: C.textPrimary },
+  summaryIcon: { fontSize: 26, width: 36 },
+  summaryTitle: { fontSize: 12, color: C.textMuted, marginBottom: 2 },
+  summaryValue: { fontSize: 16, fontWeight: "800", color: C.textPrimary },
 
   // Notes card
   card: {
