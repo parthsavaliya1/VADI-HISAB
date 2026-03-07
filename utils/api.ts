@@ -208,12 +208,24 @@ export const logout = async (): Promise<void> => {
 // 👤 PROFILE TYPES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+/** Farm category: lease/contract land is not counted in total land */
+export type FarmCategory = "owned" | "lease";
+
+/** Single farm: name, area in bigha, and optional category (default owned; lease not counted in total land) */
+export interface ProfileFarm {
+  name: string;
+  area: number;
+  category?: FarmCategory;
+}
+
 export interface FarmerProfilePayload {
   name: string;
   district: District;
   taluka: string;
   village: string;
   totalLand: { value: number; unit: LandUnit };
+  /** Optional list of farms with area in bigha; stored in backend and loaded when adding crop */
+  farms?: ProfileFarm[];
   waterSources: WaterSource[];
   tractorAvailable: boolean;
   /** Services offered when tractor available: Rotavator, RAP, Bagi, Savda, etc. */
@@ -275,10 +287,10 @@ export interface CropPayload {
   cropEmoji?: string;
   /** Variety/sub-type e.g. "Desi", "GW-496" */
   subType?: string;
-  /** Distinguish same crop grown twice: "Batch 1", "Field A" */
-  batchLabel?: string;
   /** Financial year June–June e.g. "2025-26" */
   year?: string;
+  /** Farm name from profile (e.g. "vadi") for area validation */
+  farmName?: string;
   area: number;
   areaUnit?: AreaUnit;
   sowingDate?: string | null;

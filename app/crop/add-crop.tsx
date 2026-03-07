@@ -1,12 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -21,8 +23,14 @@ import {
   createCrop,
   getCurrentFinancialYear,
   getFinancialYearOptions,
+  getCropById,
+  getCrops,
+  getMyProfile,
+  updateProfile,
+  updateCrop,
   type CropPayload,
   type CropSeason,
+  type ProfileFarm,
 } from "@/utils/api";
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
@@ -155,7 +163,6 @@ interface FormState {
   customCrop: string;
   subType: string;
   customSubType: string;
-  batchLabel: string;
   year: string;
   area: string;
   notes: string;
@@ -169,7 +176,6 @@ const EMPTY: FormState = {
   customCrop: "",
   subType: "",
   customSubType: "",
-  batchLabel: "",
   year: getCurrentFinancialYear(),
   area: "",
   notes: "",
@@ -274,13 +280,86 @@ function SummaryRow({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AddCrop() {
+  const params = useLocalSearchParams<{ id?: string }>();
+  const editId = params.id ?? null;
+  const isEdit = !!editId;
+
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [selectedFarm, setSelectedFarm] = useState<ProfileFarm | null>(null);
+  const [usedAreaByFarm, setUsedAreaByFarm] = useState<Record<string, number>>({});
+  const [leaseModalVisible, setLeaseModalVisible] = useState(false);
+  const [leaseFarmName, setLeaseFarmName] = useState("");
+  const [leaseFarmBigha, setLeaseFarmBigha] = useState("");
+  const [loadingEdit, setLoadingEdit] = useState(!!editId);
+  const [editCropFarmName, setEditCropFarmName] = useState<string | null>(null);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const { profile } = useProfile();
+  const { profile, setProfile } = useProfile();
+
+  // Load existing crop when editing
+  useEffect(() => {
+    if (!isEdit || !editId) return;
+    setLoadingEdit(true);
+    getCropById(editId)
+      .then((c) => {
+        const cr = c as any;
+        setForm({
+          season: (cr.season as CropSeason) || "",
+          cropValue: cr.cropName ?? "",
+          cropLabel: cr.cropName ?? "",
+          cropEmoji: cr.cropEmoji ?? "🌱",
+          customCrop: "",
+          subType: cr.subType ?? "",
+          customSubType: "",
+          year: cr.year ?? getCurrentFinancialYear(),
+          area: String(cr.area ?? ""),
+          notes: cr.notes ?? "",
+        });
+        if (cr.farmName) setEditCropFarmName(cr.farmName);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingEdit(false));
+  }, [editId, isEdit]);
+
+  // Load profile when reaching area step or when editing (to match farm)
+  useEffect(() => {
+    if ((step === 3 || isEdit) && !profile) {
+      getMyProfile().then(setProfile).catch(() => {});
+    }
+  }, [step, isEdit, profile, setProfile]);
+
+  // When profile loads in edit mode, set selectedFarm from saved crop's farmName
+  useEffect(() => {
+    if (!isEdit || !editCropFarmName || !profile?.farms?.length) return;
+    const farm = profile.farms.find((f) => f.name === editCropFarmName);
+    if (farm) setSelectedFarm(farm);
+  }, [isEdit, editCropFarmName, profile?.farms]);
+
+  // Fetch active crops for current year to compute used area per farm (exclude current crop when editing)
+  const fetchUsedAreaByFarm = useCallback(async () => {
+    try {
+      const res = await getCrops(1, 200, undefined, "Active", form.year);
+      const byFarm: Record<string, number> = {};
+      (res.data || []).forEach((c) => {
+        const cid = (c as any)._id;
+        if (isEdit && editId && cid === editId) return;
+        const name = (c as any).farmName ?? "";
+        if (!name) return;
+        const area = Number((c as any).area) || 0;
+        byFarm[name] = (byFarm[name] || 0) + area;
+      });
+      setUsedAreaByFarm(byFarm);
+    } catch {
+      setUsedAreaByFarm({});
+    }
+  }, [form.year, isEdit, editId]);
+
+  useEffect(() => {
+    if (step === 3 && form.year) fetchUsedAreaByFarm();
+  }, [step, form.year, fetchUsedAreaByFarm]);
 
   const set = (key: keyof FormState, val: any) =>
     setForm((p) => ({ ...p, [key]: val }));
@@ -325,10 +404,43 @@ export default function AddCrop() {
       (!form.area.trim() || isNaN(Number(form.area)) || Number(form.area) <= 0)
     )
       return "કૃપા કરીને માન્ય વીઘા સંખ્યા દાખલ કરો.";
+    if (step === 3 && profile?.farms?.length && !selectedFarm)
+      return "કૃપા કરીને વાડી પસંદ કરો.";
+    if (
+      step === 3 &&
+      selectedFarm &&
+      maxBighaForSelectedFarm !== null &&
+      Number(form.area) > maxBighaForSelectedFarm
+    )
+      return `આ વાડી પર ઉપલબ્ધ વિસ્તાર ${maxBighaForSelectedFarm} વીઘા છે. ${Number(form.area)} વીઘા દાખલ કર્યા છે.`;
     return null;
   };
 
   const handleNext = () => {
+    if (step === 3) {
+      const areaNum = Number(form.area);
+      if (
+        selectedFarm &&
+        maxBighaForSelectedFarm !== null &&
+        areaNum > maxBighaForSelectedFarm
+      ) {
+        Alert.alert(
+          "વિસ્તાર વધારે છે",
+          `ઉપલબ્ધ વિસ્તાર ${maxBighaForSelectedFarm} વીઘા છે. શું આ ભાડા અથવા કોન્ટ્રાક્ટ વાડી છે?`,
+          [
+            { text: "ના", style: "cancel" },
+            {
+              text: "હા",
+              onPress: () => {
+                setLeaseFarmBigha(form.area);
+                setLeaseModalVisible(true);
+              },
+            },
+          ],
+        );
+        return;
+      }
+    }
     const err = validate();
     if (err) {
       Alert.alert("⚠️ ભૂલ", err);
@@ -356,6 +468,30 @@ export default function AddCrop() {
   const currentCropSubtypes =
     CROPS.find((c) => c.value === form.cropValue)?.subtypes ?? [];
 
+  // For selected farm: max bigha = farm area - already used by active crops on same farm
+  const maxBighaForSelectedFarm = selectedFarm
+    ? Math.max(0, selectedFarm.area - (usedAreaByFarm[selectedFarm.name] ?? 0))
+    : null;
+
+  const handleLeaseAdd = async () => {
+    const name = leaseFarmName.trim();
+    const bigha = parseFloat(leaseFarmBigha);
+    if (!name || !Number.isFinite(bigha) || bigha <= 0) {
+      Alert.alert("ભૂલ", "વાડીનું નામ અને વીઘા ભરો.");
+      return;
+    }
+    const currentFarms = profile?.farms ?? [];
+    const updated = await updateProfile({
+      farms: [...currentFarms, { name, area: bigha, category: "lease" }],
+    });
+    setProfile(updated.profile);
+    setSelectedFarm({ name, area: bigha, category: "lease" });
+    setForm((p) => ({ ...p, area: String(bigha) }));
+    setLeaseModalVisible(false);
+    setLeaseFarmName("");
+    setLeaseFarmBigha("");
+  };
+
   const handleSave = async () => {
     const err = validate();
     if (err) {
@@ -363,12 +499,7 @@ export default function AddCrop() {
       return;
     }
 
-    const payload: CropPayload & {
-      subType?: string;
-      batchLabel?: string;
-      year?: string;
-    } = {
-      userId: profile?._id,
+    const payload: CropPayload = {
       season: form.season as CropSeason,
       cropName: finalCropValue,
       cropEmoji: finalCropEmoji,
@@ -376,20 +507,28 @@ export default function AddCrop() {
       areaUnit: "Bigha",
       status: "Active",
       notes: form.notes.trim() || undefined,
-      // NEW fields
       subType: finalSubType || undefined,
-      batchLabel: form.batchLabel.trim() || undefined,
       year: form.year,
+      farmName: selectedFarm?.name,
     };
 
     try {
       setSaving(true);
-      const crop = await createCrop(payload);
-      Alert.alert(
-        "✅ સફળ!",
-        `${crop.cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} ઉમેરાયો!\n${form.area} વીઘા · ${form.year} (જૂન–જૂન)`,
-        [{ text: "ઠીક છે", onPress: () => router.replace("/(tabs)") }],
-      );
+      if (isEdit && editId) {
+        const crop = await updateCrop(editId, payload);
+        Alert.alert(
+          "✅ સફળ!",
+          `${(crop as any).cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} સાચવાયો!\n${form.area} વીઘા · ${form.year}`,
+          [{ text: "ઠીક છે", onPress: () => router.replace("/(tabs)") }],
+        );
+      } else {
+        const crop = await createCrop(payload);
+        Alert.alert(
+          "✅ સફળ!",
+          `${(crop as any).cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} ઉમેરાયો!\n${form.area} વીઘા · ${form.year} (જૂન–જૂન)`,
+          [{ text: "ઠીક છે", onPress: () => router.replace("/(tabs)") }],
+        );
+      }
     } catch (error: any) {
       Alert.alert(
         "❌ ભૂલ",
@@ -421,8 +560,10 @@ export default function AddCrop() {
           <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
             <Ionicons name="arrow-back" size={20} color={C.green700} />
           </TouchableOpacity>
-          <View style={{ alignItems: "center" }}>
-            <Text style={styles.headerTitle}>🌱 નવો પાક ઉમેરો</Text>
+            <View style={{ alignItems: "center" }}>
+            <Text style={styles.headerTitle}>
+              {isEdit ? "✏️ પાક ફેરફાર" : "🌱 નવો પાક ઉમેરો"}
+            </Text>
             <Text style={styles.headerSub}>
               પગલું {step + 1} / {STEPS.length} · {STEPS[step].label}
             </Text>
@@ -632,15 +773,14 @@ export default function AddCrop() {
             </View>
           )}
 
-          {/* ══ STEP 2 — Sub Type + Batch ══ */}
+          {/* ══ STEP 2 — Sub Type only ══ */}
           {step === 2 && (
             <View>
-              <Text style={styles.stepTitle}>પ્રકાર અને બૅચ</Text>
+              <Text style={styles.stepTitle}>પ્રકાર</Text>
               <Text style={styles.stepDesc}>
-                {finalCropEmoji} {finalCropLabel} નો ચોક્કસ પ્રકાર અને ઓળખ
+                {finalCropEmoji} {finalCropLabel} નો ચોક્કસ પ્રકાર (વૈકલ્પિક)
               </Text>
 
-              {/* Sub Type */}
               <View style={styles.fieldCard}>
                 <View style={styles.fieldCardHeader}>
                   <Text style={styles.fieldCardIcon}>🏷️</Text>
@@ -654,7 +794,6 @@ export default function AddCrop() {
                   </View>
                 </View>
 
-                {/* Quick subtypes from crop list */}
                 {currentCropSubtypes.length > 0 && (
                   <View style={styles.chipWrap}>
                     {currentCropSubtypes.map((st) => (
@@ -718,96 +857,59 @@ export default function AddCrop() {
                   </View>
                 ) : null}
               </View>
-
-              {/* Batch Label — for same crop twice in one year */}
-              <View style={[styles.fieldCard, { marginTop: 14 }]}>
-                <View style={styles.fieldCardHeader}>
-                  <Text style={styles.fieldCardIcon}>🔢</Text>
-                  <View>
-                    <Text style={styles.fieldCardTitle}>ખેતર / બૅચ ઓળખ</Text>
-                    <Text style={styles.fieldCardSub}>
-                      એક જ વર્ષમાં સમાન પાક બે વખત વાવ્યો હોય તો ઓળખ આપો
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Quick batch options */}
-                <View style={styles.chipWrap}>
-                  {["ખેતર-1", "ખેતર-2", "ખેતર-3", "બૅચ-1", "બૅચ-2"].map((b) => (
-                    <Chip
-                      key={b}
-                      label={b}
-                      selected={form.batchLabel === b}
-                      onPress={() =>
-                        set("batchLabel", form.batchLabel === b ? "" : b)
-                      }
-                    />
-                  ))}
-                </View>
-
-                <View
-                  style={[
-                    styles.textBox,
-                    { marginTop: 8 },
-                    form.batchLabel.length > 0 &&
-                      ![
-                        "ખેતર-1",
-                        "ખેતર-2",
-                        "ખેતર-3",
-                        "બૅચ-1",
-                        "બૅચ-2",
-                      ].includes(form.batchLabel) &&
-                      styles.textBoxActive,
-                  ]}
-                >
-                  <Text>✏️</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={
-                      ["ખેતર-1", "ખેતર-2", "ખેતર-3", "બૅચ-1", "બૅચ-2"].includes(
-                        form.batchLabel,
-                      )
-                        ? ""
-                        : form.batchLabel
-                    }
-                    onChangeText={(v) => set("batchLabel", v)}
-                    placeholder="કસ્ટમ ઓળખ... (દા.ત. ઉત્તર ખેતર, 5 એકર)"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-
-                <View style={styles.infoBox}>
-                  <Ionicons
-                    name="information-circle"
-                    size={15}
-                    color={C.green700}
-                  />
-                  <Text style={styles.infoText}>
-                    ઓળખ ન આપો તો ઠીક છે — ફક્ત ત્યારે ઉપયોગી છે જ્યારે એ જ પાક{" "}
-                    <Text style={{ fontWeight: "700" }}>{form.year}</Text> માં{" "}
-                    <Text style={{ fontWeight: "700" }}>બે વખત</Text> વાવ્યો
-                    હોય.
-                  </Text>
-                </View>
-              </View>
             </View>
           )}
 
-          {/* ══ STEP 3 — Area ══ */}
+          {/* ══ STEP 3 — Farm + Area ══ */}
           {step === 3 && (
             <View>
-              <Text style={styles.stepTitle}>જમીનનો વિસ્તાર</Text>
-              <Text style={styles.stepDesc}>વીઘામાં વિસ્તાર દાખલ કરો</Text>
+              <Text style={styles.stepTitle}>વાડી અને વિસ્તાર</Text>
+              <Text style={styles.stepDesc}>વાડી પસંદ કરો અને વીઘામાં વિસ્તાર દાખલ કરો</Text>
               <View style={styles.miniSummary}>
                 <Text style={styles.miniSummaryText}>
                   {finalCropEmoji} {finalCropLabel}
                   {finalSubType ? ` · ${finalSubType}` : ""}
-                  {form.batchLabel ? ` · ${form.batchLabel}` : ""}
                   {" · "}
                   {SEASONS.find((s) => s.value === form.season)?.label}{" "}
                   {form.year}
                 </Text>
               </View>
+              {profile?.farms && profile.farms.length > 0 && (
+                <>
+                  <Text style={styles.myFarmsLabel}>વાડી પસંદ કરો *</Text>
+                  <View style={styles.farmChipsRow}>
+                    {profile.farms.map((farm, idx) => {
+                      const used = usedAreaByFarm[farm.name] ?? 0;
+                      const available = Math.max(0, farm.area - used);
+                      const isSelected = selectedFarm?.name === farm.name;
+                      return (
+                        <TouchableOpacity
+                          key={idx}
+                          style={[styles.farmChip, isSelected && styles.farmChipActive]}
+                          onPress={() => {
+                            setSelectedFarm(farm);
+                            setForm((p) => ({ ...p, area: "" }));
+                          }}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={[styles.farmChipName, isSelected && styles.farmChipNameActive]}>
+                            {farm.name}
+                            {(farm as any).category === "lease" ? " (ભાડા)" : ""}
+                          </Text>
+                          <Text style={[styles.farmChipArea, isSelected && styles.farmChipAreaActive]}>
+                            ઉપલબ્ધ: {available} વીઘા
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+              {selectedFarm && maxBighaForSelectedFarm !== null && (
+                <Text style={styles.availableHint}>
+                  મહત્તમ {maxBighaForSelectedFarm} વીઘા દાખલ કરી શકો (અન્ય સક્રિય પાક સિવાય)
+                </Text>
+              )}
               <View style={styles.areaCard}>
                 <View style={styles.areaInputRow}>
                   <TextInput
@@ -817,7 +919,7 @@ export default function AddCrop() {
                     placeholder="0"
                     placeholderTextColor="#D1D5DB"
                     keyboardType="numeric"
-                    autoFocus
+                    autoFocus={!(profile?.farms && profile.farms.length > 0)}
                   />
                   <View style={styles.areaUnitBadge}>
                     <Text style={styles.areaUnitText}>વીઘા</Text>
@@ -828,30 +930,38 @@ export default function AddCrop() {
                   Number(form.area) > 0 && (
                     <Text style={styles.areaHint}>
                       {form.area} વીઘા જમીન પર {finalCropLabel} ઉગાડવામાં આવશે
+                      {selectedFarm ? ` (${selectedFarm.name})` : ""}
                     </Text>
                   )}
               </View>
               <Text style={styles.orDivider}>— ઝડપી પસંદ —</Text>
               <View style={styles.presetRow}>
-                {["1", "2", "5", "10", "15", "25"].map((n) => (
-                  <TouchableOpacity
-                    key={n}
-                    style={[
-                      styles.presetChip,
-                      form.area === n && styles.presetChipActive,
-                    ]}
-                    onPress={() => set("area", n)}
-                  >
-                    <Text
+                {["1", "2", "5", "10", "15", "25"].map((n) => {
+                  const num = Number(n);
+                  const allowed = maxBighaForSelectedFarm == null || num <= maxBighaForSelectedFarm;
+                  return (
+                    <TouchableOpacity
+                      key={n}
                       style={[
-                        styles.presetText,
-                        form.area === n && styles.presetTextActive,
+                        styles.presetChip,
+                        form.area === n && styles.presetChipActive,
+                        !allowed && styles.presetChipDisabled,
                       ]}
+                      onPress={() => allowed && set("area", n)}
+                      disabled={!allowed}
                     >
-                      {n} વીઘા
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={[
+                          styles.presetText,
+                          form.area === n && styles.presetTextActive,
+                          !allowed && styles.presetTextDisabled,
+                        ]}
+                      >
+                        {n} વીઘા
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           )}
@@ -876,8 +986,8 @@ export default function AddCrop() {
                 {finalSubType && (
                   <SummaryRow icon="🏷️" title="પ્રકાર" value={finalSubType} />
                 )}
-                {form.batchLabel && (
-                  <SummaryRow icon="🔢" title="ઓળખ" value={form.batchLabel} />
+                {selectedFarm && (
+                  <SummaryRow icon="🌾" title="વાડી" value={selectedFarm.name} />
                 )}
                 <SummaryRow
                   icon="🌦️"
@@ -975,6 +1085,55 @@ export default function AddCrop() {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Lease / contract farm modal */}
+      <Modal
+        visible={leaseModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLeaseModalVisible(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setLeaseModalVisible(false)}>
+          <View style={styles.leaseModalCard}>
+            <Text style={styles.leaseModalTitle}>ભાડા / કોન્ટ્રાક્ટ વાડી ઉમેરો</Text>
+            <Text style={styles.leaseModalSub}>
+              વાડીનું નામ અને વીઘા દાખલ કરો. આ તમારી પ્રોફાઇલમાં ઉમેરાશે.
+            </Text>
+            <Text style={styles.fieldLabel}>વાડીનું નામ</Text>
+            <TextInput
+              style={styles.leaseInput}
+              value={leaseFarmName}
+              onChangeText={setLeaseFarmName}
+              placeholder="દા.ત. ભાડાની જમીન"
+              placeholderTextColor={C.textMuted}
+            />
+            <Text style={[styles.fieldLabel, { marginTop: 10 }]}>વીઘા</Text>
+            <TextInput
+              style={styles.leaseInput}
+              value={leaseFarmBigha}
+              onChangeText={setLeaseFarmBigha}
+              placeholder="0"
+              placeholderTextColor={C.textMuted}
+              keyboardType="decimal-pad"
+            />
+            <View style={styles.leaseModalButtons}>
+              <TouchableOpacity
+                style={styles.leaseCancelBtn}
+                onPress={() => {
+                  setLeaseModalVisible(false);
+                  setLeaseFarmName("");
+                  setLeaseFarmBigha("");
+                }}
+              >
+                <Text style={styles.leaseCancelText}>રદ કરો</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.leaseAddBtn} onPress={handleLeaseAdd}>
+                <Text style={styles.leaseAddText}>ઉમેરો</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -1118,6 +1277,65 @@ const styles = StyleSheet.create({
   },
   infoText: { fontSize: 12, color: C.green900, flex: 1, lineHeight: 18 },
 
+  // Lease modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  leaseModalCard: {
+    backgroundColor: C.surface,
+    borderRadius: 20,
+    padding: 22,
+    width: "100%",
+    maxWidth: 340,
+  },
+  leaseModalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: C.textPrimary,
+    marginBottom: 6,
+  },
+  leaseModalSub: {
+    fontSize: 12,
+    color: C.textMuted,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  leaseInput: {
+    borderWidth: 2,
+    borderColor: C.borderLight,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: C.textPrimary,
+    backgroundColor: "#F9FAFB",
+  },
+  leaseModalButtons: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 20,
+  },
+  leaseCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: C.borderLight,
+    alignItems: "center",
+  },
+  leaseCancelText: { fontSize: 15, fontWeight: "700", color: C.textMuted },
+  leaseAddBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: C.green700,
+    alignItems: "center",
+  },
+  leaseAddText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+
   // Chips
   chipWrap: {
     flexDirection: "row",
@@ -1160,7 +1378,7 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     borderRadius: 13,
     padding: 12,
-    backgroundColor: C.surfaceGreen ?? "#F9FBF7",
+    backgroundColor: C.surface,
   },
   textBoxActive: { borderColor: C.green700, backgroundColor: C.surface },
   textInput: { flex: 1, fontSize: 14, color: C.textPrimary },
@@ -1253,6 +1471,27 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontStyle: "italic",
   },
+  myFarmsLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: C.textSecondary,
+    marginBottom: 10,
+  },
+  farmChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 },
+  farmChip: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: C.borderLight,
+    backgroundColor: C.surface,
+    minWidth: 80,
+  },
+  farmChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
+  farmChipName: { fontSize: 13, fontWeight: "700", color: C.textPrimary },
+  farmChipNameActive: { color: C.green900 },
+  farmChipArea: { fontSize: 11, color: C.textMuted, marginTop: 2 },
+  farmChipAreaActive: { color: C.green700 },
   presetRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   presetChip: {
     paddingHorizontal: 14,
@@ -1265,6 +1504,14 @@ const styles = StyleSheet.create({
   presetChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
   presetText: { fontSize: 12, fontWeight: "600", color: C.textMuted },
   presetTextActive: { color: C.green700 },
+  presetChipDisabled: { opacity: 0.5 },
+  presetTextDisabled: { color: C.textMuted },
+  availableHint: {
+    fontSize: 11,
+    color: C.textMuted,
+    marginBottom: 12,
+    fontStyle: "italic",
+  },
 
   // Summary card — white with green accents
   summaryCard: {

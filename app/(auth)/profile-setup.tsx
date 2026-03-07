@@ -60,14 +60,17 @@ const TRACTOR_SERVICES = ["Rotavator", "RAP", "Bagi", "Savda"];
 
 type DropdownItem = { value: string; label: string };
 
+// One farm entry: name (e.g. "vadi", "farm-2") and area in bigha
+export type FarmEntry = { name: string; area: string };
+
 // ✅ FormData only holds English keys — clean & simple
 type FormData = {
     name: string;
     district: string;
     taluka: string;
     village: string;
-    totalLandValue: string;
-    totalLandUnit: "acre" | "bigha";
+    /** Farms with area (bigha). Default first farm name is "vadi". At least one farm mandatory. */
+    farms: FarmEntry[];
     waterSources: string[];
     tractorAvailable: boolean | null;
     implementsAvailable: string[];  // tractor services when tractor yes
@@ -264,8 +267,7 @@ export default function ProfileSetup() {
         district: "",
         taluka: "",
         village: "",
-        totalLandValue: "",
-        totalLandUnit: "acre",
+        farms: [{ name: "vadi", area: "" }],
         waterSources: [],
         tractorAvailable: null,
         implementsAvailable: [],
@@ -285,9 +287,12 @@ export default function ProfileSetup() {
     const submitScale = useRef(new Animated.Value(1)).current;
     const progressAnim = useRef(new Animated.Value(0)).current;
 
+    const atLeastOneFarmFilled = form.farms.some(
+        (f) => f.name.trim() !== "" && f.area.trim() !== "" && parseFloat(f.area) > 0
+    );
     const filledCount =
-        [form.name, form.district, form.taluka, form.village, form.totalLandValue]
-            .filter(Boolean).length
+        [form.name, form.district, form.taluka, form.village].filter(Boolean).length
+        + (atLeastOneFarmFilled ? 1 : 0)
         + (form.waterSources.length > 0 ? 1 : 0)
         + (form.tractorAvailable !== null ? 1 : 0)
         + (form.labourTypes.length > 0 ? 1 : 0);
@@ -296,7 +301,7 @@ export default function ProfileSetup() {
 
     const isValid =
         !!form.name && !!form.district && !!form.taluka && !!form.village &&
-        !!form.totalLandValue && form.waterSources.length > 0 &&
+        atLeastOneFarmFilled && form.waterSources.length > 0 &&
         form.tractorAvailable !== null && form.labourTypes.length > 0;
 
     useEffect(() => {
@@ -352,6 +357,30 @@ export default function ProfileSetup() {
         }));
     };
 
+    const updateFarm = (index: number, field: "name" | "area", value: string) => {
+        setForm((prev) => ({
+            ...prev,
+            farms: prev.farms.map((f, i) =>
+                i === index ? { ...f, [field]: value } : f
+            ),
+        }));
+    };
+
+    const addFarm = () => {
+        setForm((prev) => ({
+            ...prev,
+            farms: [...prev.farms, { name: "", area: "" }],
+        }));
+    };
+
+    const removeFarm = (index: number) => {
+        if (form.farms.length <= 1) return;
+        setForm((prev) => ({
+            ...prev,
+            farms: prev.farms.filter((_, i) => i !== index),
+        }));
+    };
+
     // ── Location handlers — store only English key, reset downstream ──────
 
     const handleDistrictSelect = (item: DropdownItem) => {
@@ -382,6 +411,17 @@ export default function ProfileSetup() {
 
     const submit = async () => {
         if (!isValid) { Alert.alert(t.errTitle, t.errFill); return; }
+        const totalBigha = form.farms.reduce(
+            (sum, f) => sum + (parseFloat(f.area) || 0),
+            0
+        );
+        if (totalBigha <= 0) {
+            Alert.alert(t.errTitle, t.farmsAtLeastOne);
+            return;
+        }
+        const farmsPayload = form.farms
+            .filter((f) => f.name.trim() !== "" && parseFloat(f.area) > 0)
+            .map((f) => ({ name: f.name.trim(), area: parseFloat(f.area), category: "owned" as const }));
         setLoading(true);
         try {
             await completeProfile({
@@ -389,7 +429,8 @@ export default function ProfileSetup() {
                 district: form.district as District,
                 taluka: form.taluka,
                 village: form.village,
-                totalLand: { value: parseFloat(form.totalLandValue), unit: form.totalLandUnit },
+                totalLand: { value: totalBigha, unit: "bigha" as const },
+                farms: farmsPayload,
                 waterSources: form.waterSources as WaterSource[],
                 tractorAvailable: form.tractorAvailable!,
                 implementsAvailable: form.tractorAvailable ? (form.implementsAvailable as TractorService[]) : [],
@@ -493,28 +534,54 @@ export default function ProfileSetup() {
                         </View>
 
                         <View style={styles.fieldGroup}>
-                            <Text style={styles.fieldLabel}>{t.land}</Text>
-                            <View style={styles.landRow}>
-                                <View style={[styles.textInputWrap, { flex: 1 }, form.totalLandValue ? styles.textInputWrapFilled : null]}>
-                                    <TextInput
-                                        style={styles.textInput}
-                                        value={form.totalLandValue}
-                                        onChangeText={(v) => set("totalLandValue", v)}
-                                        placeholder={t.landPH}
-                    placeholderTextColor={C.textMuted}
-                    keyboardType="decimal-pad"
-                    selectionColor={C.green700}
-                                    />
+                            <Text style={styles.fieldLabel}>{t.farmsLabel ?? "વાડી / જમીન વિસ્તાર *"}</Text>
+                            <Text style={styles.farmsHint}>{t.farmsHint ?? "ઓછામાં ઓછી એક વાડીનું નામ અને વિસ્તાર (વીઘા) ભરો"}</Text>
+                            {form.farms.map((farm, index) => (
+                                <View key={index} style={styles.farmRow}>
+                                    <View style={[styles.farmNameWrap, farm.name.trim() ? styles.textInputWrapFilled : null]}>
+                                        <TextInput
+                                            style={styles.textInput}
+                                            value={farm.name}
+                                            onChangeText={(v) => updateFarm(index, "name", v)}
+                                            placeholder={index === 0 ? (t.farmNamePH ?? "વાડી") : (t.farmNamePH2 ?? "નામ")}
+                                            placeholderTextColor={C.textMuted}
+                                            onFocus={() => setFocusedField(`farm-name-${index}`)}
+                                            onBlur={() => setFocusedField(null)}
+                                            selectionColor={C.green700}
+                                        />
+                                    </View>
+                                    <View style={[styles.farmAreaWrap, farm.area ? styles.textInputWrapFilled : null]}>
+                                        <TextInput
+                                            style={styles.textInput}
+                                            value={farm.area}
+                                            onChangeText={(v) => updateFarm(index, "area", v)}
+                                            placeholder={t.landPH}
+                                            placeholderTextColor={C.textMuted}
+                                            keyboardType="decimal-pad"
+                                            onFocus={() => setFocusedField(`farm-area-${index}`)}
+                                            onBlur={() => setFocusedField(null)}
+                                            selectionColor={C.green700}
+                                        />
+                                        <Text style={styles.farmUnit}>{t.unitBigha}</Text>
+                                    </View>
+                                    {form.farms.length > 1 ? (
+                                        <Pressable
+                                            onPress={() => removeFarm(index)}
+                                            style={styles.removeFarmBtn}
+                                            android_ripple={{ color: C.expensePale }}
+                                        >
+                                            <Text style={styles.removeFarmText}>✕</Text>
+                                        </Pressable>
+                                    ) : null}
                                 </View>
-                                <View style={styles.unitToggle}>
-                                    <Pressable onPress={() => set("totalLandUnit", "acre")} style={[styles.unitBtn, form.totalLandUnit === "acre" && styles.unitBtnActive]}>
-                                        <Text style={[styles.unitBtnText, form.totalLandUnit === "acre" && styles.unitBtnTextActive]}>{t.unitAcre}</Text>
-                                    </Pressable>
-                                    <Pressable onPress={() => set("totalLandUnit", "bigha")} style={[styles.unitBtn, form.totalLandUnit === "bigha" && styles.unitBtnActive]}>
-                                        <Text style={[styles.unitBtnText, form.totalLandUnit === "bigha" && styles.unitBtnTextActive]}>{t.unitBigha}</Text>
-                                    </Pressable>
-                                </View>
-                            </View>
+                            ))}
+                            <Pressable
+                                onPress={addFarm}
+                                style={styles.addFarmBtn}
+                                android_ripple={{ color: C.green100 }}
+                            >
+                                <Text style={styles.addFarmText}>+ {t.addFarm ?? "બીજી વાડી ઉમેરો"}</Text>
+                            </Pressable>
                         </View>
 
                         <MultiChipSelector
@@ -654,6 +721,15 @@ const styles = StyleSheet.create({
     chipSelected: { borderColor: C.green700, backgroundColor: C.green50 },
     chipText: { fontSize: 13, fontWeight: "600", color: C.textMuted },
     chipTextSelected: { color: C.green900, fontWeight: "800" },
+    farmsHint: { fontSize: 12, color: C.textMuted, marginBottom: 10 },
+    farmRow: { flexDirection: "row", gap: 8, alignItems: "center", marginBottom: 10 },
+    farmNameWrap: { flex: 1, borderWidth: 2, borderRadius: 14, borderColor: C.borderLight, backgroundColor: C.surfaceGreen, paddingHorizontal: 14 },
+    farmAreaWrap: { flexDirection: "row", alignItems: "center", width: 100, borderWidth: 2, borderRadius: 14, borderColor: C.borderLight, backgroundColor: C.surfaceGreen, paddingHorizontal: 14 },
+    farmUnit: { fontSize: 12, color: C.textMuted, marginLeft: 4, fontWeight: "600" },
+    removeFarmBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.expensePale, justifyContent: "center", alignItems: "center" },
+    removeFarmText: { fontSize: 16, color: C.expense, fontWeight: "700" },
+    addFarmBtn: { marginTop: 4, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, borderWidth: 2, borderColor: C.border, borderStyle: "dashed", alignItems: "center" },
+    addFarmText: { fontSize: 14, fontWeight: "700", color: C.green700 },
     landRow: { flexDirection: "row", gap: 10, alignItems: "center" },
     unitToggle: { flexDirection: "row", borderWidth: 2, borderColor: C.borderLight, borderRadius: 12, overflow: "hidden" },
     unitBtn: { paddingHorizontal: 14, paddingVertical: 12, backgroundColor: C.surfaceGreen },
