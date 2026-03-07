@@ -6,12 +6,14 @@ import {
   API,
   getCrops,
   getExpenses,
+  getIncomes,
   getMyProfile,
   getYearlyReport,
   type Crop,
   type Expense,
   type ExpenseCategory,
 } from "@/utils/api";
+import { getCropColors } from "@/utils/cropColors";
 
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -77,16 +79,18 @@ const WEATHER_DEFAULT = {
   condition: "લોડ થઈ રહ્યું છે...",
   humidity: "—",
   wind: "—",
+  weatherCode: undefined as number | undefined,
+  tempNum: undefined as number | undefined,
 };
-
-// Light, farmer-friendly crop card backgrounds (readable with dark text)
-const CROP_COLORS: [string, string][] = [
-  ["#E8F5E9", "#C8E6C9"],
-  ["#E0F2F1", "#B2DFDB"],
-  ["#FFF3E0", "#FFE0B2"],
-  ["#E3F2FD", "#BBDEFB"],
-  ["#F3E5F5", "#E1BEE7"],
-];
+// Open-Meteo rain codes (for weather box theme)
+const WEATHER_RAIN_CODES = new Set([51, 61, 63, 65, 80, 81, 82, 95, 96, 99]);
+function getWeatherTheme(weather: typeof WEATHER_DEFAULT): "rain" | "clear" | "hot" {
+  const code = weather.weatherCode ?? 0;
+  const temp = weather.tempNum ?? 0;
+  if (WEATHER_RAIN_CODES.has(code)) return "rain";
+  if ((code === 0 || code === 1) && temp >= 32) return "hot";
+  return "clear";
+}
 
 // English crop name (from API) → Gujarati display name (matches add-crop CROPS)
 const CROP_NAME_GUJARATI: Record<string, string> = {
@@ -143,18 +147,6 @@ export interface IncomeListResponse {
   data: Income[];
   pagination: { total: number; page: number; limit: number };
 }
-
-/**
- * GET /income
- * Uses the same API axios instance from api.ts
- * → token auto-attached, interceptors active, base URL already set
- */
-const getIncomes = async (page = 1, limit = 5): Promise<IncomeListResponse> => {
-  const res = await API.get<IncomeListResponse>("/income", {
-    params: { page, limit },
-  });
-  return res.data;
-};
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🔀 Transaction helpers
@@ -230,10 +222,14 @@ function expenseIcon(cat: ExpenseCategory): string {
 
 // ── Income helpers ────────────────────────────
 function incomeAmount(i: Income): number {
-  if (typeof i.amount === "number" && i.amount >= 0) return i.amount;
-  if (i.category === "Crop Sale") return i.cropSale?.totalAmount ?? 0;
+  const top = (i as any).amount;
+  if (top != null && top !== "") {
+    const n = Number(top);
+    if (Number.isFinite(n) && n >= 0) return n;
+  }
+  if (i.category === "Crop Sale") return (i.cropSale as any)?.totalAmount ?? 0;
   if (i.category === "Subsidy") return i.subsidy?.amount ?? 0;
-  if (i.category === "Rental Income") return i.rentalIncome?.totalAmount ?? 0;
+  if (i.category === "Rental Income") return (i.rentalIncome as any)?.totalAmount ?? 0;
   if (i.category === "Other") return i.otherIncome?.amount ?? 0;
   return 0;
 }
@@ -277,22 +273,29 @@ function buildTransactions(
     category: e.category,
   }));
 
-  const incTxns: Transaction[] = incomes.map((i) => ({
-    _id: i._id,
-    type: "income" as const,
-    label: incomeLabel(i),
-    crop: getCropName(i.cropId, crops),
-    amount: incomeAmount(i),
-    date: formatRelativeDate(i.date, t),
-    rawDate: i.date,
-    icon: incomeIcon(i.category),
-    category: i.category,
-  }));
+  const incTxns: Transaction[] = incomes.map((i) => {
+    const rawDate = i.date ?? (i as any).createdAt ?? "";
+    return {
+      _id: i._id,
+      type: "income" as const,
+      label: incomeLabel(i),
+      crop: getCropName(i.cropId, crops),
+      amount: incomeAmount(i),
+      date: formatRelativeDate(rawDate, t),
+      rawDate,
+      icon: incomeIcon(i.category),
+      category: i.category,
+    };
+  });
 
   return [...expTxns, ...incTxns]
-    .sort(
-      (a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime(),
-    )
+    .sort((a, b) => {
+      const tb = new Date(b.rawDate).getTime();
+      const ta = new Date(a.rawDate).getTime();
+      if (Number.isNaN(tb)) return -1;
+      if (Number.isNaN(ta)) return 1;
+      return tb - ta;
+    })
     .slice(0, 5);
 }
 
@@ -491,8 +494,8 @@ function CropPickerModal({
           </View>
         ) : (
           <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-            {crops.map((crop, i) => {
-              const colors = CROP_COLORS[i % CROP_COLORS.length];
+            {crops.map((crop) => {
+              const colors = getCropColors(crop.cropName);
               return (
                 <TouchableOpacity
                   key={crop._id}
@@ -814,8 +817,8 @@ export default function Dashboard() {
         getMyProfile(),
         getCrops(),
         getYearlyReport(),
-        getExpenses(undefined, undefined, undefined, 1, 10),
-        getIncomes(1, 10),
+        getExpenses(undefined, undefined, undefined, 1, 30),
+        getIncomes(1, 30),
       ]);
       setProfile(prof);
       setCrops(
@@ -830,7 +833,9 @@ export default function Dashboard() {
         }),
       );
       setSummary(yearlyReport.summary);
-      setTxns(buildTransactions(expRes.data, incRes.data, t, cropRes.data ?? []));
+      const expenses = Array.isArray(expRes?.data) ? expRes.data : [];
+      const incomes = Array.isArray(incRes?.data) ? incRes.data : [];
+      setTxns(buildTransactions(expenses, incomes as Income[], t, cropRes.data ?? []));
     } catch (err) {
       console.log("[Dashboard] loadData error:", (err as Error).message);
     } finally {
@@ -900,6 +905,8 @@ export default function Dashboard() {
           condition: conditionMap[code] ?? "આંશિક વાદળ",
           humidity: `${humidity}%`,
           wind: `${windKmh} km/h`,
+          weatherCode: code,
+          tempNum: temp,
         });
       })
       .catch(() => {});
@@ -973,7 +980,7 @@ export default function Dashboard() {
           <TouchableOpacity style={styles.notifBtn}>
             <Ionicons
               name="notifications-outline"
-              size={22}
+              size={28}
               color={C.green700}
             />
             <View style={styles.notifDot} />
@@ -994,7 +1001,6 @@ export default function Dashboard() {
           <Animated.View style={{ opacity: headerOpacity }}>
             <View style={styles.headerTop}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.greetingSmall}>🌅 {t("dashboard", "greeting")}</Text>
                 {loadingProfile ? (
                   <SkeletonLine
                     width={180}
@@ -1031,38 +1037,34 @@ export default function Dashboard() {
                 <TouchableOpacity style={styles.notifBtn}>
                   <Ionicons
                     name="notifications-outline"
-                    size={22}
+                    size={28}
                     color={C.green700}
                   />
                   <View style={styles.notifDot} />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.avatarCircle}
-                  onPress={() => router.push("/profile")}
-                  activeOpacity={0.8}
-                >
-                  {loadingProfile ? (
-                    <SkeletonLine
-                      width={22}
-                      height={22}
-                      style={{ borderRadius: 11 }}
-                    />
-                  ) : (
-                    <Text style={styles.avatarText}>{avatarChar}</Text>
-                  )}
-                </TouchableOpacity>
               </View>
             </View>
-            <View style={styles.weatherBar}>
-              <Ionicons name="partly-sunny-outline" size={22} color={C.gold} />
-              <Text style={styles.weatherTemp}>{weather.temp}</Text>
-              <Text style={styles.weatherCond}>{weather.condition}</Text>
-              <View style={styles.weatherDivider} />
-              <Ionicons name="water-outline" size={14} color={C.textMuted} />
-              <Text style={styles.weatherStat}>{weather.humidity}</Text>
-              <Ionicons name="flag-outline" size={14} color={C.textMuted} />
-              <Text style={styles.weatherStat}>{weather.wind}</Text>
-            </View>
+            {(() => {
+              const theme = getWeatherTheme(weather);
+              const rainStyle = theme === "rain" ? styles.weatherBarRain : undefined;
+              const clearStyle = theme === "clear" ? styles.weatherBarClear : undefined;
+              const hotStyle = theme === "hot" ? styles.weatherBarHot : undefined;
+              const weatherBarStyle = [styles.weatherBar, rainStyle, clearStyle, hotStyle];
+              const iconName = theme === "rain" ? "rainy-outline" : theme === "hot" ? "sunny" : "partly-sunny-outline";
+              const iconColor = theme === "rain" ? "#7EB8DA" : theme === "hot" ? "#C4A574" : "#B8C99E";
+              return (
+                <View style={weatherBarStyle}>
+                  <Ionicons name={iconName as any} size={24} color={iconColor} />
+                  <Text style={styles.weatherTemp}>{weather.temp}</Text>
+                  <Text style={styles.weatherCond}>{weather.condition}</Text>
+                  <View style={styles.weatherDivider} />
+                  <Ionicons name="water-outline" size={14} color={C.textMuted} />
+                  <Text style={styles.weatherStat}>{weather.humidity}</Text>
+                  <Ionicons name="flag-outline" size={14} color={C.textMuted} />
+                  <Text style={styles.weatherStat}>{weather.wind}</Text>
+                </View>
+              );
+            })()}
           </Animated.View>
         </LinearGradient>
       </Animated.View>
@@ -1236,7 +1238,7 @@ export default function Dashboard() {
                     }}
                   >
                     {activeCrops.slice(0, 10).map((crop, i) => {
-                      const colors = CROP_COLORS[i % CROP_COLORS.length];
+                      const colors = getCropColors(crop.cropName);
                       const isSel = selectedCrop === i;
                       const cropDate = crop.createdAt
                         ? formatRelativeDate(crop.createdAt, t)
@@ -1474,12 +1476,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  greetingSmall: {
-    fontSize: 17,
-    color: C.textMuted,
-    marginBottom: 4,
-    fontWeight: "700",
-  },
   farmerName: {
     fontSize: 28,
     fontWeight: "800",
@@ -1522,18 +1518,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    backgroundColor: C.surface,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 14,
     borderWidth: 1,
-    borderColor: C.borderLight,
+    backgroundColor: "#F5FAFF",
+    borderColor: "#D4E9F7",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  weatherBarRain: {
+    backgroundColor: "#F2F8FC",
+    borderColor: "#D4E9F7",
+  },
+  weatherBarClear: {
+    backgroundColor: "#F5FAFF",
+    borderColor: "#D4E9F7",
+  },
+  weatherBarHot: {
+    backgroundColor: "#FFFBF5",
+    borderColor: "#F5E6D3",
   },
   weatherTemp: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
   weatherCond: { fontSize: 16, color: C.textMuted, flex: 1 },

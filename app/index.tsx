@@ -29,7 +29,6 @@ const C = {
 export default function Index() {
   const logoScale = useRef(new Animated.Value(0)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
   const taglineOpacity = useRef(new Animated.Value(0)).current;
   const loaderOpacity = useRef(new Animated.Value(0)).current;
   const loaderWidth = useRef(new Animated.Value(0)).current;
@@ -52,11 +51,6 @@ export default function Index() {
           useNativeDriver: true,
         }),
       ]),
-      Animated.timing(textOpacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
       Animated.timing(taglineOpacity, {
         toValue: 1,
         duration: 400,
@@ -142,26 +136,19 @@ export default function Index() {
             { opacity: logoOpacity, transform: [{ scale: logoScale }] },
           ]}
         >
-          <View style={styles.logoCircle}>
+          <View style={styles.logoContainer}>
             <Image
               source={require("../assets/vadi-logo.png")}
               style={styles.logoImage}
               resizeMode="contain"
             />
           </View>
-          <View style={styles.glowRing} />
         </Animated.View>
 
         <Animated.View
-          style={{ opacity: textOpacity, alignItems: "center", marginTop: 20 }}
+          style={{ opacity: taglineOpacity, alignItems: "center", marginTop: 24 }}
         >
-          <Text style={styles.appName}>VADI</Text>
-        </Animated.View>
-
-        <Animated.View
-          style={{ opacity: taglineOpacity, alignItems: "center", marginTop: 10 }}
-        >
-          <Text style={styles.tagline}>ખેડૂતોનો સ્માર્ટ હિસાબ</Text>
+          <Text style={styles.tagline}>ખર્ચા ઘટાડો આવક વધારો</Text>
           <View style={styles.taglineDivider} />
           <Text style={styles.taglineSub}>નફો જાણો · ઉગો · ફળો</Text>
         </Animated.View>
@@ -184,7 +171,7 @@ export default function Index() {
 
       <View style={styles.bottomBrand}>
         <Text style={styles.bottomBrandText}>Powered by</Text>
-        <Text style={styles.bottomBrandName}>VADI · Agri Solutions</Text>
+        <Text style={styles.bottomBrandName}>Agri Solutions</Text>
       </View>
     </View>
   );
@@ -233,41 +220,24 @@ const styles = StyleSheet.create({
   logoWrapper: {
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
   },
-  logoCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 24,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
+  logoContainer: {
+    width: 280,
+    height: 280,
+    borderRadius: 28,
+    backgroundColor: C.green50,
     alignItems: "center",
-    shadowColor: C.green700,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 12,
+    justifyContent: "center",
     overflow: "hidden",
   },
-  logoImage: { width: 88, height: 88 },
-  glowRing: {
-    position: "absolute",
-    width: 136,
-    height: 136,
-    borderRadius: 28,
-    borderWidth: 1.5,
-    borderColor: C.green100 + "CC",
-  },
-  appName: {
-    fontSize: 48,
-    fontWeight: "900",
-    color: C.textPrimary,
-    letterSpacing: 6,
+  logoImage: {
+    width: 240,
+    height: 240,
   },
   tagline: {
-    fontSize: 15,
+    fontSize: 17,
     color: C.textPrimary,
-    fontWeight: "600",
+    fontWeight: "700",
     letterSpacing: 0.5,
     textAlign: "center",
   },

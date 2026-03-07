@@ -10,6 +10,7 @@ import {
   type Crop,
   type CropStatus,
 } from "@/utils/api";
+import { getCropColorForChart, getCropColors } from "@/utils/cropColors";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -156,6 +157,7 @@ function CropCard({
 
   const season = SEASON_META[item.season ?? ""] ?? { label: item.season, icon: "🌾", color: C.textMuted, pale: C.green50 };
   const status = STATUS_META[item.status ?? "Active"] ?? STATUS_META.Active;
+  const [cropPale, cropColor] = getCropColors(item.cropName);
 
   return (
     <Animated.View
@@ -212,13 +214,13 @@ function CropCard({
         style={[styles.card, { transform: [{ translateX }] }]}
         {...panResponder.panHandlers}
       >
-        {/* Top accent bar — season colour */}
-        <View style={[styles.cardAccentBar, { backgroundColor: season.color }]} />
+        {/* Top accent bar — same crop color as dashboard/chart */}
+        <View style={[styles.cardAccentBar, { backgroundColor: cropColor }]} />
 
         <View style={styles.cardInner}>
           {/* Top row */}
           <View style={styles.cardTop}>
-            <View style={[styles.cropEmojiWrap, { backgroundColor: season.pale }]}>
+            <View style={[styles.cropEmojiWrap, { backgroundColor: cropPale }]}>
               <Text style={styles.cropEmoji}>{item.cropEmoji ?? "🌱"}</Text>
             </View>
 
@@ -235,8 +237,8 @@ function CropCard({
               ) : null}
 
               <View style={styles.tagsRow}>
-                <View style={[styles.tag, { backgroundColor: season.pale }]}>
-                  <Text style={[styles.tagText, { color: season.color }]}>
+                <View style={[styles.tag, { backgroundColor: cropPale }]}>
+                  <Text style={[styles.tagText, { color: cropColor }]}>
                     {season.icon} {season.label}
                   </Text>
                 </View>
@@ -557,24 +559,21 @@ const VIEW_TABS = [
   { key: "chart" as const, label: "ચાર્ટ", icon: "bar-chart" },
 ];
 
-// Same colors as list/dashboard crop cards (CROP_COLORS — use darker shade per pair)
-const PIE_COLORS = [
-  "#C8E6C9", "#B2DFDB", "#FFE0B2", "#BBDEFB", "#E1BEE7",
-  "#A5D6A7", "#80CBC4", "#FFCC80", "#90CAF9", "#CE93D8",
-];
-
 function areaForCropChart(c: Crop): number {
   const a = (c as any).area;
   if (a != null && a !== "") return Number(a) || 0;
   return 0;
 }
 
-/** Donut pie: crops + remaining bigha; totalLandBigha optional for "બાકી" slice */
+/** Donut pie: only active crops + remaining bigha; totalLandBigha optional for "બાકી" slice */
 function ChartView({ crops, totalLandBigha = 0 }: { crops: Crop[]; totalLandBigha?: number }) {
+  const activeCrops = crops.filter((c) => c.status === "Active");
   const byCrop: Record<string, number> = {};
-  crops.forEach((c) => {
+  const byCropEnglish: Record<string, string> = {};
+  activeCrops.forEach((c) => {
     const name = cropDisplayName(c.cropName);
     byCrop[name] = (byCrop[name] || 0) + areaForCropChart(c);
+    byCropEnglish[name] = c.cropName;
   });
   const usedBigha = Object.values(byCrop).reduce((s, v) => s + v, 0);
   const remainingBigha = totalLandBigha > 0 ? Math.max(0, totalLandBigha - usedBigha) : 0;
@@ -583,8 +582,8 @@ function ChartView({ crops, totalLandBigha = 0 }: { crops: Crop[]; totalLandBigh
   const cropEntries = Object.entries(byCrop)
     .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1]);
-  const sliceData: { label: string; value: number; isRemaining?: boolean }[] = [
-    ...cropEntries.map(([label, value]) => ({ label, value })),
+  const sliceData: { label: string; value: number; isRemaining?: boolean; cropName?: string }[] = [
+    ...cropEntries.map(([label, value]) => ({ label, value, cropName: byCropEnglish[label] })),
     ...(remainingBigha > 0 ? [{ label: "બાકી વીઘા", value: remainingBigha, isRemaining: true }] : []),
   ];
   const total = sliceData.reduce((s, d) => s + d.value, 0);
@@ -598,7 +597,7 @@ function ChartView({ crops, totalLandBigha = 0 }: { crops: Crop[]; totalLandBigh
   const startAngle = -Math.PI / 2;
   const REMAINING_COLOR = "#E8E8E8";
 
-  const slices = sliceData.map(({ label, value, isRemaining }, i) => {
+  const slices = sliceData.map(({ label, value, isRemaining, cropName }, i) => {
     const ratio = total > 0 ? value / total : 0;
     const prevSum = sliceData.slice(0, i).reduce((s, d) => s + d.value, 0);
     const angleStart = startAngle + (total > 0 ? prevSum / total : 0) * 2 * Math.PI;
@@ -618,7 +617,7 @@ function ChartView({ crops, totalLandBigha = 0 }: { crops: Crop[]; totalLandBigh
       value,
       ratio,
       d,
-      color: isRemaining ? REMAINING_COLOR : PIE_COLORS[i % PIE_COLORS.length],
+      color: isRemaining ? REMAINING_COLOR : getCropColorForChart(cropName ?? ""),
       isRemaining,
     };
   });
@@ -631,9 +630,9 @@ function ChartView({ crops, totalLandBigha = 0 }: { crops: Crop[]; totalLandBigh
     >
       <View style={styles.chartCard}>
         <Text style={styles.chartTitle}>વીઘા ચાર્ટ</Text>
-        <Text style={styles.chartSubtitle}>પાક અને બાકી વીઘા</Text>
+        <Text style={styles.chartSubtitle}>સક્રિય પાક અને બાકી વીઘા</Text>
         {!hasData ? (
-          <Text style={styles.chartEmpty}>કોઈ પાક નથી</Text>
+          <Text style={styles.chartEmpty}>કોઈ સક્રિય પાક નથી</Text>
         ) : (
           <>
             <View style={[styles.pieWrap, { width: size, height: size }]}>

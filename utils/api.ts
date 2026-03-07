@@ -548,9 +548,16 @@ export interface LabourDailyPayload {
   dailyRate: number;
 }
 
+/** Sharing for ભાગમા (contract) – used in reports. */
+export type SharingOption = "25" | "33" | "50" | "custom";
+
 export interface LabourContractPayload {
   advanceReason: AdvanceReason;
   amountGiven: number;
+  /** 25%, 33%, 50%, or "custom". When "custom", use sharingCustom for report. */
+  sharingType?: SharingOption;
+  /** Percentage (0–100) when sharingType is "custom". */
+  sharingCustom?: number;
 }
 
 export interface MachineryExpensePayload {
