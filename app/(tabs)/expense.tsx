@@ -91,7 +91,7 @@ function formatDate(iso: string): string {
 }
 
 function formatINR(n: number): string {
-  return "₹ " + n.toLocaleString("en-IN");
+  return n.toLocaleString("en-IN");
 }
 
 // ─── Empty State ──────────────────────────────────────────────────────────────

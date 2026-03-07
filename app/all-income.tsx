@@ -72,7 +72,7 @@ function formatDate(iso: string): string {
 }
 
 function formatINR(n: number): string {
-  return "₹" + n.toLocaleString("en-IN");
+  return n.toLocaleString("en-IN");
 }
 
 function incomeLabel(i: Income): string {
@@ -93,7 +93,7 @@ function getDetailLine(item: Income): string {
       const parts: string[] = [];
       if (cs.marketName) parts.push(`બજાર: ${cs.marketName}`);
       if (cs.quantityKg != null) parts.push(`જથ્થો: ${cs.quantityKg} kg`);
-      if (cs.pricePerKg != null) parts.push(`દર: ₹${cs.pricePerKg}/kg`);
+      if (cs.pricePerKg != null) parts.push(`દર: ${cs.pricePerKg}/kg`);
       if (cs.buyerName) parts.push(`ખરીદદાર: ${cs.buyerName}`);
       return parts.join(" · ");
     case "Subsidy":
@@ -103,7 +103,7 @@ function getDetailLine(item: Income): string {
     case "Rental Income":
       const r = item.rentalIncome;
       if (!r) return "";
-      return r.rentedToName ? `${r.assetType} · ${r.rentedToName}` : `${r.assetType} · ${r.hoursOrDays} × ₹${r.ratePerUnit}`;
+      return r.rentedToName ? `${r.assetType} · ${r.rentedToName}` : `${r.assetType} · ${r.hoursOrDays} × ${r.ratePerUnit}`;
     case "Other":
       const o = item.otherIncome;
       if (!o) return "";

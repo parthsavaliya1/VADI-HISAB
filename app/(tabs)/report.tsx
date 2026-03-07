@@ -62,7 +62,7 @@ function cropDisplayName(name: string): string {
 }
 
 function formatINR(n: number): string {
-  return "₹" + n.toLocaleString("en-IN");
+  return n.toLocaleString("en-IN");
 }
 
 export default function ReportScreen() {

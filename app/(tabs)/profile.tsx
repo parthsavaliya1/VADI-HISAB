@@ -5,9 +5,9 @@ import {
     getVillageItems,
 } from "@/data/gujarati-location";
 import type { FarmerProfile as APIFarmerProfile } from "@/utils/api";
-import { getCrops, getMyProfile, getYearlyReport, logout, saveConsent, updateProfile } from "@/utils/api";
+import { getMyProfile, logout, saveConsent, updateProfile } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -28,6 +28,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 
@@ -72,9 +73,8 @@ const T = {
     dataSharing: "ડેટા શેરિંગ",
     dataSharingSub: "ગામ-સ્તરના આંકડા",
     dataSharingNote: "તમારો ડેટા ગામ-સ્તરના સરેરાશ અહેવાલ માટે ઉપયોગ થશે.",
-    activeCrops: "સક્રિય પાક",
-    netProfit: "ચોખ્ખો નફો",
-    seasons: "સિઝન",
+    vadiScore: "વાદી સ્કોર",
+    vadiScoreSub: "અમારી રેટિંગ — તમારી ખેતી સંભવિકતા",
     namePH: "નામ દાખલ કરો",
     landPH: "જમીન",
     farmer: "ખેડૂત",
@@ -549,6 +549,63 @@ function CardHeader({ emoji, title }: { emoji: string; title: string }) {
     );
 }
 
+/** Compute Vadi Score 0–100 from profile completeness (farmer potential rating) */
+function computeVadiScore(p: APIFarmerProfile | null): number {
+    if (!p) return 0;
+    let score = 0;
+    if (p.name?.trim()) score += 15;
+    if (p.district) score += 15;
+    if ((p as any).taluka) score += 8;
+    if (p.village) score += 12;
+    if (p.totalLand?.value) score += 15;
+    const water = Array.isArray((p as any).waterSources) ? (p as any).waterSources : (p as any).waterSource ? [(p as any).waterSource] : [];
+    if (water.length) score += 10;
+    const labour = Array.isArray((p as any).labourTypes) ? (p as any).labourTypes : (p as any).labourType ? [(p as any).labourType] : [];
+    if (labour.length) score += 7;
+    if (p.tractorAvailable) score += 5;
+    if ((p as any).analyticsConsent) score += 3;
+    if (p.farms?.length) score += 5;
+    return Math.min(100, score);
+}
+
+const SCORE_RING_SIZE = 120;
+const SCORE_RING_STROKE = 10;
+const SCORE_RING_R = (SCORE_RING_SIZE - SCORE_RING_STROKE) / 2;
+const SCORE_CIRCUMFERENCE = 2 * Math.PI * SCORE_RING_R;
+
+function VadiScoreCircle({ score }: { score: number }) {
+    const dash = (score / 100) * SCORE_CIRCUMFERENCE;
+    return (
+        <View style={styles.scoreRingWrap}>
+            <Svg width={SCORE_RING_SIZE} height={SCORE_RING_SIZE} style={styles.scoreRingSvg}>
+                <Circle
+                    cx={SCORE_RING_SIZE / 2}
+                    cy={SCORE_RING_SIZE / 2}
+                    r={SCORE_RING_R}
+                    stroke="#E8EDE6"
+                    strokeWidth={SCORE_RING_STROKE}
+                    fill="transparent"
+                />
+                <Circle
+                    cx={SCORE_RING_SIZE / 2}
+                    cy={SCORE_RING_SIZE / 2}
+                    r={SCORE_RING_R}
+                    stroke="#5DAF5D"
+                    strokeWidth={SCORE_RING_STROKE}
+                    fill="transparent"
+                    strokeDasharray={`${dash} ${SCORE_CIRCUMFERENCE}`}
+                    strokeLinecap="round"
+                    transform={`rotate(-90, ${SCORE_RING_SIZE / 2}, ${SCORE_RING_SIZE / 2})`}
+                />
+            </Svg>
+            <View style={styles.scoreRingCenter} pointerEvents="none">
+                <Text style={styles.scoreRingValue}>{score}</Text>
+                <Text style={styles.scoreRingMax}>/100</Text>
+            </View>
+        </View>
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Screen
 // ─────────────────────────────────────────────────────────────────────────────
@@ -562,29 +619,18 @@ export default function Profile() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [loadError, setLoadError] = useState("");
-    const [activeCropsCount, setActiveCropsCount] = useState(0);
-    const [netProfit, setNetProfit] = useState(0);
-    const [totalCropsThisYear, setTotalCropsThisYear] = useState(0);
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
-    const avatarScale = useRef(new Animated.Value(0.75)).current;
+    const cardScale = useRef(new Animated.Value(0.96)).current;
     const headerPulse = useRef(new Animated.Value(1)).current;
 
     const loadProfile = async () => {
         setLoading(true); setLoadError("");
         try {
-            const [data, cropRes, report] = await Promise.all([
-                getMyProfile(),
-                getCrops(1, 50),
-                getYearlyReport(),
-            ]);
+            const data = await getMyProfile();
             setApiProfile(data);
             setPhone((data as any).phone ?? (data as any).user?.phone ?? "");
-            const crops = cropRes?.data ?? [];
-            setActiveCropsCount(crops.filter((c: any) => c.status === "Active").length);
-            setNetProfit(report?.summary?.netProfit ?? 0);
-            setTotalCropsThisYear(report?.summary?.totalCrops ?? 0);
         } catch (err: any) {
             setLoadError(err.message ?? T.loadErr);
         } finally {
@@ -599,7 +645,7 @@ export default function Profile() {
             Animated.parallel([
                 Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
                 Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
-                Animated.spring(avatarScale, { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }),
+                Animated.spring(cardScale, { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }),
             ]).start();
         }
     }, [loading, apiProfile]);
@@ -682,94 +728,101 @@ export default function Profile() {
     const labourDisplay = toLabels(LABOUR_OPTIONS, labourTypes);
     const tractorServicesDisplay = implementsAvailable.length > 0 ? toLabels(TRACTOR_SERVICE_OPTIONS, implementsAvailable) : null;
 
+    const profilePhotoUrl = (p as any).profileImage ?? (p as any).photo ?? (p as any).avatar ?? null;
+    const vadiScore = computeVadiScore(p);
+
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#1B5E20" />
+            <StatusBar barStyle="dark-content" backgroundColor="#F6F9F4" />
             <View style={styles.bgDecor1} />
             <View style={styles.bgDecor2} />
 
             <Animated.ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
-                    {/* ══ Hero Header ══ */}
-                    <Animated.View style={[styles.hero, { transform: [{ scale: headerPulse }] }]}>
-                        <LinearGradient colors={["#1B5E20", "#2E7D32", "#4CAF50"]} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                        <View style={styles.heroTopBar}>
-                            <Text style={styles.heroTopLabel}>{T.title}</Text>
-                            <Pressable onPress={handleEditOpen} style={({ pressed }) => [styles.editFAB, pressed && styles.editFABPressed]}>
-                                <Ionicons name="create-outline" size={15} color="#065F46" />
-                                <Text style={styles.editFABText}>{T.edit}</Text>
-                            </Pressable>
-                        </View>
-                        <Animated.View style={[styles.avatarRing, { transform: [{ scale: avatarScale }] }]}>
-                            <LinearGradient colors={["#D1FAE5", "#6EE7B7", "#34D399"]} style={styles.avatarGrad}>
-                                <Text style={styles.avatarInitials}>{initials}</Text>
-                            </LinearGradient>
-                        </Animated.View>
-                        <Text style={styles.heroName}>{p.name}</Text>
-                        <Text style={styles.heroRole}>🌾 {T.farmer}</Text>
-                        <View style={styles.langRow}>
-                            <Text style={styles.langLabel}>{t("common", "language")}</Text>
-                            <View style={styles.langChips}>
-                                <Pressable style={[styles.langChip, lang === "gu" && styles.langChipActive]} onPress={() => setLang("gu")}>
-                                    <Text style={[styles.langChipText, lang === "gu" && styles.langChipTextActive]}>{t("common", "gujarati")}</Text>
-                                </Pressable>
-                                <Pressable style={[styles.langChip, lang === "en" && styles.langChipActive]} onPress={() => setLang("en")}>
-                                    <Text style={[styles.langChipText, lang === "en" && styles.langChipTextActive]}>{t("common", "english")}</Text>
-                                </Pressable>
+                    {/* ══ Light header: title + edit ══ */}
+                    <Animated.View style={[styles.topBar, { transform: [{ scale: headerPulse }] }]}>
+                        <Text style={styles.topBarTitle}>{T.title}</Text>
+                        <Pressable onPress={handleEditOpen} style={({ pressed }) => [styles.editFAB, pressed && styles.editFABPressed]}>
+                            <Ionicons name="create-outline" size={16} color="#2E7D32" />
+                            <Text style={styles.editFABText}>{T.edit}</Text>
+                        </Pressable>
+                    </Animated.View>
+
+                    {/* ══ Farmer card: photo + details ══ */}
+                    <Animated.View style={[styles.farmerCard, { transform: [{ scale: cardScale }] }]}>
+                        <View style={styles.farmerCardInner}>
+                            <View style={styles.farmerPhotoWrap}>
+                                {profilePhotoUrl ? (
+                                    <Image source={{ uri: profilePhotoUrl }} style={styles.farmerPhoto} contentFit="cover" />
+                                ) : (
+                                    <View style={styles.farmerPhotoPlaceholder}>
+                                        <Text style={styles.farmerInitials}>{initials}</Text>
+                                    </View>
+                                )}
                             </View>
-                        </View>
-                        <View style={styles.heroBadgeRow}>
-                            <View style={styles.heroBadge}><Ionicons name="location-sharp" size={11} color="#A7F3D0" /><Text style={styles.heroBadgeText}>{villageDisplay}</Text></View>
-                            <View style={styles.heroBadgeDot} />
-                            <View style={styles.heroBadge}><Ionicons name="map" size={11} color="#A7F3D0" /><Text style={styles.heroBadgeText}>{districtDisplay}</Text></View>
-                            <View style={styles.heroBadgeDot} />
-                            <View style={styles.heroBadge}><Ionicons name="leaf" size={11} color="#A7F3D0" /><Text style={styles.heroBadgeText}>{landDisplay}</Text></View>
-                        </View>
-                        <View style={styles.statsStrip}>
-                            <View style={styles.statBox}><Text style={styles.statNum}>{activeCropsCount}</Text><Text style={styles.statLbl}>{T.activeCrops}</Text></View>
-                            <View style={styles.statSep} />
-                            <View style={styles.statBox}><Text style={styles.statNum}>{netProfit >= 1000 ? `₹${(netProfit / 1000).toFixed(1)}K` : `₹${Math.round(netProfit).toLocaleString("en-IN")}`}</Text><Text style={styles.statLbl}>{T.netProfit}</Text></View>
-                            <View style={styles.statSep} />
-                            <View style={styles.statBox}><Text style={styles.statNum}>{totalCropsThisYear}</Text><Text style={styles.statLbl}>{T.seasons}</Text></View>
+                            <Text style={styles.farmerName}>{p.name}</Text>
+                            <Text style={styles.farmerRole}>🌾 {T.farmer}</Text>
+                            <View style={styles.farmerMeta}>
+                                {villageDisplay !== "—" && (
+                                    <View style={styles.farmerMetaItem}>
+                                        <Ionicons name="location-outline" size={14} color="#6B7B6E" />
+                                        <Text style={styles.farmerMetaText}>{villageDisplay}</Text>
+                                    </View>
+                                )}
+                                {districtDisplay && (
+                                    <View style={styles.farmerMetaItem}>
+                                        <Ionicons name="map-outline" size={14} color="#6B7B6E" />
+                                        <Text style={styles.farmerMetaText}>{districtDisplay}</Text>
+                                    </View>
+                                )}
+                                <View style={styles.farmerMetaItem}>
+                                    <Ionicons name="leaf-outline" size={14} color="#6B7B6E" />
+                                    <Text style={styles.farmerMetaText}>{landDisplay}</Text>
+                                </View>
+                            </View>
                         </View>
                     </Animated.View>
 
-                    {/* 4 options — All Income, Add Expense, Contact Us, About Us */}
-                    <Card>
-                        <CardHeader emoji="📋" title="મેનૂ" />
-                        <Pressable style={styles.linkRow} onPress={() => router.push("/all-income")} android_ripple={{ color: "#E8F5E9" }}>
-                            <View style={[styles.infoIconWrap, { backgroundColor: "#E8F5E9" }]}>
-                                <Ionicons name="add-circle-outline" size={18} color="#1B5E20" />
-                            </View>
-                            <Text style={styles.linkRowLabel}>બધી આવક</Text>
-                            <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+                    {/* ══ Vadi Score — farmer potential rating ══ */}
+                    <View style={styles.scoreCard}>
+                        <Text style={styles.scoreLabel}>{T.vadiScore}</Text>
+                        <Text style={styles.scoreSub}>{T.vadiScoreSub}</Text>
+                        <VadiScoreCircle score={vadiScore} />
+                    </View>
+
+                    {/* Language */}
+                    <View style={styles.langRow}>
+                        <Text style={styles.langLabel}>{t("common", "language")}</Text>
+                        <View style={styles.langChips}>
+                            <Pressable style={[styles.langChip, lang === "gu" && styles.langChipActive]} onPress={() => setLang("gu")}>
+                                <Text style={[styles.langChipText, lang === "gu" && styles.langChipTextActive]}>{t("common", "gujarati")}</Text>
+                            </Pressable>
+                            <Pressable style={[styles.langChip, lang === "en" && styles.langChipActive]} onPress={() => setLang("en")}>
+                                <Text style={[styles.langChipText, lang === "en" && styles.langChipTextActive]}>{t("common", "english")}</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+
+                    {/* Minimal quick links — no menu card */}
+                    <View style={styles.quickLinks}>
+                        <Pressable style={styles.quickLink} onPress={() => router.push("/all-income")}>
+                            <Ionicons name="trending-up-outline" size={20} color="#2E7D32" />
+                            <Text style={styles.quickLinkText}>બધી આવક</Text>
                         </Pressable>
-                        <View style={styles.linkDivider} />
-                        <Pressable style={styles.linkRow} onPress={() => router.push("/all-expense")} android_ripple={{ color: "#E8F5E9" }}>
-                            <View style={[styles.infoIconWrap, { backgroundColor: "#FFEBEE" }]}>
-                                <Ionicons name="remove-circle-outline" size={18} color="#B71C1C" />
-                            </View>
-                            <Text style={styles.linkRowLabel}>બધા ખર્ચ</Text>
-                            <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+                        <Pressable style={styles.quickLink} onPress={() => router.push("/all-expense")}>
+                            <Ionicons name="trending-down-outline" size={20} color="#C62828" />
+                            <Text style={styles.quickLinkText}>બધા ખર્ચ</Text>
                         </Pressable>
-                        <View style={styles.linkDivider} />
-                        <Pressable style={styles.linkRow} onPress={() => Alert.alert("અમારો સંપર્ક કરો", "ઇમેઇલ: support@vadihisaab.com\nફોન: +91 XXXXX XXXXX\nઅમને સંપર્ક કરો — અમે મદદ કરીશું.", [{ text: "ઠીક છે" }])} android_ripple={{ color: "#E8F5E9" }}>
-                            <View style={[styles.infoIconWrap, { backgroundColor: "#E3F2FD" }]}>
-                                <Ionicons name="call-outline" size={18} color="#1565C0" />
-                            </View>
-                            <Text style={styles.linkRowLabel}>અમારો સંપર્ક કરો</Text>
-                            <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+                        <Pressable style={styles.quickLink} onPress={() => Alert.alert("અમારો સંપર્ક કરો", "ઇમેઇલ: support@vadihisaab.com\nફોન: +91 XXXXX XXXXX", [{ text: "ઠીક છે" }])}>
+                            <Ionicons name="call-outline" size={20} color="#1565C0" />
+                            <Text style={styles.quickLinkText}>સંપર્ક</Text>
                         </Pressable>
-                        <View style={styles.linkDivider} />
-                        <Pressable style={styles.linkRow} onPress={() => Alert.alert("અમારા વિશે", "VADI-Hisaab — ખેડૂત માટે સ્માર્ટ હિસાબ.\nપાક, ખર્ચ અને આવકનું સરળ રેકોર્ડ.\n\n" + T.version, [{ text: "ઠીક છે" }])} android_ripple={{ color: "#E8F5E9" }}>
-                            <View style={[styles.infoIconWrap, { backgroundColor: "#F3E5F5" }]}>
-                                <Ionicons name="information-circle-outline" size={18} color="#7B1FA2" />
-                            </View>
-                            <Text style={styles.linkRowLabel}>અમારા વિશે</Text>
-                            <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+                        <Pressable style={styles.quickLink} onPress={() => Alert.alert("અમારા વિશે", "VADI-Hisaab — ખેડૂત માટે સ્માર્ટ હિસાબ.\n\n" + T.version, [{ text: "ઠીક છે" }])}>
+                            <Ionicons name="information-circle-outline" size={20} color="#5C6BC0" />
+                            <Text style={styles.quickLinkText}>અમારા વિશે</Text>
                         </Pressable>
-                    </Card>
+                    </View>
 
                     <Pressable onPress={handleLogout} style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}>
                         <Ionicons name="log-out-outline" size={18} color="#DC2626" />
@@ -798,44 +851,51 @@ export default function Profile() {
 // ─────────────────────────────────────────────────────────────────────────────
 // View Styles
 // ─────────────────────────────────────────────────────────────────────────────
-// Dashboard theme: bg #F5F7F2, green700 #2E7D32, textPrimary #0A0E0B
+// Light theme: soft green-tinted background, farmer-focused
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#F5F7F2" },
-    centerScreen: { flex: 1, justifyContent: "center", alignItems: "center", gap: 14, backgroundColor: "#F5F7F2" },
-    loadingText: { fontSize: 16, color: "#2D4230" },
+    container: { flex: 1, backgroundColor: "#F6F9F4" },
+    centerScreen: { flex: 1, justifyContent: "center", alignItems: "center", gap: 14, backgroundColor: "#F6F9F4" },
+    loadingText: { fontSize: 16, color: "#3D5C40" },
     loadErrText: { fontSize: 14, color: "#EF4444", textAlign: "center", paddingHorizontal: 32, lineHeight: 22 },
     retryBtn: { backgroundColor: "#2E7D32", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 14 },
     retryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-    bgDecor1: { position: "absolute", width: 280, height: 280, borderRadius: 140, backgroundColor: "#C8E6C920", top: -80, right: -80 },
-    bgDecor2: { position: "absolute", width: 180, height: 180, borderRadius: 90, backgroundColor: "#E8F5E915", top: 200, left: -60 },
-    scrollContent: { paddingBottom: 20 },
-    hero: { overflow: "hidden", paddingTop: Platform.OS === "ios" ? 60 : 44, paddingBottom: 28, paddingHorizontal: 22, alignItems: "center", borderBottomLeftRadius: 32, borderBottomRightRadius: 32, marginBottom: 20, shadowColor: "#1B5E20", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 12 },
-    heroTopBar: { width: "100%", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
-    heroTopLabel: { fontSize: 17, fontWeight: "700", color: "rgba(255,255,255,0.7)" },
-    editFAB: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#C8E6C9", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 22, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 4 },
-    editFABPressed: { opacity: 0.8 },
-    editFABText: { fontSize: 14, fontWeight: "800", color: "#1B5E20" },
-    avatarRing: { width: 90, height: 90, borderRadius: 45, borderWidth: 3, borderColor: "rgba(255,255,255,0.5)", marginBottom: 12 },
-    avatarGrad: { flex: 1, borderRadius: 45, justifyContent: "center", alignItems: "center" },
-    avatarInitials: { fontSize: 30, fontWeight: "900", color: "#1B5E20" },
-    heroName: { fontSize: 28, fontWeight: "800", color: "#fff", letterSpacing: 0.2, marginBottom: 2 },
-    heroRole: { fontSize: 17, color: "rgba(255,255,255,0.65)", marginBottom: 10 },
-    langRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 },
-    langLabel: { fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: "600" },
+    bgDecor1: { position: "absolute", width: 260, height: 260, borderRadius: 130, backgroundColor: "#E2EDE0", top: -70, right: -70 },
+    bgDecor2: { position: "absolute", width: 160, height: 160, borderRadius: 80, backgroundColor: "#E8F0E6", top: 180, left: -50 },
+    scrollContent: { paddingBottom: 20, paddingTop: Platform.OS === "ios" ? 52 : 36 },
+    topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginBottom: 16 },
+    topBarTitle: { fontSize: 22, fontWeight: "800", color: "#1A2E1C", letterSpacing: 0.2 },
+    editFAB: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fff", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: "#C8E6C9", shadowColor: "#0A0E0B", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+    editFABPressed: { opacity: 0.85 },
+    editFABText: { fontSize: 14, fontWeight: "800", color: "#2E7D32" },
+    farmerCard: { backgroundColor: "#fff", borderRadius: 24, marginHorizontal: 18, marginBottom: 18, paddingVertical: 24, paddingHorizontal: 20, alignItems: "center", shadowColor: "#1A2E1C", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
+    farmerCardInner: { alignItems: "center" },
+    farmerPhotoWrap: { width: 96, height: 96, borderRadius: 48, marginBottom: 14, overflow: "hidden" },
+    farmerPhoto: { width: "100%", height: "100%", borderRadius: 48 },
+    farmerPhotoPlaceholder: { width: "100%", height: "100%", borderRadius: 48, backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center" },
+    farmerInitials: { fontSize: 32, fontWeight: "900", color: "#2E7D32" },
+    farmerName: { fontSize: 24, fontWeight: "800", color: "#1A2E1C", marginBottom: 4, textAlign: "center" },
+    farmerRole: { fontSize: 15, color: "#6B7B6E", marginBottom: 12 },
+    farmerMeta: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12 },
+    farmerMetaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+    farmerMetaText: { fontSize: 13, color: "#5C6B5E", fontWeight: "600" },
+    scoreCard: { backgroundColor: "#fff", borderRadius: 24, marginHorizontal: 18, marginBottom: 18, paddingVertical: 24, paddingHorizontal: 20, alignItems: "center", shadowColor: "#1A2E1C", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
+    scoreLabel: { fontSize: 18, fontWeight: "800", color: "#1A2E1C", marginBottom: 4 },
+    scoreSub: { fontSize: 12, color: "#6B7B6E", marginBottom: 18 },
+    scoreRingWrap: { width: SCORE_RING_SIZE, height: SCORE_RING_SIZE, position: "relative", alignItems: "center", justifyContent: "center" },
+    scoreRingSvg: { position: "absolute" },
+    scoreRingCenter: { alignItems: "center", justifyContent: "center" },
+    scoreRingValue: { fontSize: 36, fontWeight: "900", color: "#2E7D32" },
+    scoreRingMax: { fontSize: 16, fontWeight: "700", color: "#8B9B8E", marginTop: -2 },
+    langRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 18, marginHorizontal: 18 },
+    langLabel: { fontSize: 13, color: "#5C6B5E", fontWeight: "600" },
     langChips: { flexDirection: "row", gap: 8 },
-    langChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.2)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" },
-    langChipActive: { backgroundColor: "rgba(255,255,255,0.35)", borderColor: "#C8E6C9" },
-    langChipText: { fontSize: 14, color: "rgba(255,255,255,0.9)", fontWeight: "600" },
-    langChipTextActive: { color: "#fff", fontWeight: "700" },
-    heroBadgeRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20, flexWrap: "wrap", justifyContent: "center" },
-    heroBadge: { flexDirection: "row", alignItems: "center", gap: 3 },
-    heroBadgeText: { fontSize: 12, color: "#C8E6C9", fontWeight: "600" },
-    heroBadgeDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#C8E6C950" },
-    statsStrip: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, width: "100%", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
-    statBox: { flex: 1, alignItems: "center" },
-    statNum: { fontSize: 20, fontWeight: "900", color: "#fff" },
-    statLbl: { fontSize: 12, color: "rgba(200,230,201,0.95)", marginTop: 3, textAlign: "center", fontWeight: "700" },
-    statSep: { width: 1, backgroundColor: "rgba(255,255,255,0.2)", marginVertical: 4 },
+    langChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#EEF4EE", borderWidth: 1, borderColor: "#D8E6D8" },
+    langChipActive: { backgroundColor: "#E0F0E0", borderColor: "#5DAF5D" },
+    langChipText: { fontSize: 14, color: "#5C6B5E", fontWeight: "600" },
+    langChipTextActive: { color: "#1B5E20", fontWeight: "700" },
+    quickLinks: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12, marginHorizontal: 18, marginBottom: 18 },
+    quickLink: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fff", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1, borderColor: "#E8EDE6", minWidth: 100 },
+    quickLinkText: { fontSize: 14, fontWeight: "700", color: "#2D4230" },
     card: { backgroundColor: "#fff", borderRadius: 20, marginHorizontal: 16, marginBottom: 14, paddingHorizontal: 16, paddingVertical: 14, shadowColor: "#0A0E0B", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
     cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: "#EAF4EA" },
     cardHeaderEmoji: { fontSize: 20 },

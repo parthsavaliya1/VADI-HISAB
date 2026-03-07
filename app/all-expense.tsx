@@ -63,7 +63,7 @@ function formatDate(iso: string): string {
 }
 
 function formatINR(n: number): string {
-  return "₹" + n.toLocaleString("en-IN");
+  return n.toLocaleString("en-IN");
 }
 
 function ExpenseRow({ item }: { item: Expense }) {

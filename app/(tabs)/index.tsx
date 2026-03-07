@@ -113,6 +113,22 @@ function areaUnitLabel(unit: string | undefined, t: (s: string, k: string) => st
   return unit?.toLowerCase() === "acre" ? t("common", "acre") : t("common", "bigha");
 }
 
+/** Total land in bigha for per-bigha calculations (acre → bigha ≈ ×1.6) */
+function totalLandBigha(profile: { totalLand?: { value: number; unit?: string } } | null): number {
+  const tl = profile?.totalLand;
+  if (!tl || !tl.value || tl.value <= 0) return 0;
+  return tl.unit === "acre" ? tl.value * 1.6 : tl.value;
+}
+
+/** Crop area in bigha (Acre → ×1.6, Hectare → ×6.17) */
+function cropAreaBigha(area: number | undefined, areaUnit: string | undefined): number {
+  const a = Number(area);
+  if (!a || a <= 0) return 0;
+  if (areaUnit === "Acre") return a * 1.6;
+  if (areaUnit === "Hectare") return a * 6.17;
+  return a;
+}
+
 const HEADER_MAX = 200;
 const HEADER_MIN = 72;
 const STICKY_THRESHOLD = HEADER_MAX - HEADER_MIN;
@@ -171,6 +187,16 @@ function formatRelativeDate(iso: string, t: (s: string, k: string) => string): s
   return new Date(iso).toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
+  });
+}
+
+/** Actual date for crop cards / detail (e.g. "7 Mar 2025") */
+function formatDisplayDate(iso: string | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   });
 }
 
@@ -770,7 +796,7 @@ function RecentTransactions({
                     { color: t.type === "income" ? C.income : C.expense },
                   ]}
                 >
-                  {t.amount > 0 ? "+" : ""}₹
+                  {t.amount > 0 ? "+" : ""}
                   {Math.abs(t.amount).toLocaleString("en-IN")}
                 </Text>
                 <Ionicons
@@ -915,6 +941,9 @@ export default function Dashboard() {
   const totalIncome = summary.totalIncome;
   const totalExpense = summary.totalExpense;
   const totalProfit = summary.netProfit;
+  const landBigha = totalLandBigha(profile);
+  const incomePerBigha = landBigha > 0 ? totalIncome / landBigha : 0;
+  const expensePerBigha = landBigha > 0 ? totalExpense / landBigha : 0;
 
   const farmerName = profile?.name ?? "";
   const farmerVillage = profile?.village ?? "";
@@ -1096,12 +1125,7 @@ export default function Dashboard() {
           ]}
         >
           <PressableCard>
-            <View
-              style={[
-                styles.profitCard,
-                { borderColor: totalProfit >= 0 ? C.green100 : "#FFCDD2" },
-              ]}
-            >
+            <View style={styles.profitCard}>
               <View
                 style={[
                   styles.profitStrip,
@@ -1119,7 +1143,7 @@ export default function Dashboard() {
                       { color: totalProfit >= 0 ? C.income : C.expense },
                     ]}
                   >
-                    {totalProfit >= 0 ? "+" : "-"}₹
+                    {totalProfit >= 0 ? "+" : "-"}
                   </Text>
                   <AnimatedNumber value={Math.abs(totalProfit)} />
                 </View>
@@ -1131,7 +1155,6 @@ export default function Dashboard() {
                         label: t("dashboard", "income"),
                         value: totalIncome,
                         color: C.income,
-                        bg: C.incomePale,
                         isCount: false,
                       },
                       {
@@ -1139,49 +1162,53 @@ export default function Dashboard() {
                         label: t("dashboard", "expense"),
                         value: totalExpense,
                         color: C.expense,
-                        bg: C.expensePale,
                         isCount: false,
                       },
                       {
                         icon: "leaf-outline",
                         label: t("dashboard", "crops"),
                         value: crops.length,
-                        color: "#5D4037",
-                        bg: "#FFF8E1",
+                        color: C.textSecondary,
                         isCount: true,
-                        isCropsStyle: true,
                       },
                     ] as const
                   ).map((item, i) => (
                     <View
                       key={i}
-                      style={[
-                        styles.profitSubItem,
-                        { backgroundColor: item.bg },
-                        (item as any).isCropsStyle && styles.profitSubItemCrops,
-                      ]}
+                      style={styles.profitSubItem}
                     >
-                      <Ionicons name={item.icon} size={14} color={item.color} />
+                      <Ionicons name={item.icon} size={22} color={item.color} />
                       <View>
                         <Text
                           style={[styles.profitSubValue, { color: item.color }]}
                         >
                           {item.isCount
                             ? String(item.value)
-                            : `₹${item.value.toLocaleString("en-IN")}`}
+                            : `${item.value.toLocaleString("en-IN")}`}
                         </Text>
-                        <Text
-                          style={[
-                            styles.profitSubCaption,
-                            (item as any).isCropsStyle && styles.profitSubCaptionCrops,
-                          ]}
-                        >
+                        <Text style={styles.profitSubCaption}>
                           {item.label}
                         </Text>
                       </View>
                     </View>
                   ))}
                 </View>
+                {landBigha > 0 && (
+                  <View style={styles.profitPerBighaRow}>
+                    <View style={styles.profitPerBighaItem}>
+                      <Text style={[styles.profitPerBighaValue, { color: C.income }]}>
+                        {Math.round(incomePerBigha).toLocaleString("en-IN")}
+                      </Text>
+                      <Text style={styles.profitPerBighaLabel}>આવક/વીઘા</Text>
+                    </View>
+                    <View style={styles.profitPerBighaItem}>
+                      <Text style={[styles.profitPerBighaValue, { color: C.expense }]}>
+                        {Math.round(expensePerBigha).toLocaleString("en-IN")}
+                      </Text>
+                      <Text style={styles.profitPerBighaLabel}>ખર્ચ/વીઘા</Text>
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
           </PressableCard>
@@ -1232,6 +1259,11 @@ export default function Dashboard() {
                     snapToInterval={CROP_PAGE_WIDTH}
                     snapToAlignment="start"
                     decelerationRate="fast"
+                    onScroll={(e) => {
+                      const idx = Math.round(e.nativeEvent.contentOffset.x / CROP_PAGE_WIDTH);
+                      setSelected(Math.min(Math.max(0, idx), activeCrops.length - 1));
+                    }}
+                    scrollEventThrottle={32}
                     onMomentumScrollEnd={(e) => {
                       const idx = Math.round(e.nativeEvent.contentOffset.x / CROP_PAGE_WIDTH);
                       setSelected(Math.min(Math.max(0, idx), activeCrops.length - 1));
@@ -1240,10 +1272,9 @@ export default function Dashboard() {
                     {activeCrops.slice(0, 10).map((crop, i) => {
                       const colors = getCropColors(crop.cropName);
                       const isSel = selectedCrop === i;
-                      const cropDate = crop.createdAt
-                        ? formatRelativeDate(crop.createdAt, t)
-                        : "—";
+                      const cropDate = formatDisplayDate(crop.createdAt);
                       const farmLabel = (crop as any).farmName || (crop as any).farm_name || "—";
+                      const areaLine = [farmLabel !== "—" ? farmLabel : null, `${crop.area} ${areaUnitLabel(crop.areaUnit, t)}`].filter(Boolean).join(" · ");
                       return (
                         <PressableCard
                           key={crop._id}
@@ -1266,28 +1297,10 @@ export default function Dashboard() {
                             </View>
                             <View style={styles.cropCardRight}>
                               <Text style={styles.cropName} numberOfLines={2}>{cropDisplayName(crop.cropName)}</Text>
-                              <Text style={styles.cropMetaLine}>
-                                📅 {cropDate}
-                              </Text>
-                              <Text style={styles.cropMetaLine}>
-                                🏠 {farmLabel} · {crop.area} {areaUnitLabel(crop.areaUnit, t)}
-                              </Text>
-                              <View
-                                style={[
-                                  styles.cropBadge,
-                                  {
-                                    backgroundColor: "rgba(76, 175, 80, 0.2)",
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  style={[
-                                    styles.cropBadgeText,
-                                    { color: C.green700 },
-                                  ]}
-                                >
-                                  ● સક્રિય
-                                </Text>
+                              <Text style={styles.cropMetaLine}>{cropDate}</Text>
+                              {areaLine ? <Text style={styles.cropMetaLine}>{areaLine}</Text> : null}
+                              <View style={styles.cropBadge}>
+                                <Text style={styles.cropBadgeText}>● સક્રિય</Text>
                               </View>
                             </View>
                           </LinearGradient>
@@ -1295,6 +1308,36 @@ export default function Dashboard() {
                       );
                     })}
                   </ScrollView>
+                  {activeCrops.length > 1 && (
+                    <>
+                      {selectedCrop > 0 && (
+                        <TouchableOpacity
+                          style={styles.cropScrollArrowLeft}
+                          onPress={() => {
+                            const next = selectedCrop - 1;
+                            setSelected(next);
+                            cropScrollRef.current?.scrollTo({ x: next * CROP_PAGE_WIDTH, animated: true });
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="chevron-back" size={36} color="#9E9E9E" />
+                        </TouchableOpacity>
+                      )}
+                      {selectedCrop < activeCrops.length - 1 && (
+                        <TouchableOpacity
+                          style={styles.cropScrollArrowRight}
+                          onPress={() => {
+                            const next = selectedCrop + 1;
+                            setSelected(next);
+                            cropScrollRef.current?.scrollTo({ x: next * CROP_PAGE_WIDTH, animated: true });
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="chevron-forward" size={36} color="#9E9E9E" />
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  )}
                 </View>
               )}
             </View>
@@ -1312,6 +1355,9 @@ export default function Dashboard() {
             const inc = (c as any).income ?? 0;
             const exp = (c as any).expense ?? 0;
             const net = inc - exp;
+            const areaBigha = cropAreaBigha(c.area, c.areaUnit);
+            const incPerBigha = areaBigha > 0 ? inc / areaBigha : 0;
+            const expPerBigha = areaBigha > 0 ? exp / areaBigha : 0;
             return (
               <View style={styles.section}>
                 <View style={styles.detailCard}>
@@ -1321,17 +1367,14 @@ export default function Dashboard() {
                         {c.cropEmoji ?? "🌱"}
                       </Text>
                     </View>
-                    <View style={{ flex: 1 }}>
+                    <View style={styles.detailHeaderText}>
                       <Text style={styles.detailName}>{cropDisplayName(c.cropName)}</Text>
                       <Text style={styles.detailMeta}>
-                        {c.season === "Kharif"
-                          ? "ખરીફ"
-                          : c.season === "Rabi"
-                            ? "રવી"
-                            : "ઉનાળો"}
+                        {c.season === "Kharif" ? "ખરીફ" : c.season === "Rabi" ? "રવી" : "ઉનાળો"}
                         {" · "}
                         {c.area} {areaUnitLabel(c.areaUnit, t)}
                       </Text>
+                      <Text style={styles.detailDate}>{formatDisplayDate(c.createdAt)}</Text>
                     </View>
                     <TouchableOpacity
                       style={styles.editBtn}
@@ -1339,32 +1382,35 @@ export default function Dashboard() {
                         router.push(`/crop/add-crop?id=${c._id}` as any)
                       }
                     >
-                      <Ionicons
-                        name="create-outline"
-                        size={18}
-                        color={C.green700}
-                      />
+                      <Ionicons name="create-outline" size={20} color={C.green700} />
                     </TouchableOpacity>
                   </View>
 
-                  <Text style={styles.detailSummaryTitle}>આ પાકનો હિસાબ</Text>
-                  <View style={styles.detailSummaryRow}>
-                    <View style={[styles.detailSummaryBox, styles.detailIncomeBox]}>
-                      <Text style={styles.detailSummaryLabel}>{t("dashboard", "totalIncome")}</Text>
-                      <Text style={styles.detailSummaryIncome}>₹{inc.toLocaleString("en-IN")}</Text>
+                  <View style={styles.detailSummarySingleBox}>
+                    <View style={styles.detailSummaryCell}>
+                      <Text style={[styles.detailSummaryCellLabel, { color: C.income }]}>આવક</Text>
+                      <Text style={[styles.detailSummaryCellValue, { color: C.income }]}>{inc.toLocaleString("en-IN")}</Text>
                     </View>
-                    <Text style={styles.detailSummaryMinus}>−</Text>
-                    <View style={[styles.detailSummaryBox, styles.detailExpenseBox]}>
-                      <Text style={styles.detailSummaryLabel}>{t("dashboard", "totalExpense")}</Text>
-                      <Text style={styles.detailSummaryExpense}>₹{exp.toLocaleString("en-IN")}</Text>
+                    <Text style={styles.detailSummaryOp}>−</Text>
+                    <View style={styles.detailSummaryCell}>
+                      <Text style={[styles.detailSummaryCellLabel, { color: C.expense }]}>ખર્ચ</Text>
+                      <Text style={[styles.detailSummaryCellValue, { color: C.expense }]}>{exp.toLocaleString("en-IN")}</Text>
+                    </View>
+                    <Text style={styles.detailSummaryOp}>=</Text>
+                    <View style={styles.detailSummaryCell}>
+                      <Text style={[styles.detailSummaryCellLabel, { color: C.textPrimary }]}>નફો</Text>
+                      <Text style={[styles.detailSummaryCellValue, { color: C.textPrimary }]}>{net >= 0 ? "" : "−"}{Math.abs(net).toLocaleString("en-IN")}</Text>
                     </View>
                   </View>
-                  <View style={styles.detailNetRow}>
-                    <Text style={styles.detailNetLabel}>{t("dashboard", "profit")}</Text>
-                    <Text style={[styles.detailNetValue, { color: net >= 0 ? C.income : C.expense }]}>
-                      {net >= 0 ? "" : "−"}₹{Math.abs(net).toLocaleString("en-IN")}
-                    </Text>
-                  </View>
+                  {areaBigha > 0 && (
+                    <View style={styles.detailUnitRow}>
+                      <Text style={styles.detailUnitText}>
+                        <Text style={{ color: C.income, fontWeight: "700" }}>આવક/વીઘા</Text> {Math.round(incPerBigha).toLocaleString("en-IN")}
+                        {"  ·  "}
+                        <Text style={{ color: C.expense, fontWeight: "700" }}>ખર્ચ/વીઘા</Text> {Math.round(expPerBigha).toLocaleString("en-IN")}
+                      </Text>
+                    </View>
+                  )}
 
                   <View style={styles.detailActions}>
                     <PressableCard
@@ -1582,21 +1628,22 @@ const styles = StyleSheet.create({
 
   profitCard: {
     backgroundColor: C.surface,
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 18,
     flexDirection: "row",
     alignItems: "stretch",
-    borderWidth: 1.5,
+    borderWidth: 1,
+    borderColor: C.borderLight,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
     overflow: "hidden",
   },
-  profitStrip: { width: 5, borderRadius: 4, marginRight: 16 },
+  profitStrip: { width: 4, borderRadius: 2, marginRight: 14 },
   profitLabel: {
-    fontSize: 17,
+    fontSize: 18,
     color: C.textMuted,
     fontWeight: "800",
     marginBottom: 8,
@@ -1607,9 +1654,9 @@ const styles = StyleSheet.create({
     gap: 2,
     marginBottom: 16,
   },
-  profitSign: { fontSize: 26, fontWeight: "800", marginBottom: 4 },
+  profitSign: { fontSize: 28, fontWeight: "800", marginBottom: 4 },
   netProfitAmount: {
-    fontSize: 42,
+    fontSize: 44,
     fontWeight: "900",
     letterSpacing: -1.5,
     color: C.textPrimary,
@@ -1617,20 +1664,38 @@ const styles = StyleSheet.create({
   profitSubRow: { flexDirection: "row", gap: 8 },
   profitSubItem: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 8,
     alignItems: "center",
     gap: 4,
+    backgroundColor: "#F8FAF8",
+    borderWidth: 1,
+    borderColor: C.borderLight,
   },
-  profitSubItemCrops: {
-    borderWidth: 2,
-    borderColor: "#FFE082",
-    borderRadius: 12,
-  },
-  profitSubValue: { fontSize: 17, fontWeight: "800" },
+  profitSubValue: { fontSize: 19, fontWeight: "800" },
   profitSubCaption: { fontSize: 14, color: C.textMuted, fontWeight: "700" },
-  profitSubCaptionCrops: { color: "#5D4037" },
+  profitPerBighaRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: C.borderLight,
+  },
+  profitPerBighaItem: {
+    flex: 1,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    alignItems: "center",
+    gap: 0,
+    backgroundColor: "#F8FAF8",
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  profitPerBighaValue: { fontSize: 17, fontWeight: "800" },
+  profitPerBighaLabel: { fontSize: 12, color: C.textMuted, fontWeight: "600" },
 
   qaRow: { flexDirection: "row", gap: 10 },
   qaHalf: { flex: 1 },
@@ -1687,42 +1752,69 @@ const styles = StyleSheet.create({
 
   cropCarouselWrap: { position: "relative" },
   cropCard: {
-    borderRadius: 20,
+    borderRadius: 22,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 4,
   },
-  cropCardSel: { shadowOpacity: 0.22, shadowRadius: 12, elevation: 8 },
+  cropCardSel: { shadowOpacity: 0.12, shadowRadius: 12, elevation: 6 },
   cropCardGrad: {
     flexDirection: "row",
-    padding: 18,
-    minHeight: 130,
+    padding: 20,
+    minHeight: 140,
     alignItems: "center",
   },
   cropCardLeft: {
-    width: 80,
+    width: 88,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
+    marginRight: 16,
   },
   cropCardRight: { flex: 1, justifyContent: "center" },
-  cropCardEmoji: { fontSize: 50 },
-  cropBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: "flex-start", marginTop: 6 },
-  cropBadgeText: { fontSize: 13, fontWeight: "800" },
-  cropName: { fontSize: 19, fontWeight: "800", color: C.textPrimary, marginBottom: 4 },
+  cropCardEmoji: { fontSize: 58 },
+  cropBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+    marginTop: 8,
+    backgroundColor: "rgba(46, 125, 50, 0.12)",
+  },
+  cropBadgeText: { fontSize: 13, fontWeight: "800", color: C.green700 },
+  cropName: { fontSize: 20, fontWeight: "800", color: C.textPrimary, marginBottom: 6 },
   cropMetaLine: {
     fontSize: 15,
     color: C.textSecondary,
-    fontWeight: "700",
-    marginBottom: 2,
+    fontWeight: "600",
+    marginBottom: 3,
   },
   cropMeta: {
     fontSize: 15,
     color: C.textSecondary,
     fontWeight: "700",
+  },
+  cropScrollArrowLeft: {
+    position: "absolute",
+    left: 4,
+    top: "50%",
+    marginTop: -24,
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cropScrollArrowRight: {
+    position: "absolute",
+    right: 4,
+    top: "50%",
+    marginTop: -24,
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   emptyCropCard: {
@@ -1757,82 +1849,91 @@ const styles = StyleSheet.create({
   detailCard: {
     backgroundColor: C.surface,
     borderRadius: 20,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: C.borderLight,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 3,
   },
   detailHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 14,
-    paddingBottom: 14,
+    gap: 16,
+    marginBottom: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: C.borderLight,
   },
   detailEmojiWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: C.green50,
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    backgroundColor: "#F4FAF4",
     justifyContent: "center",
     alignItems: "center",
   },
-  detailEmoji: { fontSize: 32 },
-  detailName: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
-  detailMeta: { fontSize: 16, color: C.textMuted, marginTop: 3 },
+  detailEmoji: { fontSize: 40 },
+  detailHeaderText: { flex: 1 },
+  detailName: { fontSize: 24, fontWeight: "800", color: C.textPrimary, marginBottom: 4 },
+  detailMeta: { fontSize: 16, color: C.textMuted, marginTop: 2, fontWeight: "600" },
+  detailDate: { fontSize: 14, color: C.textMuted, marginTop: 6, fontWeight: "600" },
   editBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    backgroundColor: C.green50,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#F4FAF4",
     justifyContent: "center",
     alignItems: "center",
   },
-  detailSummaryTitle: {
-    fontSize: 19,
-    fontWeight: "800",
-    color: C.textSecondary,
-    marginBottom: 12,
-  },
-  detailSummaryRow: {
+  detailSummarySingleBox: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 14,
-    gap: 10,
-  },
-  detailSummaryBox: {
-    flex: 1,
-    borderRadius: 14,
-    padding: 14,
-  },
-  detailIncomeBox: { backgroundColor: C.incomePale, borderWidth: 1, borderColor: C.green100 },
-  detailExpenseBox: { backgroundColor: C.expensePale, borderWidth: 1, borderColor: "#FFCDD2" },
-  detailSummaryLabel: { fontSize: 14, color: C.textMuted, fontWeight: "700", marginBottom: 4 },
-  detailSummaryIncome: { fontSize: 19, fontWeight: "800", color: C.income },
-  detailSummaryExpense: { fontSize: 19, fontWeight: "800", color: C.expense },
-  detailSummaryMinus: { fontSize: 19, fontWeight: "800", color: C.textMuted },
-  detailNetRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: C.green50,
-    borderRadius: 14,
-    marginBottom: 16,
+    justifyContent: "center",
+    backgroundColor: "#F8FAF8",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: C.green100,
+    borderColor: C.borderLight,
+    gap: 18,
   },
-  detailNetLabel: { fontSize: 17, fontWeight: "800", color: C.textPrimary },
-  detailNetValue: { fontSize: 21, fontWeight: "900" },
-  detailActions: { flexDirection: "row", gap: 12 },
+  detailSummaryCell: {
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 88,
+    flex: 1,
+  },
+  detailSummaryCellLabel: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  detailSummaryCellValue: {
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  detailSummaryOp: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: C.textMuted,
+  },
+  detailUnitRow: {
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderTopWidth: 1,
+    borderTopColor: C.borderLight,
+  },
+  detailUnitText: {
+    fontSize: 18,
+    color: C.textSecondary,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  detailActions: { flexDirection: "row", gap: 12, marginTop: 12 },
   detailBtnWrap: { flex: 1 },
   detailActionBtn: {
     flexDirection: "row",

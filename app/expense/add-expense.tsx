@@ -415,12 +415,12 @@ export default function AddExpense() {
     if (category === "Seed") {
       if (!seedType) return "બિયારણ પ્રકાર જરૂરી છે.";
       if (!seedQty || Number(seedQty) <= 0) return "જથ્થો દાખલ કરો.";
-      if (!seedUnitRate || Number(seedUnitRate) < 0) return "દર (₹/એકમ) દાખલ કરો.";
+      if (!seedUnitRate || Number(seedUnitRate) < 0) return "દર (પ્રતિ એકમ) દાખલ કરો.";
     }
     if (category === "Fertilizer") {
       if (!fertProduct) return "ઉત્પાદનનું નામ જરૂરી છે.";
       if (!fertBags || Number(fertBags) <= 0) return "બૅગ સંખ્યા દાખલ કરો.";
-      if (!fertUnitCost || Number(fertUnitCost) < 0) return "દર દર બૅગ (₹) દાખલ કરો.";
+      if (!fertUnitCost || Number(fertUnitCost) < 0) return "દર દર બૅગ દાખલ કરો.";
     }
     if (category === "Pesticide") {
       if (!pestCategory) return "કેટેગરી પસંદ કરો.";
@@ -656,12 +656,12 @@ export default function AddExpense() {
                   placeholderTextColor="#5B6570"
                   multiline
                 />
-                <SectionLabel text="ખર્ચ રકમ (₹) *" />
+                <SectionLabel text="ખર્ચ રકમ *" />
                 <NumericInput
                   value={generalAmount}
                   onChange={setGeneralAmount}
                   placeholder="0"
-                  prefix="₹"
+                  prefix=""
                 />
                 <TouchableOpacity
                   style={styles.saveBtn}
@@ -791,19 +791,19 @@ export default function AddExpense() {
                 </TouchableOpacity>
               </View>
             </View>
-            <SectionLabel text={`દર (₹ પ્રતિ ${seedQtyUnit === "man" ? "મણ" : "કિ.ગ્રા."}) *`} />
+            <SectionLabel text={`દર (પ્રતિ ${seedQtyUnit === "man" ? "મણ" : "કિ.ગ્રા."}) *`} />
             <NumericInput
               value={seedUnitRate}
               onChange={setSeedUnitRate}
               placeholder="0"
-              prefix="₹"
+              prefix=""
             />
             {Number(seedQty) > 0 && Number(seedUnitRate) >= 0 && (
               <View style={styles.derivedBox}>
                 <Ionicons name="calculator" size={16} color={C.green700} />
                 <Text style={styles.derivedText}>
-                  કુલ ખર્ચ: ₹{Number(seedCost).toLocaleString("en-IN")}
-                  {seedRatePerKg && ` · દર ₹${seedRatePerKg}/કિ.ગ્રા.`}
+                  કુલ ખર્ચ: {Number(seedCost).toLocaleString("en-IN")}
+                  {seedRatePerKg && ` · દર ${seedRatePerKg}/કિ.ગ્રા.`}
                 </Text>
               </View>
             )}
@@ -832,19 +832,19 @@ export default function AddExpense() {
               suffix="બૅગ"
               onFocus={scrollToForm}
             />
-            <SectionLabel text="દર દર બૅગ (₹) *" />
+            <SectionLabel text="દર દર બૅગ *" />
             <NumericInput
               value={fertUnitCost}
               onChange={setFertUnitCost}
               placeholder="0"
-              prefix="₹"
+              prefix=""
               onFocus={scrollToForm}
             />
             {fertTotal !== null && fertTotal >= 0 && (
               <View style={styles.totalBox}>
                 <Text style={styles.totalLabel}>કુલ = બૅગ × દર</Text>
                 <Text style={styles.totalValue}>
-                  ₹ {fertTotal.toLocaleString("en-IN")}
+                  {fertTotal.toLocaleString("en-IN")}
                 </Text>
               </View>
             )}
@@ -879,12 +879,12 @@ export default function AddExpense() {
               suffix="ml"
               onFocus={scrollToForm}
             />
-            <SectionLabel text="ખર્ચ (₹) *" />
+            <SectionLabel text="ખર્ચ *" />
             <NumericInput
               value={pestCost}
               onChange={setPestCost}
               placeholder="0"
-              prefix="₹"
+              prefix=""
               onFocus={scrollToForm}
             />
           </View>
@@ -962,19 +962,19 @@ export default function AddExpense() {
                     />
                   </View>
                 </View>
-                <SectionLabel text="દૈનિક દર (₹)" />
+                <SectionLabel text="દૈનિક દર" />
                 <NumericInput
                   value={labourRate}
                   onChange={setLabourRate}
                   placeholder="0"
-                  prefix="₹"
+                  prefix=""
                   onFocus={scrollToForm}
                 />
                 {labourTotal !== null && (
                   <View style={styles.totalBox}>
                     <Text style={styles.totalLabel}>કુલ =</Text>
                     <Text style={styles.totalValue}>
-                      ₹ {labourTotal.toLocaleString("en-IN")}
+                      {labourTotal.toLocaleString("en-IN")}
                     </Text>
                   </View>
                 )}
@@ -1014,12 +1014,12 @@ export default function AddExpense() {
                   placeholder="કારણ પસંદ કરો..."
                   onOpen={scrollToForm}
                 />
-                <SectionLabel text="આપેલ રકમ (₹) *" />
+                <SectionLabel text="આપેલ રકમ *" />
                 <NumericInput
                   value={advanceAmount}
                   onChange={setAdvanceAmount}
                   placeholder="0"
-                  prefix="₹"
+                  prefix=""
                   onFocus={scrollToForm}
                 />
               </>
@@ -1086,12 +1086,12 @@ export default function AddExpense() {
               suffix={machineUnitType === "vigha" ? "વીઘા" : "કલાક"}
               onFocus={scrollToForm}
             />
-            <SectionLabel text="દર (₹) *" />
+            <SectionLabel text="દર *" />
             <NumericInput
               value={machineRate}
               onChange={setMachineRate}
               placeholder="0"
-              prefix="₹"
+              prefix=""
               onFocus={scrollToForm}
             />
             {machineTotal !== null && (
@@ -1100,7 +1100,7 @@ export default function AddExpense() {
                   કુલ = {machineUnitType === "vigha" ? "વીઘા" : "કલાક"} × દર
                 </Text>
                 <Text style={styles.totalValue}>
-                  ₹ {machineTotal.toLocaleString("en-IN")}
+                  {machineTotal.toLocaleString("en-IN")}
                 </Text>
               </View>
             )}

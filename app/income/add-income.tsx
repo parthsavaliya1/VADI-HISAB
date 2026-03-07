@@ -311,10 +311,10 @@ function CropSaleForm({
         </View>
         <View style={{ flex: 1 }}>
           <NumField
-            label="ભાવ / kg (₹) *"
+            label="ભાવ / kg *"
             value={data.pricePerKg}
             onChange={(v) => set("pricePerKg", v)}
-            suffix="₹"
+            suffix=""
           />
         </View>
       </View>
@@ -322,7 +322,7 @@ function CropSaleForm({
       {qty > 0 && price > 0 && (
         <DerivedCard
           label="કુલ રકમ"
-          value={`₹ ${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         />
       )}
 
@@ -362,10 +362,10 @@ function SubsidyForm({
         />
       </View>
       <NumField
-        label="રકમ (₹) *"
+        label="રકમ *"
         value={data.amount}
         onChange={(v) => set("amount", v)}
-        suffix="₹"
+        suffix=""
       />
       <TxtField
         label="સંદર્ભ નંબર"
@@ -416,17 +416,17 @@ function RentalIncomeForm({
         </View>
         <View style={{ flex: 1 }}>
           <NumField
-            label="દર (₹) *"
+            label="દર *"
             value={data.ratePerUnit}
             onChange={(v) => set("ratePerUnit", v)}
-            suffix="₹"
+            suffix=""
           />
         </View>
       </View>
       {hrs > 0 && rate > 0 && (
         <DerivedCard
           label="કુલ રકમ"
-          value={`₹ ${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         />
       )}
     </>
@@ -453,10 +453,10 @@ function OtherIncomeForm({
         />
       </View>
       <NumField
-        label="રકમ (₹) *"
+        label="રકમ *"
         value={data.amount}
         onChange={(v) => set("amount", v)}
-        suffix="₹"
+        suffix=""
       />
       <TxtField
         label="વિગત"

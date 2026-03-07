@@ -1,17 +1,17 @@
 /**
  * Same crop colors everywhere: dashboard, crop summary list, and chart.
- * Very light, soft shades – easy on eyes.
+ * Cool, light, friendly palette – easy on eyes.
  */
 export const CROP_COLORS: [string, string][] = [
-  ["#F0F7FF", "#B3D7F7"],   // 0 Cotton – very light sky blue
-  ["#F0FAFB", "#A8E4EA"],   // 1 Groundnut – very light cyan
-  ["#FFF8F0", "#F5D4A8"],   // 2 Jeera – very light orange
-  ["#FAF5FB", "#E4C4E8"],   // 3 Garlic – very light lavender
-  ["#F2F3F9", "#C5C8E0"],   // 4 Onion – very light indigo
-  ["#F0FAF9", "#B0D9D6"],   // 5 Chana – very light teal
-  ["#F2F9F2", "#C5E6C5"],   // 6 Wheat – very light mint
-  ["#FDF2F6", "#F5C6D6"],   // 7 Bajra – very light pink
-  ["#F8F6F5", "#D4CFCA"],   // 8 Maize – very light grey
+  ["#E8F4FD", "#9EC8ED"],   // 0 Cotton – cool sky blue
+  ["#E6F6F8", "#8DD4E0"],   // 1 Groundnut – cool aqua
+  ["#FDF6ED", "#E8C9A0"],   // 2 Jeera – soft sand
+  ["#F5EEFA", "#D4B8E4"],   // 3 Garlic – cool lavender
+  ["#EEEEF8", "#B8B8D8"],   // 4 Onion – cool lilac
+  ["#E8F6F5", "#9DD5D2"],   // 5 Chana – cool mint teal
+  ["#EEF8EE", "#B0DDB0"],   // 6 Wheat – cool sage
+  ["#FCE8F0", "#E8B8CC"],   // 7 Bajra – cool rose
+  ["#F2F0EE", "#C8C4BE"],   // 8 Maize – cool stone
 ];
 
 /** Each crop → unique color index. */
