@@ -120,6 +120,46 @@ const MACHINERY_IMPLEMENTS: { value: MachineryImplement; label: string }[] = [
   { value: "રેપ (Rap)", label: "રેપ" },
 ];
 
+// ─── Crop dropdown: same format as dashboard CropPickerModal (Gujarati name, સિઝન, વીઘા) ───
+const CROP_NAME_GUJ: Record<string, string> = {
+  Cotton: "કપાસ",
+  Groundnut: "મગફળી",
+  Jeera: "જીરું",
+  Garlic: "લસણ",
+  Onion: "ડુંગળી",
+  Chana: "ચણા",
+  Wheat: "ઘઉં",
+  Bajra: "બાજરી",
+  Maize: "મકાઈ",
+};
+const SEASON_DISPLAY: Record<string, string> = {
+  Kharif: "☔ ખરીફ",
+  Rabi: "❄️ રવી",
+  Summer: "☀️ ઉનાળો",
+};
+const AREA_UNIT_GUJ: Record<string, string> = {
+  Bigha: "વીઘા",
+  Acre: "એકર",
+  Hectare: "હેક્ટર",
+};
+function cropDisplayNameGuj(name: string): string {
+  if (!name || typeof name !== "string") return "—";
+  const trimmed = name.trim();
+  const exact = CROP_NAME_GUJ[trimmed];
+  if (exact) return exact;
+  const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  if (CROP_NAME_GUJ[capitalized]) return CROP_NAME_GUJ[capitalized];
+  return trimmed;
+}
+function getCropDropdownLabel(c: Crop): string {
+  const emoji = c.cropEmoji ?? "🌱";
+  const name = cropDisplayNameGuj(c.cropName ?? "");
+  const season = SEASON_DISPLAY[c.season ?? ""] ?? (c.season ?? "—");
+  const area = c.area != null ? String(c.area) : "—";
+  const unit = AREA_UNIT_GUJ[(c.areaUnit ?? "Bigha") as string] ?? "વીઘા";
+  return `${emoji} ${name} · ${season} · ${area} ${unit}`;
+}
+
 // ─── Reusable components ──────────────────────────────────────────────────────
 function SectionLabel({ text }: { text: string }) {
   return <Text style={styles.label}>{text}</Text>;
@@ -229,12 +269,16 @@ export default function AddExpense() {
   const [selectedCropId, setSelectedCropId] = useState<string | "">("");
   const [generalDescription, setGeneralDescription] = useState("");
   const [generalAmount, setGeneralAmount] = useState("");
-  const cropId = paramCropId ?? (selectedCropId || undefined);
+  const cropId = selectedCropId || paramCropId || undefined;
 
   useEffect(() => {
-    if (!paramCropId || isGeneralExpense) {
+    if (!isGeneralExpense) {
       getCrops().then((r) => setCrops(r.data ?? [])).catch(() => setCrops([]));
     }
+  }, [isGeneralExpense]);
+
+  useEffect(() => {
+    if (paramCropId && !isGeneralExpense) setSelectedCropId(paramCropId);
   }, [paramCropId, isGeneralExpense]);
 
   const [category, setCategory] = useState<ExpenseCategory | "">("");
@@ -348,9 +392,9 @@ export default function AddExpense() {
             amountGiven: Number(generalAmount),
           },
         });
-        Alert.alert("✅ સફળ!", "સામાન્ય ખર્ચ સાચવ્યો.", [
-          { text: "ઠીક છે", onPress: () => router.back() },
-        ]);
+        Alert.alert("✅ સફળ!", "સામાન્ય ખર્ચ સાચવ્યો.", [{ text: "ઠીક છે" }]);
+        setGeneralDescription("");
+        setGeneralAmount("");
         return;
       }
       await createExpense({
@@ -404,9 +448,27 @@ export default function AddExpense() {
           },
         }),
       });
-      Alert.alert("✅ સફળ!", "ખર્ચ સફળતાપૂર્વક ઉમેરાયો!", [
-        { text: "ઠીક છે", onPress: () => router.back() },
-      ]);
+      Alert.alert("✅ સફળ!", "ખર્ચ સફળતાપૂર્વક ઉમેરાયો!", [{ text: "ઠીક છે" }]);
+      setCategory("");
+      setSeedType("");
+      setSeedQty("");
+      setSeedUnitRate("");
+      setFertProduct("");
+      setFertBags("");
+      setFertUnitCost("");
+      setPestCategory("");
+      setPestDosage("");
+      setPestCost("");
+      setLabourTask("");
+      setLabourPeople("");
+      setLabourDays("");
+      setLabourRate("");
+      setAdvanceReason("");
+      setAdvanceAmount("");
+      setMachineImpl("");
+      setMachineQty("");
+      setMachineRate("");
+      setNotes("");
     } catch (error: any) {
       Alert.alert("❌ ભૂલ", error?.message ?? "કંઈક ખોટું થયું.");
     } finally {
@@ -526,25 +588,20 @@ export default function AddExpense() {
           </View>
         ) : (
           <>
-        {/* ── General expense: no crop in params — show crop selector ── */}
-        {!paramCropId && (
-          <View style={styles.generalExpenseCard}>
-            <Text style={styles.generalExpenseTitle}>સામાન્ય ખર્ચ / અન્ય ખર્ચ</Text>
-            {crops.length > 0 ? (
-              <>
-                <SectionLabel text="આ ખર્ચ કયા પાક સાથે જોડવો? (સામાન્ય માટે કોઈ પણ પાક પસંદ કરો)" />
-                <SelectPicker
-                  options={crops.map((c) => ({ value: c._id, label: `${c.cropEmoji ?? "🌱"} ${c.cropName}` }))}
-                  selected={selectedCropId}
-                  onSelect={setSelectedCropId}
-                  placeholder="પાક પસંદ કરો..."
-                />
-              </>
-            ) : (
-              <Text style={styles.generalExpenseNote}>કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો, પછી ખર્ચ ઉમેરો.</Text>
-            )}
-          </View>
-        )}
+        {/* ── Crop dropdown: pre-selected from dashboard (cropId in URL) or user choice ── */}
+        <View style={styles.cropSelectCard}>
+          <SectionLabel text="પાક પસંદ કરો *" />
+          {crops.length > 0 ? (
+            <SelectPicker
+              options={crops.map((c) => ({ value: c._id, label: getCropDropdownLabel(c) }))}
+              selected={cropId ?? ""}
+              onSelect={(id) => setSelectedCropId(id)}
+              placeholder="આ ખર્ચ કયા પાક માટે?"
+            />
+          ) : (
+            <Text style={styles.generalExpenseNote}>કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો.</Text>
+          )}
+        </View>
 
         {/* ── Row 1: Seed, Fertilizer, Pesticide — Row 2: Labour, Machinery ── */}
         <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર પસંદ કરો</Text>
@@ -1028,6 +1085,14 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 13, color: C.textMuted, marginTop: 2 },
 
   scroll: { padding: CAT_GRID_PAD },
+  cropSelectCard: {
+    backgroundColor: C.surfaceGreen,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 18,
+    borderWidth: 1.5,
+    borderColor: C.green100,
+  },
   generalExpenseCard: {
     backgroundColor: C.surfaceGreen,
     borderRadius: 16,

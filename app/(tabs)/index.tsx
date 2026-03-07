@@ -125,6 +125,8 @@ export type IncomeCategory =
 export interface Income {
   _id: string;
   category: IncomeCategory;
+  /** Server-computed total; use this when present for display */
+  amount?: number;
   date: string;
   notes?: string;
   cropId?: string | { _id: string; cropName: string };
@@ -182,9 +184,14 @@ function formatRelativeDate(iso: string, t: (s: string, k: string) => string): s
 
 function getCropName(
   cropId: string | { _id: string; cropName: string } | undefined,
+  crops?: Crop[],
 ): string {
   if (!cropId) return "—";
-  if (typeof cropId === "object") return cropId.cropName;
+  if (typeof cropId === "object") return cropDisplayName(cropId.cropName ?? "—");
+  if (crops?.length) {
+    const c = crops.find((x) => x._id === cropId);
+    if (c) return cropDisplayName(c.cropName ?? "—");
+  }
   return "—";
 }
 
@@ -223,6 +230,7 @@ function expenseIcon(cat: ExpenseCategory): string {
 
 // ── Income helpers ────────────────────────────
 function incomeAmount(i: Income): number {
+  if (typeof i.amount === "number" && i.amount >= 0) return i.amount;
   if (i.category === "Crop Sale") return i.cropSale?.totalAmount ?? 0;
   if (i.category === "Subsidy") return i.subsidy?.amount ?? 0;
   if (i.category === "Rental Income") return i.rentalIncome?.totalAmount ?? 0;
@@ -255,12 +263,13 @@ function buildTransactions(
   expenses: Expense[],
   incomes: Income[],
   t: (s: string, k: string) => string,
+  crops: Crop[] = [],
 ): Transaction[] {
   const expTxns: Transaction[] = expenses.map((e) => ({
     _id: e._id,
     type: "expense" as const,
     label: expenseLabel(e),
-    crop: getCropName(e.cropId as any),
+    crop: getCropName(e.cropId as any, crops),
     amount: -expenseAmount(e),
     date: formatRelativeDate(e.date, t),
     rawDate: e.date,
@@ -272,7 +281,7 @@ function buildTransactions(
     _id: i._id,
     type: "income" as const,
     label: incomeLabel(i),
-    crop: getCropName(i.cropId),
+    crop: getCropName(i.cropId, crops),
     amount: incomeAmount(i),
     date: formatRelativeDate(i.date, t),
     rawDate: i.date,
@@ -284,7 +293,7 @@ function buildTransactions(
     .sort(
       (a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime(),
     )
-    .slice(0, 6);
+    .slice(0, 5);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -805,8 +814,8 @@ export default function Dashboard() {
         getMyProfile(),
         getCrops(),
         getYearlyReport(),
-        getExpenses(undefined, undefined, 1, 5),
-        getIncomes(1, 5),
+        getExpenses(undefined, undefined, undefined, 1, 10),
+        getIncomes(1, 10),
       ]);
       setProfile(prof);
       setCrops(
@@ -821,7 +830,7 @@ export default function Dashboard() {
         }),
       );
       setSummary(yearlyReport.summary);
-      setTxns(buildTransactions(expRes.data, incRes.data, t));
+      setTxns(buildTransactions(expRes.data, incRes.data, t, cropRes.data ?? []));
     } catch (err) {
       console.log("[Dashboard] loadData error:", (err as Error).message);
     } finally {

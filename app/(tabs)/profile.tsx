@@ -5,7 +5,7 @@ import {
     getVillageItems,
 } from "@/data/gujarati-location";
 import type { FarmerProfile as APIFarmerProfile } from "@/utils/api";
-import { getMyProfile, logout, updateProfile } from "@/utils/api";
+import { getCrops, getMyProfile, getYearlyReport, logout, saveConsent, updateProfile } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -562,6 +562,9 @@ export default function Profile() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [loadError, setLoadError] = useState("");
+    const [activeCropsCount, setActiveCropsCount] = useState(0);
+    const [netProfit, setNetProfit] = useState(0);
+    const [totalCropsThisYear, setTotalCropsThisYear] = useState(0);
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
@@ -571,9 +574,17 @@ export default function Profile() {
     const loadProfile = async () => {
         setLoading(true); setLoadError("");
         try {
-            const data = await getMyProfile();
+            const [data, cropRes, report] = await Promise.all([
+                getMyProfile(),
+                getCrops(1, 50),
+                getYearlyReport(),
+            ]);
             setApiProfile(data);
             setPhone((data as any).phone ?? (data as any).user?.phone ?? "");
+            const crops = cropRes?.data ?? [];
+            setActiveCropsCount(crops.filter((c: any) => c.status === "Active").length);
+            setNetProfit(report?.summary?.netProfit ?? 0);
+            setTotalCropsThisYear(report?.summary?.totalCrops ?? 0);
         } catch (err: any) {
             setLoadError(err.message ?? T.loadErr);
         } finally {
@@ -608,17 +619,20 @@ export default function Profile() {
         if (!draft.totalLand.trim() || isNaN(Number(draft.totalLand))) { Alert.alert(T.errTitle, T.errLand); return; }
         setSaving(true);
         try {
-            const updated = await updateProfile({
-                name: draft.name,
-                district: draft.district,
-                taluka: draft.taluka,
-                village: draft.village,
-                totalLand: { value: parseFloat(draft.totalLand), unit: draft.totalLandUnit },
-                waterSources: draft.waterSources as any,
-                tractorAvailable: draft.tractorAvailable,
-                implementsAvailable: draft.implementsAvailable,
-                labourTypes: draft.labourTypes as any,
-            });
+            const [updated] = await Promise.all([
+                updateProfile({
+                    name: draft.name,
+                    district: draft.district,
+                    taluka: draft.taluka,
+                    village: draft.village,
+                    totalLand: { value: parseFloat(draft.totalLand), unit: draft.totalLandUnit },
+                    waterSources: draft.waterSources as any,
+                    tractorAvailable: draft.tractorAvailable,
+                    implementsAvailable: draft.implementsAvailable,
+                    labourTypes: draft.labourTypes as any,
+                }),
+                saveConsent(draft.dataSharing),
+            ]);
             setApiProfile(updated.profile);
             setEditVisible(false);
             setDraft(null);
@@ -713,66 +727,46 @@ export default function Profile() {
                             <View style={styles.heroBadge}><Ionicons name="leaf" size={11} color="#A7F3D0" /><Text style={styles.heroBadgeText}>{landDisplay}</Text></View>
                         </View>
                         <View style={styles.statsStrip}>
-                            <View style={styles.statBox}><Text style={styles.statNum}>3</Text><Text style={styles.statLbl}>{T.activeCrops}</Text></View>
+                            <View style={styles.statBox}><Text style={styles.statNum}>{activeCropsCount}</Text><Text style={styles.statLbl}>{T.activeCrops}</Text></View>
                             <View style={styles.statSep} />
-                            <View style={styles.statBox}><Text style={styles.statNum}>₹19.3K</Text><Text style={styles.statLbl}>{T.netProfit}</Text></View>
+                            <View style={styles.statBox}><Text style={styles.statNum}>{netProfit >= 1000 ? `₹${(netProfit / 1000).toFixed(1)}K` : `₹${Math.round(netProfit).toLocaleString("en-IN")}`}</Text><Text style={styles.statLbl}>{T.netProfit}</Text></View>
                             <View style={styles.statSep} />
-                            <View style={styles.statBox}><Text style={styles.statNum}>2</Text><Text style={styles.statLbl}>{T.seasons}</Text></View>
+                            <View style={styles.statBox}><Text style={styles.statNum}>{totalCropsThisYear}</Text><Text style={styles.statLbl}>{T.seasons}</Text></View>
                         </View>
                     </Animated.View>
 
-                    {/* Personal */}
+                    {/* 4 options — All Income, Add Expense, Contact Us, About Us */}
                     <Card>
-                        <CardHeader emoji="👤" title={T.sectionPersonal} />
-                        <InfoRow icon="person-outline" label={T.fullName} value={p.name} />
-                        <InfoRow icon="call-outline" label={T.mobile} value={phone ? `+91 ${phone}` : "—"} last />
-                    </Card>
-
-                    {/* Location — shows Gujarati labels, data is from English keys */}
-                    <Card>
-                        <CardHeader emoji="📍" title={T.sectionLocation} />
-                        <InfoRow icon="map-outline" label={T.district} value={districtDisplay} />
-                        <InfoRow icon="navigate-outline" label={T.taluka} value={talukaDisplay} />
-                        <InfoRow icon="home-outline" label={T.village} value={villageDisplay} last />
-                    </Card>
-
-                    {/* Farm */}
-                    <Card>
-                        <CardHeader emoji="🌾" title={T.sectionFarm} />
-                        <InfoRow icon="resize-outline" label={T.totalLand} value={landDisplay} />
-                        <InfoRow icon="water-outline" label={T.waterSource} value={waterDisplay} />
-                        <InfoRow icon="people-outline" label={T.labourType} value={labourDisplay} />
-                        <InfoRow icon="car-outline" label={T.tractor} value={p.tractorAvailable ? (tractorServicesDisplay ? `✅ ઉપલબ્ધ (${tractorServicesDisplay})` : "✅ ઉપલબ્ધ") : "❌ ઉપલબ્ધ નથી"} last />
-                    </Card>
-
-                    {/* Privacy */}
-                    <Card>
-                        <CardHeader emoji="🔐" title={T.sectionPrivacy} />
-                        <View style={styles.switchInfoRow}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.switchInfoLabel}>{T.dataSharing}</Text>
-                                <Text style={styles.switchInfoSub}>{T.dataSharingSub}</Text>
+                        <CardHeader emoji="📋" title="મેનૂ" />
+                        <Pressable style={styles.linkRow} onPress={() => router.push("/all-income")} android_ripple={{ color: "#E8F5E9" }}>
+                            <View style={[styles.infoIconWrap, { backgroundColor: "#E8F5E9" }]}>
+                                <Ionicons name="add-circle-outline" size={18} color="#1B5E20" />
                             </View>
-                            <Switch value={(p as any).analyticsConsent ?? false} disabled trackColor={{ false: "#E5E7EB", true: "#A7F3D0" }} thumbColor={(p as any).analyticsConsent ? "#059669" : "#D1D5DB"} />
-                        </View>
-                    </Card>
-
-                    {/* All expense & All income — match dashboard theme */}
-                    <Card>
-                        <CardHeader emoji="🧾" title="બધા વ્યવહાર" />
+                            <Text style={styles.linkRowLabel}>બધી આવક</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+                        </Pressable>
+                        <View style={styles.linkDivider} />
                         <Pressable style={styles.linkRow} onPress={() => router.push("/all-expense")} android_ripple={{ color: "#E8F5E9" }}>
                             <View style={[styles.infoIconWrap, { backgroundColor: "#FFEBEE" }]}>
-                                <Ionicons name="remove-circle-outline" size={16} color="#B71C1C" />
+                                <Ionicons name="remove-circle-outline" size={18} color="#B71C1C" />
                             </View>
                             <Text style={styles.linkRowLabel}>બધા ખર્ચ</Text>
                             <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
                         </Pressable>
                         <View style={styles.linkDivider} />
-                        <Pressable style={styles.linkRow} onPress={() => router.push("/all-income")} android_ripple={{ color: "#E8F5E9" }}>
-                            <View style={[styles.infoIconWrap, { backgroundColor: "#E8F5E9" }]}>
-                                <Ionicons name="add-circle-outline" size={16} color="#1B5E20" />
+                        <Pressable style={styles.linkRow} onPress={() => Alert.alert("અમારો સંપર્ક કરો", "ઇમેઇલ: support@vadihisaab.com\nફોન: +91 XXXXX XXXXX\nઅમને સંપર્ક કરો — અમે મદદ કરીશું.", [{ text: "ઠીક છે" }])} android_ripple={{ color: "#E8F5E9" }}>
+                            <View style={[styles.infoIconWrap, { backgroundColor: "#E3F2FD" }]}>
+                                <Ionicons name="call-outline" size={18} color="#1565C0" />
                             </View>
-                            <Text style={styles.linkRowLabel}>બધી આવક</Text>
+                            <Text style={styles.linkRowLabel}>અમારો સંપર્ક કરો</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+                        </Pressable>
+                        <View style={styles.linkDivider} />
+                        <Pressable style={styles.linkRow} onPress={() => Alert.alert("અમારા વિશે", "VADI-Hisaab — ખેડૂત માટે સ્માર્ટ હિસાબ.\nપાક, ખર્ચ અને આવકનું સરળ રેકોર્ડ.\n\n" + T.version, [{ text: "ઠીક છે" }])} android_ripple={{ color: "#E8F5E9" }}>
+                            <View style={[styles.infoIconWrap, { backgroundColor: "#F3E5F5" }]}>
+                                <Ionicons name="information-circle-outline" size={18} color="#7B1FA2" />
+                            </View>
+                            <Text style={styles.linkRowLabel}>અમારા વિશે</Text>
                             <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
                         </Pressable>
                     </Card>
@@ -817,15 +811,15 @@ const styles = StyleSheet.create({
     scrollContent: { paddingBottom: 20 },
     hero: { overflow: "hidden", paddingTop: Platform.OS === "ios" ? 60 : 44, paddingBottom: 28, paddingHorizontal: 22, alignItems: "center", borderBottomLeftRadius: 32, borderBottomRightRadius: 32, marginBottom: 20, shadowColor: "#1B5E20", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 12 },
     heroTopBar: { width: "100%", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
-    heroTopLabel: { fontSize: 16, fontWeight: "700", color: "rgba(255,255,255,0.7)" },
+    heroTopLabel: { fontSize: 17, fontWeight: "700", color: "rgba(255,255,255,0.7)" },
     editFAB: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#C8E6C9", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 22, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 4 },
     editFABPressed: { opacity: 0.8 },
     editFABText: { fontSize: 14, fontWeight: "800", color: "#1B5E20" },
     avatarRing: { width: 90, height: 90, borderRadius: 45, borderWidth: 3, borderColor: "rgba(255,255,255,0.5)", marginBottom: 12 },
     avatarGrad: { flex: 1, borderRadius: 45, justifyContent: "center", alignItems: "center" },
     avatarInitials: { fontSize: 30, fontWeight: "900", color: "#1B5E20" },
-    heroName: { fontSize: 22, fontWeight: "900", color: "#fff", letterSpacing: 0.3, marginBottom: 2 },
-    heroRole: { fontSize: 14, color: "rgba(255,255,255,0.65)", marginBottom: 10 },
+    heroName: { fontSize: 28, fontWeight: "800", color: "#fff", letterSpacing: 0.2, marginBottom: 2 },
+    heroRole: { fontSize: 17, color: "rgba(255,255,255,0.65)", marginBottom: 10 },
     langRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 },
     langLabel: { fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: "600" },
     langChips: { flexDirection: "row", gap: 8 },
@@ -839,21 +833,21 @@ const styles = StyleSheet.create({
     heroBadgeDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#C8E6C950" },
     statsStrip: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, width: "100%", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
     statBox: { flex: 1, alignItems: "center" },
-    statNum: { fontSize: 18, fontWeight: "900", color: "#fff" },
-    statLbl: { fontSize: 11, color: "rgba(200,230,201,0.95)", marginTop: 3, textAlign: "center" },
+    statNum: { fontSize: 20, fontWeight: "900", color: "#fff" },
+    statLbl: { fontSize: 12, color: "rgba(200,230,201,0.95)", marginTop: 3, textAlign: "center", fontWeight: "700" },
     statSep: { width: 1, backgroundColor: "rgba(255,255,255,0.2)", marginVertical: 4 },
     card: { backgroundColor: "#fff", borderRadius: 20, marginHorizontal: 16, marginBottom: 14, paddingHorizontal: 16, paddingVertical: 14, shadowColor: "#0A0E0B", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
     cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: "#EAF4EA" },
-    cardHeaderEmoji: { fontSize: 17 },
-    cardHeaderTitle: { fontSize: 17, fontWeight: "800", color: "#0A0E0B", letterSpacing: 0.2 },
+    cardHeaderEmoji: { fontSize: 20 },
+    cardHeaderTitle: { fontSize: 20, fontWeight: "800", color: "#1A2E1C", letterSpacing: 0.2 },
     infoRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, gap: 12 },
     infoIconWrap: { width: 28, height: 28, borderRadius: 8, backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center" },
     infoTextWrap: { flex: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    infoLabel: { fontSize: 13, color: "#2D4230", fontWeight: "500" },
-    infoValue: { fontSize: 14, fontWeight: "700", color: "#0A0E0B", textAlign: "right", flex: 1, marginLeft: 8 },
+    infoLabel: { fontSize: 17, color: "#3D5C40", fontWeight: "600" },
+    infoValue: { fontSize: 17, fontWeight: "700", color: "#1A2E1C", textAlign: "right", flex: 1, marginLeft: 8 },
     rowDivider: { height: 1, backgroundColor: "#F9FAFB", marginLeft: 40 },
-    linkRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, gap: 12 },
-    linkRowLabel: { fontSize: 17, fontWeight: "800", color: "#0A0E0B", flex: 1 },
+    linkRow: { flexDirection: "row", alignItems: "center", paddingVertical: 14, gap: 12 },
+    linkRowLabel: { fontSize: 18, fontWeight: "800", color: "#1A2E1C", flex: 1 },
     linkDivider: { height: 1, backgroundColor: "#F0F7F0", marginLeft: 40 },
     switchInfoRow: { flexDirection: "row", alignItems: "center", paddingVertical: 6 },
     switchInfoLabel: { fontSize: 14, fontWeight: "700", color: "#0A0E0B" },
