@@ -754,11 +754,10 @@ export default function Dashboard() {
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const currentYear = new Date().getFullYear();
       const [prof, cropRes, yearlyReport, expRes, incRes] = await Promise.all([
         getMyProfile(),
         getCrops(),
-        getYearlyReport(currentYear),
+        getYearlyReport(),
         getExpenses(undefined, undefined, 1, 5),
         getIncomes(1, 5),
       ]);

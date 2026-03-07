@@ -17,7 +17,13 @@ import {
 } from "react-native";
 
 import { useProfile } from "@/contexts/ProfileContext";
-import { createCrop, type CropPayload, type CropSeason } from "@/utils/api";
+import {
+  createCrop,
+  getCurrentFinancialYear,
+  getFinancialYearOptions,
+  type CropPayload,
+  type CropSeason,
+} from "@/utils/api";
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 const C = {
@@ -138,8 +144,7 @@ const STEPS = [
   { label: "પુષ્ટિ", icon: "✅" },
 ];
 
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
+const YEAR_OPTIONS = getFinancialYearOptions();
 
 // ─── Form state ───────────────────────────────────────────────────────────────
 interface FormState {
@@ -151,7 +156,7 @@ interface FormState {
   subType: string;
   customSubType: string;
   batchLabel: string;
-  year: number;
+  year: string;
   area: string;
   notes: string;
 }
@@ -165,7 +170,7 @@ const EMPTY: FormState = {
   subType: "",
   customSubType: "",
   batchLabel: "",
-  year: CURRENT_YEAR,
+  year: getCurrentFinancialYear(),
   area: "",
   notes: "",
 };
@@ -361,7 +366,7 @@ export default function AddCrop() {
     const payload: CropPayload & {
       subType?: string;
       batchLabel?: string;
-      year?: number;
+      year?: string;
     } = {
       userId: profile?._id,
       season: form.season as CropSeason,
@@ -382,7 +387,7 @@ export default function AddCrop() {
       const crop = await createCrop(payload);
       Alert.alert(
         "✅ સફળ!",
-        `${crop.cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} ઉમેરાયો!\n${form.area} વીઘા · ${form.year}`,
+        `${crop.cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} ઉમેરાયો!\n${form.area} વીઘા · ${form.year} (જૂન–જૂન)`,
         [{ text: "ઠીક છે", onPress: () => router.replace("/(tabs)") }],
       );
     } catch (error: any) {
@@ -442,10 +447,10 @@ export default function AddCrop() {
           {step === 0 && (
             <View>
               <Text style={styles.stepTitle}>સિઝન અને વર્ષ પસંદ કરો</Text>
-              <Text style={styles.stepDesc}>પાક ક્યા વર્ષ અને સિઝનનો છે?</Text>
+              <Text style={styles.stepDesc}>પાક ક્યા વર્ષ અને સિઝનનો છે? (જૂન થી જૂન)</Text>
 
-              {/* Year selector */}
-              <Text style={styles.fieldLabel}>📅 વર્ષ</Text>
+              {/* Financial year selector — 2025-26 = June 2025 to May 2026 */}
+              <Text style={styles.fieldLabel}>📅 વર્ષ (જૂન – જૂન)</Text>
               <View style={styles.yearRow}>
                 {YEAR_OPTIONS.map((y) => (
                   <TouchableOpacity

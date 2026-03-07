@@ -134,12 +134,6 @@ function CropCard({
   const season = SEASON_META[item.season ?? ""] ?? { label: item.season, icon: "🌾", color: C.textMuted, pale: C.green50 };
   const status = STATUS_META[item.status ?? "Active"] ?? STATUS_META.Active;
 
-  // ── Yield efficiency badge (only shown after harvest if both values exist) ──
-  const showYieldBadge =
-    item.status === "Harvested" &&
-    item.yieldEfficiency !== null &&
-    item.yieldEfficiency !== undefined;
-
   return (
     <Animated.View
       style={[
@@ -314,35 +308,27 @@ function CropCard({
               </Text>
             </View>
 
-            {/* sowingDate — NEW field */}
+            {/* Sowing date — default when creating crop */}
             {item.sowingDate ? (
               <View style={styles.footerItem}>
                 <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
                 <Text style={styles.footerText}>
-                  {new Date(item.sowingDate).toLocaleDateString("gu-IN", { day: "numeric", month: "short" })}
+                  વાવણી: {new Date(item.sowingDate).toLocaleDateString("gu-IN", { day: "numeric", month: "short", year: "numeric" })}
                 </Text>
               </View>
             ) : null}
 
-            {/* Yield efficiency badge — NEW, shown after harvest */}
-            {showYieldBadge ? (
-              <View style={[styles.yieldBadge, {
-                backgroundColor: (item.yieldEfficiency ?? 0) >= 80 ? C.incomePale : C.expensePale,
-              }]}>
-                <Ionicons
-                  name="analytics-outline"
-                  size={11}
-                  color={(item.yieldEfficiency ?? 0) >= 80 ? C.income : C.expense}
-                />
-                <Text style={[styles.yieldBadgeText, {
-                  color: (item.yieldEfficiency ?? 0) >= 80 ? C.income : C.expense,
-                }]}>
-                  {item.yieldEfficiency}%
+            {/* Harvest date — shown when status is Harvested */}
+            {item.status === "Harvested" && item.harvestDate ? (
+              <View style={styles.footerItem}>
+                <Ionicons name="leaf-outline" size={13} color="#B45309" />
+                <Text style={[styles.footerText, { color: "#B45309" }]}>
+                  લણણી: {new Date(item.harvestDate).toLocaleDateString("gu-IN", { day: "numeric", month: "short", year: "numeric" })}
                 </Text>
               </View>
             ) : null}
 
-            {item.notes && !showYieldBadge ? (
+            {item.notes ? (
               <View style={styles.footerItem}>
                 <Ionicons name="document-text-outline" size={13} color={C.textMuted} />
                 <Text style={styles.footerText} numberOfLines={1}>{item.notes}</Text>
@@ -533,56 +519,30 @@ export default function CropScreen() {
     ]);
   };
 
-  // ── Status change ─────────────────────────────────────────────────────────
+  // ── Status change (backend sets harvest_date when status → Harvested) ────
   const handleStatusChange = async (id: string, status: CropStatus) => {
     try {
-      await updateCropStatus(id, status);
-      setCrops((prev) => prev.map((c) => (c._id === id ? { ...c, status } : c)));
+      const updated = await updateCropStatus(id, status);
+      setCrops((prev) => prev.map((c) => (c._id === id ? { ...c, ...updated } : c)));
     } catch (err: any) {
       Alert.alert("ભૂલ", err.message);
     }
   };
 
-  // ── Harvest — asks for actualYieldKg before marking harvested ─────────────
-  // Uses the new markCropHarvested API which accepts actualYieldKg
-  const handleHarvest = (id: string) => {
-    Alert.prompt(
-      "🌾 લણણી",
-      "વ્યવહારિક ઉત્પાદન (કિ.ગ્રા.) દાખલ કરો (વૈકલ્પિક):",
-      [
-        { text: "રદ કરો", style: "cancel" },
-        {
-          text: "લણણી",
-          onPress: async (value: any) => {
-            try {
-              const actualYieldKg =
-                value && !isNaN(Number(value)) && Number(value) > 0
-                  ? Number(value)
-                  : undefined;
-              const updated = await markCropHarvested(id, { actualYieldKg });
-              setCrops((prev) =>
-                prev.map((c) =>
-                  c._id === id
-                    ? {
-                      ...c,
-                      status: updated.status,
-                      harvestDate: updated.harvestDate,
-                      actualYieldKg: updated.actualYieldKg,
-                      yieldEfficiency: updated.yieldEfficiency,
-                    }
-                    : c,
-                ),
-              );
-            } catch (err: any) {
-              Alert.alert("ભૂલ", err.message);
-            }
-          },
-        },
-      ],
-      "plain-text",
-      "",
-      "numeric",
-    );
+  // ── Harvest — marks as Harvested with today's date ────────────────────────
+  const handleHarvest = async (id: string) => {
+    try {
+      const updated = await markCropHarvested(id);
+      setCrops((prev) =>
+        prev.map((c) =>
+          c._id === id
+            ? { ...c, status: updated.status, harvestDate: updated.harvestDate }
+            : c,
+        ),
+      );
+    } catch (err: any) {
+      Alert.alert("ભૂલ", err.message);
+    }
   };
 
   const filtered =

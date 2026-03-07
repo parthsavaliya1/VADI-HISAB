@@ -277,23 +277,19 @@ export interface CropPayload {
   subType?: string;
   /** Distinguish same crop grown twice: "Batch 1", "Field A" */
   batchLabel?: string;
-  year?: number;
+  /** Financial year June–June e.g. "2025-26" */
+  year?: string;
   area: number;
   areaUnit?: AreaUnit;
   sowingDate?: string | null;
   harvestDate?: string | null;
   status?: CropStatus;
   notes?: string;
-  /** Farmer's expected harvest in kg — used for yield efficiency tracking */
-  expectedYieldKg?: number | null;
 }
 
 export interface Crop extends CropPayload {
   _id: string;
   userId: string;
-  actualYieldKg: number | null;
-  /** Virtual: (actualYieldKg / expectedYieldKg) * 100 */
-  yieldEfficiency: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -327,7 +323,8 @@ export interface SeasonBreakdown {
 
 export interface YearlyReportResponse {
   success: boolean;
-  year: number;
+  year: string;
+  financialYear?: string;
   crops: CropReportRow[];
   seasonBreakdown: Record<CropSeason, SeasonBreakdown>;
   summary: {
@@ -341,8 +338,26 @@ export interface YearlyReportResponse {
 
 export interface YearsResponse {
   success: boolean;
-  /** Sorted newest first */
-  years: number[];
+  /** Sorted newest first — financial years e.g. ["2025-26", "2024-25"] */
+  years: string[];
+}
+
+/** Financial year: June to June. e.g. "2025-26" = June 2025 – May 2026 */
+export function getCurrentFinancialYear(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  if (month >= 5) return `${year}-${String((year + 1) % 100).padStart(2, "0")}`;
+  return `${year - 1}-${String(year % 100).padStart(2, "0")}`;
+}
+
+/** Options for year picker: current and next financial year only e.g. ["2025-26", "2026-27"] */
+export function getFinancialYearOptions(): string[] {
+  const [startY] = getCurrentFinancialYear().split("-").map(Number);
+  return [
+    `${startY}-${String((startY + 1) % 100).padStart(2, "0")}`,
+    `${startY + 1}-${String((startY + 2) % 100).padStart(2, "0")}`,
+  ];
 }
 
 // ── Harvest patch types ───────────────────────────────────────────────────────
@@ -350,8 +365,6 @@ export interface YearsResponse {
 export interface HarvestPayload {
   /** ISO date string — defaults to today if omitted */
   harvestDate?: string;
-  /** Actual yield in kg recorded at harvest */
-  actualYieldKg?: number;
 }
 
 
@@ -371,10 +384,10 @@ export const getCrops = async (
   limit = 20,
   season?: CropSeason,
   status?: CropStatus,
-  year?: number,
+  year?: string,
 ): Promise<CropListResponse> => {
   const res = await API.get<CropListResponse>("/crops", {
-    params: { page, limit, season, status, year },
+    params: { page, limit, season, status, financialYear: year || undefined, year: year || undefined },
   });
   return res.data;
 };
@@ -388,7 +401,7 @@ export const getCropById = async (id: string): Promise<Crop> => {
 /** PUT /crops/:id */
 export const updateCrop = async (
   id: string,
-  payload: Partial<CropPayload> & { actualYieldKg?: number | null },
+  payload: Partial<CropPayload>,
 ): Promise<Crop> => {
   const res = await API.put<{ success: boolean; data: Crop }>(`/crops/${id}`, payload);
   return res.data.data;
@@ -408,7 +421,7 @@ export const updateCropStatus = async (
 
 /**
  * PATCH /crops/:id/harvest
- * Marks crop as Harvested. Optionally records harvestDate and actualYieldKg.
+ * Marks crop as Harvested and sets harvest date (defaults to today).
  */
 export const markCropHarvested = async (
   id: string,
@@ -426,19 +439,46 @@ export const deleteCrop = async (id: string): Promise<void> => {
   await API.delete(`/crops/${id}`);
 };
 
-/** GET /crops/report/years — which years have data for the current user */
-export const getCropYears = async (): Promise<number[]> => {
+/** GET /crops/report/years — financial years with data e.g. ["2025-26", "2024-25"] */
+export const getCropYears = async (): Promise<string[]> => {
   const res = await API.get<YearsResponse>("/crops/report/years");
   return res.data.years;
 };
 
 /**
  * GET /crops/report/yearly
- * Full per-crop income/expense/profit breakdown for a given year.
+ * Full per-crop income/expense/profit breakdown for a financial year.
+ * @param financialYear e.g. "2025-26" — defaults to current FY
  */
-export const getYearlyReport = async (year?: number): Promise<YearlyReportResponse> => {
+export const getYearlyReport = async (financialYear?: string): Promise<YearlyReportResponse> => {
   const res = await API.get<YearlyReportResponse>("/crops/report/yearly", {
-    params: { year },
+    params: { financialYear: financialYear || getCurrentFinancialYear() },
+  });
+  return res.data;
+};
+
+export interface CompareReportResponse {
+  success: boolean;
+  financialYear: string;
+  cropName: string | null;
+  myTotalIncome: number;
+  myTotalExpense: number;
+  myNetProfit: number;
+  myTotalArea: number;
+  avgIncome: number;
+  avgExpense: number;
+  percentileIncome: number | null;
+  percentileExpense: number | null;
+  sampleSize: number;
+}
+
+/** GET /crops/report/compare — compare with other farmers for a FY and optional crop */
+export const getCompareReport = async (
+  financialYear?: string,
+  cropName?: string
+): Promise<CompareReportResponse> => {
+  const res = await API.get<CompareReportResponse>("/crops/report/compare", {
+    params: { financialYear: financialYear || getCurrentFinancialYear(), cropName },
   });
   return res.data;
 };
