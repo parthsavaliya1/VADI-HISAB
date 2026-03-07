@@ -664,7 +664,7 @@ function RecentTransactions({
         <Text style={styles.sectionTitle}>🧾 {t("dashboard", "recentTxns")}</Text>
         <TouchableOpacity
           style={styles.seeAllBtn}
-          onPress={() => router.push("/expense" as any)}
+          onPress={() => router.push("/(tabs)/profile" as any)}
         >
           <Text style={styles.seeAll}>{t("dashboard", "seeAll")}</Text>
           <Ionicons name="chevron-forward" size={14} color={C.green700} />

@@ -190,7 +190,7 @@ function ChipPicker({ options, selected, onSelect }: {
                     key={opt.key}
                     onPress={() => onSelect(opt.key)}
                     style={[editStyles.chip, selected === opt.key && editStyles.chipActive]}
-                    android_ripple={{ color: "#A7F3D0" }}
+                    android_ripple={{ color: "#E8F5E9" }}
                 >
                     <Text style={[editStyles.chipText, selected === opt.key && editStyles.chipTextActive]}>
                         {opt.label}
@@ -219,7 +219,7 @@ function MultiChipPicker({ options, selected, onToggle }: {
                         key={opt.key}
                         onPress={() => onToggle(opt.key)}
                         style={[editStyles.chip, isSelected && editStyles.chipActive]}
-                        android_ripple={{ color: "#A7F3D0" }}
+                        android_ripple={{ color: "#E8F5E9" }}
                     >
                         <Text style={[editStyles.chipText, isSelected && editStyles.chipTextActive]}>
                             {opt.label}
@@ -285,7 +285,7 @@ function LocationModal({ visible, title, items, selectedValue, onSelect, onClose
                                 key={item.value}
                                 style={[editStyles.locItem, sel && editStyles.locItemSelected]}
                                 onPress={() => { onSelect(item); onClose(); }}
-                                android_ripple={{ color: "#C8E6C9" }}
+                                android_ripple={{ color: "#E8F5E9" }}
                             >
                                 <View style={{ flex: 1 }}>
                                     <Text style={[editStyles.locItemLabel, sel && editStyles.locItemLabelSel]}>{item.label}</Text>
@@ -370,7 +370,7 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
                                     onChangeText={(v) => set("name", v)}
                                     placeholder={T.namePH}
                                     placeholderTextColor="#9CA3AF"
-                                    selectionColor="#059669"
+                                    selectionColor="#2E7D32"
                                 />
                             </View>
 
@@ -414,7 +414,7 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
                                         placeholder={T.landPH}
                                         placeholderTextColor="#9CA3AF"
                                         keyboardType="decimal-pad"
-                                        selectionColor="#059669"
+                                        selectionColor="#2E7D32"
                                     />
                                     <View style={editStyles.unitToggle}>
                                         <Pressable onPress={() => set("totalLandUnit", "acre")} style={[editStyles.unitBtn, draft.totalLandUnit === "acre" && editStyles.unitBtnActive]}>
@@ -450,7 +450,7 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
                                     <Text style={editStyles.inputLabel}>🚜 {T.tractor}</Text>
                                     <Text style={editStyles.inputSub}>{T.tractorSub}</Text>
                                 </View>
-                                <Switch value={draft.tractorAvailable} onValueChange={(v) => set("tractorAvailable", v)} trackColor={{ false: "#E5E7EB", true: "#A7F3D0" }} thumbColor={draft.tractorAvailable ? "#059669" : "#D1D5DB"} />
+                                <Switch value={draft.tractorAvailable} onValueChange={(v) => set("tractorAvailable", v)} trackColor={{ false: "#E5E7EB", true: "#C8E6C9" }} thumbColor={draft.tractorAvailable ? "#2E7D32" : "#D1D5DB"} />
                             </View>
 
                             {draft.tractorAvailable && (
@@ -471,7 +471,7 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
                                     <Text style={editStyles.inputLabel}>{T.dataSharing}</Text>
                                     <Text style={editStyles.inputSub}>{T.dataSharingSub}</Text>
                                 </View>
-                                <Switch value={draft.dataSharing} onValueChange={(v) => set("dataSharing", v)} trackColor={{ false: "#E5E7EB", true: "#A7F3D0" }} thumbColor={draft.dataSharing ? "#059669" : "#D1D5DB"} />
+                                <Switch value={draft.dataSharing} onValueChange={(v) => set("dataSharing", v)} trackColor={{ false: "#E5E7EB", true: "#C8E6C9" }} thumbColor={draft.dataSharing ? "#2E7D32" : "#D1D5DB"} />
                             </View>
 
                             <View style={{ height: 40 }} />
@@ -524,7 +524,7 @@ function InfoRow({ icon, label, value, last = false }: { icon: string; label: st
         <>
             <View style={styles.infoRow}>
                 <View style={styles.infoIconWrap}>
-                    <Ionicons name={icon as any} size={14} color="#059669" />
+                    <Ionicons name={icon as any} size={14} color="#2E7D32" />
                 </View>
                 <View style={styles.infoTextWrap}>
                     <Text style={styles.infoLabel}>{label}</Text>
@@ -638,12 +638,12 @@ export default function Profile() {
     };
 
     if (loading) {
-        return <View style={styles.centerScreen}><ActivityIndicator size="large" color="#059669" /><Text style={styles.loadingText}>{T.loading}</Text></View>;
+        return <View style={styles.centerScreen}><ActivityIndicator size="large" color="#2E7D32" /><Text style={styles.loadingText}>{T.loading}</Text></View>;
     }
     if (loadError) {
         return (
             <View style={styles.centerScreen}>
-                <Ionicons name="cloud-offline-outline" size={52} color="#9CA3AF" />
+                <Ionicons name="cloud-offline-outline" size={52} color="#2D4230" />
                 <Text style={styles.loadErrText}>{loadError}</Text>
                 <TouchableOpacity style={styles.retryBtn} onPress={loadProfile}>
                     <Text style={styles.retryBtnText}>{T.retry}</Text>
@@ -670,7 +670,7 @@ export default function Profile() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#134E27" />
+            <StatusBar barStyle="light-content" backgroundColor="#1B5E20" />
             <View style={styles.bgDecor1} />
             <View style={styles.bgDecor2} />
 
@@ -679,7 +679,7 @@ export default function Profile() {
 
                     {/* ══ Hero Header ══ */}
                     <Animated.View style={[styles.hero, { transform: [{ scale: headerPulse }] }]}>
-                        <LinearGradient colors={["#134E27", "#1A7A3A", "#22A04A"]} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                        <LinearGradient colors={["#1B5E20", "#2E7D32", "#4CAF50"]} style={StyleSheet.absoluteFillObject} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                         <View style={styles.heroTopBar}>
                             <Text style={styles.heroTopLabel}>{T.title}</Text>
                             <Pressable onPress={handleEditOpen} style={({ pressed }) => [styles.editFAB, pressed && styles.editFABPressed]}>
@@ -757,6 +757,26 @@ export default function Profile() {
                         </View>
                     </Card>
 
+                    {/* All expense & All income — match dashboard theme */}
+                    <Card>
+                        <CardHeader emoji="🧾" title="બધા વ્યવહાર" />
+                        <Pressable style={styles.linkRow} onPress={() => router.push("/all-expense")} android_ripple={{ color: "#E8F5E9" }}>
+                            <View style={[styles.infoIconWrap, { backgroundColor: "#FFEBEE" }]}>
+                                <Ionicons name="remove-circle-outline" size={16} color="#B71C1C" />
+                            </View>
+                            <Text style={styles.linkRowLabel}>બધા ખર્ચ</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+                        </Pressable>
+                        <View style={styles.linkDivider} />
+                        <Pressable style={styles.linkRow} onPress={() => router.push("/all-income")} android_ripple={{ color: "#E8F5E9" }}>
+                            <View style={[styles.infoIconWrap, { backgroundColor: "#E8F5E9" }]}>
+                                <Ionicons name="add-circle-outline" size={16} color="#1B5E20" />
+                            </View>
+                            <Text style={styles.linkRowLabel}>બધી આવક</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+                        </Pressable>
+                    </Card>
+
                     <Pressable onPress={handleLogout} style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}>
                         <Ionicons name="log-out-outline" size={18} color="#DC2626" />
                         <Text style={styles.logoutBtnText}>{T.logout}</Text>
@@ -784,60 +804,64 @@ export default function Profile() {
 // ─────────────────────────────────────────────────────────────────────────────
 // View Styles
 // ─────────────────────────────────────────────────────────────────────────────
+// Dashboard theme: bg #F5F7F2, green700 #2E7D32, textPrimary #0A0E0B
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#F0FDF4" },
-    centerScreen: { flex: 1, justifyContent: "center", alignItems: "center", gap: 14, backgroundColor: "#F0FDF4" },
-    loadingText: { fontSize: 14, color: "#6B7280" },
+    container: { flex: 1, backgroundColor: "#F5F7F2" },
+    centerScreen: { flex: 1, justifyContent: "center", alignItems: "center", gap: 14, backgroundColor: "#F5F7F2" },
+    loadingText: { fontSize: 16, color: "#2D4230" },
     loadErrText: { fontSize: 14, color: "#EF4444", textAlign: "center", paddingHorizontal: 32, lineHeight: 22 },
-    retryBtn: { backgroundColor: "#059669", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 14 },
-    retryBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-    bgDecor1: { position: "absolute", width: 280, height: 280, borderRadius: 140, backgroundColor: "#D1FAE520", top: -80, right: -80 },
-    bgDecor2: { position: "absolute", width: 180, height: 180, borderRadius: 90, backgroundColor: "#A7F3D015", top: 200, left: -60 },
+    retryBtn: { backgroundColor: "#2E7D32", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 14 },
+    retryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+    bgDecor1: { position: "absolute", width: 280, height: 280, borderRadius: 140, backgroundColor: "#C8E6C920", top: -80, right: -80 },
+    bgDecor2: { position: "absolute", width: 180, height: 180, borderRadius: 90, backgroundColor: "#E8F5E915", top: 200, left: -60 },
     scrollContent: { paddingBottom: 20 },
-    hero: { overflow: "hidden", paddingTop: Platform.OS === "ios" ? 60 : 44, paddingBottom: 28, paddingHorizontal: 22, alignItems: "center", borderBottomLeftRadius: 32, borderBottomRightRadius: 32, marginBottom: 20, shadowColor: "#134E27", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 12 },
+    hero: { overflow: "hidden", paddingTop: Platform.OS === "ios" ? 60 : 44, paddingBottom: 28, paddingHorizontal: 22, alignItems: "center", borderBottomLeftRadius: 32, borderBottomRightRadius: 32, marginBottom: 20, shadowColor: "#1B5E20", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 12 },
     heroTopBar: { width: "100%", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
-    heroTopLabel: { fontSize: 15, fontWeight: "700", color: "rgba(255,255,255,0.7)" },
-    editFAB: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#A7F3D0", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 22, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 4 },
+    heroTopLabel: { fontSize: 16, fontWeight: "700", color: "rgba(255,255,255,0.7)" },
+    editFAB: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#C8E6C9", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 22, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 4 },
     editFABPressed: { opacity: 0.8 },
-    editFABText: { fontSize: 13, fontWeight: "800", color: "#065F46" },
+    editFABText: { fontSize: 14, fontWeight: "800", color: "#1B5E20" },
     avatarRing: { width: 90, height: 90, borderRadius: 45, borderWidth: 3, borderColor: "rgba(255,255,255,0.5)", marginBottom: 12 },
     avatarGrad: { flex: 1, borderRadius: 45, justifyContent: "center", alignItems: "center" },
-    avatarInitials: { fontSize: 30, fontWeight: "900", color: "#065F46" },
+    avatarInitials: { fontSize: 30, fontWeight: "900", color: "#1B5E20" },
     heroName: { fontSize: 22, fontWeight: "900", color: "#fff", letterSpacing: 0.3, marginBottom: 2 },
-    heroRole: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginBottom: 10 },
+    heroRole: { fontSize: 14, color: "rgba(255,255,255,0.65)", marginBottom: 10 },
     langRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 },
-    langLabel: { fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: "600" },
+    langLabel: { fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: "600" },
     langChips: { flexDirection: "row", gap: 8 },
     langChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.2)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" },
-    langChipActive: { backgroundColor: "rgba(255,255,255,0.35)", borderColor: "#A7F3D0" },
-    langChipText: { fontSize: 13, color: "rgba(255,255,255,0.9)", fontWeight: "600" },
+    langChipActive: { backgroundColor: "rgba(255,255,255,0.35)", borderColor: "#C8E6C9" },
+    langChipText: { fontSize: 14, color: "rgba(255,255,255,0.9)", fontWeight: "600" },
     langChipTextActive: { color: "#fff", fontWeight: "700" },
     heroBadgeRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20, flexWrap: "wrap", justifyContent: "center" },
     heroBadge: { flexDirection: "row", alignItems: "center", gap: 3 },
-    heroBadgeText: { fontSize: 11, color: "#A7F3D0", fontWeight: "600" },
-    heroBadgeDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#A7F3D050" },
+    heroBadgeText: { fontSize: 12, color: "#C8E6C9", fontWeight: "600" },
+    heroBadgeDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#C8E6C950" },
     statsStrip: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, width: "100%", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
     statBox: { flex: 1, alignItems: "center" },
     statNum: { fontSize: 18, fontWeight: "900", color: "#fff" },
-    statLbl: { fontSize: 10, color: "rgba(167,243,208,0.9)", marginTop: 3, textAlign: "center" },
+    statLbl: { fontSize: 11, color: "rgba(200,230,201,0.95)", marginTop: 3, textAlign: "center" },
     statSep: { width: 1, backgroundColor: "rgba(255,255,255,0.2)", marginVertical: 4 },
-    card: { backgroundColor: "#fff", borderRadius: 20, marginHorizontal: 16, marginBottom: 14, paddingHorizontal: 16, paddingVertical: 14, shadowColor: "#0D4A1F", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
-    cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
-    cardHeaderEmoji: { fontSize: 16 },
-    cardHeaderTitle: { fontSize: 13, fontWeight: "800", color: "#1F2937", letterSpacing: 0.2 },
+    card: { backgroundColor: "#fff", borderRadius: 20, marginHorizontal: 16, marginBottom: 14, paddingHorizontal: 16, paddingVertical: 14, shadowColor: "#0A0E0B", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
+    cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: "#EAF4EA" },
+    cardHeaderEmoji: { fontSize: 17 },
+    cardHeaderTitle: { fontSize: 17, fontWeight: "800", color: "#0A0E0B", letterSpacing: 0.2 },
     infoRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, gap: 12 },
-    infoIconWrap: { width: 28, height: 28, borderRadius: 8, backgroundColor: "#D1FAE5", justifyContent: "center", alignItems: "center" },
+    infoIconWrap: { width: 28, height: 28, borderRadius: 8, backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center" },
     infoTextWrap: { flex: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    infoLabel: { fontSize: 12, color: "#9CA3AF", fontWeight: "500" },
-    infoValue: { fontSize: 13, fontWeight: "700", color: "#1F2937", textAlign: "right", flex: 1, marginLeft: 8 },
+    infoLabel: { fontSize: 13, color: "#2D4230", fontWeight: "500" },
+    infoValue: { fontSize: 14, fontWeight: "700", color: "#0A0E0B", textAlign: "right", flex: 1, marginLeft: 8 },
     rowDivider: { height: 1, backgroundColor: "#F9FAFB", marginLeft: 40 },
+    linkRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, gap: 12 },
+    linkRowLabel: { fontSize: 17, fontWeight: "800", color: "#0A0E0B", flex: 1 },
+    linkDivider: { height: 1, backgroundColor: "#F0F7F0", marginLeft: 40 },
     switchInfoRow: { flexDirection: "row", alignItems: "center", paddingVertical: 6 },
-    switchInfoLabel: { fontSize: 13, fontWeight: "700", color: "#1F2937" },
-    switchInfoSub: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
-    logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 16, paddingVertical: 16, borderRadius: 18, backgroundColor: "#FEF2F2", borderWidth: 1.5, borderColor: "#FCA5A5", marginBottom: 12 },
+    switchInfoLabel: { fontSize: 14, fontWeight: "700", color: "#0A0E0B" },
+    switchInfoSub: { fontSize: 12, color: "#2D4230", marginTop: 2 },
+    logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 16, paddingVertical: 16, borderRadius: 18, backgroundColor: "#FFEBEE", borderWidth: 1.5, borderColor: "#FFCDD2", marginBottom: 12 },
     logoutBtnPressed: { opacity: 0.7 },
-    logoutBtnText: { fontSize: 15, fontWeight: "800", color: "#DC2626" },
-    versionText: { textAlign: "center", fontSize: 11, color: "#9CA3AF", marginBottom: 4 },
+    logoutBtnText: { fontSize: 17, fontWeight: "800", color: "#B71C1C" },
+    versionText: { textAlign: "center", fontSize: 12, color: "#2D4230", marginBottom: 4 },
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -846,37 +870,37 @@ const styles = StyleSheet.create({
 const editStyles = StyleSheet.create({
     modalOverlay: { flex: 1, justifyContent: "flex-end" },
     modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
-    modalSheet: { height: SCREEN_H * 0.92, backgroundColor: "#F0FDF4", borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
+    modalSheet: { height: SCREEN_H * 0.92, backgroundColor: "#F5F7F2", borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
     sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#fff", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#E5E7EB", borderTopLeftRadius: 28, borderTopRightRadius: 28 },
     sheetCloseBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#F3F4F6", justifyContent: "center", alignItems: "center" },
     sheetTitle: { fontSize: 16, fontWeight: "800", color: "#1F2937" },
-    sheetSaveBtn: { backgroundColor: "#059669", paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, minWidth: 60, alignItems: "center" },
+    sheetSaveBtn: { backgroundColor: "#2E7D32", paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, minWidth: 60, alignItems: "center" },
     sheetSaveBtnText: { fontSize: 14, fontWeight: "800", color: "#fff" },
     sheetScroll: { padding: 18 },
-    groupLabel: { fontSize: 12, fontWeight: "800", color: "#059669", letterSpacing: 0.8, marginBottom: 10, marginTop: 8, textTransform: "uppercase" },
+    groupLabel: { fontSize: 13, fontWeight: "800", color: "#2E7D32", letterSpacing: 0.8, marginBottom: 10, marginTop: 8, textTransform: "uppercase" },
     inputGroup: { backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12, shadowColor: "#0D4A1F", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
     inputLabel: { fontSize: 12, fontWeight: "700", color: "#6B7280", marginBottom: 8 },
     inputSub: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
-    textInput: { fontSize: 15, fontWeight: "600", color: "#1F2937", borderBottomWidth: 2, borderBottomColor: "#D1FAE5", paddingVertical: 6, paddingHorizontal: 2 },
+    textInput: { fontSize: 15, fontWeight: "600", color: "#1F2937", borderBottomWidth: 2, borderBottomColor: "#C8E6C9", paddingVertical: 6, paddingHorizontal: 2 },
     landRow: { flexDirection: "row", alignItems: "center" },
-    unitToggle: { flexDirection: "row", borderWidth: 1.5, borderColor: "#D1FAE5", borderRadius: 12, overflow: "hidden" },
+    unitToggle: { flexDirection: "row", borderWidth: 1.5, borderColor: "#C8E6C9", borderRadius: 12, overflow: "hidden" },
     unitBtn: { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: "#F9FAFB" },
-    unitBtnActive: { backgroundColor: "#059669" },
+    unitBtnActive: { backgroundColor: "#2E7D32" },
     unitBtnText: { fontSize: 12, fontWeight: "700", color: "#9CA3AF" },
     unitBtnTextActive: { color: "#fff" },
     chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#D1FAE5", backgroundColor: "#F9FAFB" },
-    chipActive: { borderColor: "#059669", backgroundColor: "#D1FAE5" },
+    chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#C8E6C9", backgroundColor: "#F9FAFB" },
+    chipActive: { borderColor: "#2E7D32", backgroundColor: "#E8F5E9" },
     chipText: { fontSize: 12, fontWeight: "600", color: "#6B7280" },
-    chipTextActive: { color: "#065F46", fontWeight: "800" },
+    chipTextActive: { color: "#1B5E20", fontWeight: "800" },
     switchRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12, shadowColor: "#0D4A1F", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
     // Location dropdown in edit mode
     locationBtn: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1.5, borderRadius: 12, borderColor: "#E5E7EB", backgroundColor: "#F9FAFB", paddingHorizontal: 12, paddingVertical: 11, marginBottom: 8 },
-    locationBtnFilled: { borderColor: "#6EE7B7" },
+    locationBtnFilled: { borderColor: "#66BB6A" },
     locationBtnDisabled: { opacity: 0.4 },
     locationBtnText: { fontSize: 14, color: "#1F2937", fontWeight: "600", flex: 1 },
     locationBtnPlaceholder: { color: "#9CA3AF", fontWeight: "400" },
-    locationBtnArrow: { fontSize: 14, color: "#059669", marginLeft: 6, fontWeight: "700" },
+    locationBtnArrow: { fontSize: 14, color: "#2E7D32", marginLeft: 6, fontWeight: "700" },
     // Location sub-modal
     locModalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
     locModalSheet: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: Platform.OS === "ios" ? 36 : 24, maxHeight: "60%" },
@@ -885,7 +909,7 @@ const editStyles = StyleSheet.create({
     locItem: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F9FAFB" },
     locItemSelected: { backgroundColor: "#F0FDF4", borderRadius: 10, paddingHorizontal: 8 },
     locItemLabel: { fontSize: 15, color: "#1F2937", fontWeight: "600" },
-    locItemLabelSel: { color: "#059669", fontWeight: "800" },
+    locItemLabelSel: { color: "#2E7D32", fontWeight: "800" },
     locItemSub: { fontSize: 11, color: "#9CA3AF", marginTop: 1 },
-    locItemCheck: { fontSize: 16, color: "#059669", fontWeight: "900", marginLeft: 8 },
+    locItemCheck: { fontSize: 16, color: "#2E7D32", fontWeight: "900", marginLeft: 8 },
 });

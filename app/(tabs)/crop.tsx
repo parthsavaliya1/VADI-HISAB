@@ -30,6 +30,7 @@ const { width: SCREEN_W } = Dimensions.get("window");
 const SWIPE_THRESHOLD = -80;
 
 // ─── Color system ─────────────────────────────────────────────────────────────
+// Match dashboard theme
 const C = {
   green900: "#1B5E20",
   green700: "#2E7D32",
@@ -40,12 +41,12 @@ const C = {
   bg: "#F5F7F2",
   surface: "#FFFFFF",
   surfaceGreen: "#F1F8F1",
-  textPrimary: "#1A2E1C",
-  textSecondary: "#3D5C40",
-  textMuted: "#7A9B7E",
+  textPrimary: "#0A0E0B",
+  textSecondary: "#1A2E1C",
+  textMuted: "#2D4230",
   income: "#2E7D32",
   incomePale: "#E8F5E9",
-  expense: "#C62828",
+  expense: "#B71C1C",
   expensePale: "#FFEBEE",
   gold: "#F9A825",
   goldPale: "#FFFDE7",
