@@ -1,5 +1,6 @@
 import {
   getExpenses,
+  getFinancialYearOptionsExtended,
   type Expense,
   type ExpenseCategory,
 } from "@/utils/api";
@@ -10,6 +11,7 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -39,15 +41,21 @@ const CATEGORY_CONFIG: Record<ExpenseCategory, { label: string; icon: string; co
   Pesticide: { label: "જંતુનાશક", icon: "medical-outline", color: "#DC2626" },
   Labour: { label: "મજૂરી", icon: "people-outline", color: "#D97706" },
   Machinery: { label: "મશીનરી", icon: "construct-outline", color: "#7C3AED" },
+  Irrigation: { label: "સિંચાઈ", icon: "water-outline", color: "#0284C7" },
+  Other: { label: "અન્ય", icon: "ellipsis-horizontal-outline", color: "#64748B" },
 };
 
 function getExpenseAmount(exp: Expense): number {
+  if (typeof (exp as any).amount === "number" && !Number.isNaN((exp as any).amount))
+    return (exp as any).amount;
   switch (exp.category) {
     case "Seed": return exp.seed?.totalCost ?? 0;
     case "Fertilizer": return exp.fertilizer?.totalCost ?? 0;
     case "Pesticide": return exp.pesticide?.cost ?? 0;
     case "Labour": return exp.labourDaily?.totalCost ?? exp.labourContract?.amountGiven ?? 0;
     case "Machinery": return exp.machinery?.totalCost ?? 0;
+    case "Irrigation": return exp.irrigation?.amount ?? 0;
+    case "Other": return exp.other?.totalAmount ?? 0;
     default: return 0;
   }
 }
@@ -67,7 +75,7 @@ function formatINR(n: number): string {
 }
 
 function ExpenseRow({ item }: { item: Expense }) {
-  const cfg = CATEGORY_CONFIG[item.category];
+  const cfg = CATEGORY_CONFIG[item.category] ?? CATEGORY_CONFIG.Other;
   const amount = getExpenseAmount(item);
   const cropName = getCropName(item.cropId as any);
 
@@ -88,14 +96,34 @@ function ExpenseRow({ item }: { item: Expense }) {
   );
 }
 
+const ALL_CATEGORIES: (ExpenseCategory | "all")[] = [
+  "all",
+  "Seed",
+  "Fertilizer",
+  "Pesticide",
+  "Labour",
+  "Machinery",
+  "Irrigation",
+  "Other",
+];
+
 export default function AllExpenseScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string | undefined>(undefined);
+  const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | "all">("all");
 
   const fetchAll = useCallback(async () => {
     try {
-      const res = await getExpenses(undefined, undefined, undefined, 1, 300);
+      const res = await getExpenses(
+        undefined,
+        selectedCategory === "all" ? undefined : selectedCategory,
+        undefined,
+        1,
+        300,
+        selectedFinancialYear,
+      );
       setExpenses(res.data ?? []);
     } catch (err) {
       console.warn("[AllExpense]", (err as Error).message);
@@ -104,7 +132,7 @@ export default function AllExpenseScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedFinancialYear, selectedCategory]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -120,6 +148,53 @@ export default function AllExpenseScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>💸 બધા ખર્ચ</Text>
         <View style={styles.backBtn} />
+      </View>
+
+      {/* Financial year filter */}
+      <View style={styles.filterWrap}>
+        <Text style={styles.filterLabel}>વિત્તીય વર્ષ:</Text>
+        <View style={styles.filterChips}>
+          <TouchableOpacity
+            style={[styles.filterChip, selectedFinancialYear === undefined && styles.filterChipActive]}
+            onPress={() => setSelectedFinancialYear(undefined)}
+          >
+            <Text style={[styles.filterChipText, selectedFinancialYear === undefined && styles.filterChipTextActive]}>
+              બધા
+            </Text>
+          </TouchableOpacity>
+          {getFinancialYearOptionsExtended().map((fy) => {
+            const active = selectedFinancialYear === fy;
+            return (
+              <TouchableOpacity
+                key={fy}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setSelectedFinancialYear(fy)}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{fy}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* Category filter */}
+      <View style={styles.filterWrap}>
+        <Text style={styles.filterLabel}>પ્રકાર:</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChips}>
+          {ALL_CATEGORIES.map((cat) => {
+            const label = cat === "all" ? "બધા" : (CATEGORY_CONFIG as any)[cat]?.label ?? cat;
+            const active = selectedCategory === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setSelectedCategory(cat)}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {loading ? (
@@ -175,6 +250,20 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
   headerTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary },
+  filterWrap: { marginHorizontal: 16, marginTop: 12, marginBottom: 4 },
+  filterLabel: { fontSize: 14, fontWeight: "700", color: C.textMuted, marginBottom: 8 },
+  filterChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  filterChipActive: { backgroundColor: C.green700, borderColor: C.green700 },
+  filterChipText: { fontSize: 13, fontWeight: "700", color: C.textSecondary },
+  filterChipTextActive: { color: "#fff" },
   loadWrap: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   loadText: { fontSize: 16, color: C.textMuted, fontWeight: "600" },
   totalBar: {

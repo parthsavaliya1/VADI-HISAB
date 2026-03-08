@@ -593,6 +593,9 @@ function ChartView({ crops, totalLandBigha = 0 }: { crops: Crop[]; totalLandBigh
   ];
   const total = sliceData.reduce((s, d) => s + d.value, 0);
   const hasData = total > 0;
+  const hasCrops = activeCrops.length > 0;
+  /** Show pie only when there is at least one crop; otherwise show empty state (no single gray donut) */
+  const showPie = hasData && hasCrops;
 
   const size = Math.max(220, Math.min(SCREEN_W - 48, 300));
   const cx = size / 2;
@@ -636,8 +639,24 @@ function ChartView({ crops, totalLandBigha = 0 }: { crops: Crop[]; totalLandBigh
       <View style={styles.chartCard}>
         <Text style={styles.chartTitle}>વીઘા ચાર્ટ</Text>
         <Text style={styles.chartSubtitle}>સક્રિય પાક અને બાકી વીઘા</Text>
-        {!hasData ? (
-          <Text style={styles.chartEmpty}>કોઈ સક્રિય પાક નથી</Text>
+        {!showPie ? (
+          <View style={styles.chartEmptyWrap}>
+            <View style={styles.chartEmptyIconWrap}>
+              <Text style={styles.chartEmptyEmoji}>📊</Text>
+            </View>
+            <Text style={styles.chartEmptyTitle}>કોઈ સક્રિય પાક નથી</Text>
+            <Text style={styles.chartEmptyDesc}>
+              ચાર્ટ દેખાવા માટે ઓછામાં ઓછો એક પાક સક્રિય કરો અથવા નવો પાક ઉમેરો.
+            </Text>
+            <TouchableOpacity
+              style={styles.chartEmptyBtn}
+              onPress={() => router.push("/crop/add-crop")}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle-outline" size={16} color="#5D4037" />
+              <Text style={styles.chartEmptyBtnText}>નવો પાક ઉમેરો</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <>
             <View style={[styles.pieWrap, { width: size, height: size }]}>
@@ -1153,6 +1172,50 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   chartEmpty: { fontSize: 15, color: C.textMuted, fontWeight: "700", marginVertical: 16 },
+  chartEmptyWrap: {
+    alignItems: "center",
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+  },
+  chartEmptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: C.green50,
+    borderWidth: 2,
+    borderColor: C.borderLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  chartEmptyEmoji: { fontSize: 36 },
+  chartEmptyTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: C.textPrimary,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  chartEmptyDesc: {
+    fontSize: 15,
+    color: C.textMuted,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  chartEmptyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: "#FFF8E1",
+    borderWidth: 2,
+    borderColor: "#FFE082",
+  },
+  chartEmptyBtnText: { fontSize: 17, fontWeight: "800", color: "#5D4037" },
 
   listContent: { padding: 14, paddingBottom: 110 },
 

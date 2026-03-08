@@ -1,4 +1,11 @@
-import { getCrops, getIncomes, type Crop, type Income, type IncomeCategory } from "@/utils/api";
+import {
+  getCrops,
+  getFinancialYearOptionsExtended,
+  getIncomes,
+  type Crop,
+  type Income,
+  type IncomeCategory,
+} from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -157,28 +164,17 @@ function IncomeRow({ item, crops }: { item: Income; crops: Crop[] }) {
   );
 }
 
-function getYearOptions(): { value: number | undefined; label: string }[] {
-  const y = new Date().getFullYear();
-  return [
-    { value: undefined, label: "બધા વર્ષ" },
-    { value: y, label: `${y}` },
-    { value: y - 1, label: `${y - 1}` },
-    { value: y - 2, label: `${y - 2}` },
-    { value: y - 3, label: `${y - 3}` },
-  ];
-}
-
 export default function AllIncomeScreen() {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string | undefined>(undefined);
 
   const fetchAll = useCallback(async () => {
     try {
       const [incRes, cropRes] = await Promise.all([
-        getIncomes(1, 300, undefined, undefined, selectedYear),
+        getIncomes(1, 300, undefined, undefined, undefined, selectedFinancialYear),
         getCrops(1, 100),
       ]);
       setIncomes(incRes.data ?? []);
@@ -190,7 +186,7 @@ export default function AllIncomeScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedYear]);
+  }, [selectedFinancialYear]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -208,19 +204,27 @@ export default function AllIncomeScreen() {
         <View style={styles.backBtn} />
       </View>
 
-      {/* Year filter */}
+      {/* Financial year filter */}
       <View style={styles.yearFilterWrap}>
-        <Text style={styles.yearFilterLabel}>વર્ષ:</Text>
+        <Text style={styles.yearFilterLabel}>વિત્તીય વર્ષ:</Text>
         <View style={styles.yearChips}>
-          {getYearOptions().map((opt) => {
-            const active = selectedYear === opt.value;
+          <TouchableOpacity
+            style={[styles.yearChip, selectedFinancialYear === undefined && styles.yearChipActive]}
+            onPress={() => setSelectedFinancialYear(undefined)}
+          >
+            <Text style={[styles.yearChipText, selectedFinancialYear === undefined && styles.yearChipTextActive]}>
+              બધા
+            </Text>
+          </TouchableOpacity>
+          {getFinancialYearOptionsExtended().map((fy) => {
+            const active = selectedFinancialYear === fy;
             return (
               <TouchableOpacity
-                key={opt.label}
+                key={fy}
                 style={[styles.yearChip, active && styles.yearChipActive]}
-                onPress={() => setSelectedYear(opt.value)}
+                onPress={() => setSelectedFinancialYear(fy)}
               >
-                <Text style={[styles.yearChipText, active && styles.yearChipTextActive]}>{opt.label}</Text>
+                <Text style={[styles.yearChipText, active && styles.yearChipTextActive]}>{fy}</Text>
               </TouchableOpacity>
             );
           })}

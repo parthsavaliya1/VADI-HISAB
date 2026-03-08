@@ -414,6 +414,9 @@ export default function AddExpense() {
   const [machineQty, setMachineQty] = useState("");
   const [machineRate, setMachineRate] = useState("");
   const [notes, setNotes] = useState("");
+  const [irrigationAmount, setIrrigationAmount] = useState("");
+  const [otherAmount, setOtherAmount] = useState("");
+  const [otherDescription, setOtherDescription] = useState("");
 
   const labourTotal =
     labourPeople && labourDays && labourRate
@@ -473,6 +476,12 @@ export default function AddExpense() {
     if (category === "Machinery") {
       if (!machineImpl) return "મશીન/ઓજાર પસંદ કરો.";
       if (!machineQty || !machineRate) return "બધી મશીનરી માહિતી ભરો.";
+    }
+    if (category === "Irrigation") {
+      if (!irrigationAmount || Number(irrigationAmount) <= 0) return "સિંચાઈ ખર્ચની રકમ દાખલ કરો.";
+    }
+    if (category === "Other") {
+      if (!otherAmount || Number(otherAmount) <= 0) return "ખર્ચની રકમ દાખલ કરો.";
     }
     return null;
   };
@@ -559,6 +568,12 @@ export default function AddExpense() {
             rate: Number(machineRate),
           },
         }),
+        ...(category === "Irrigation" && {
+          irrigation: { amount: Number(irrigationAmount) },
+        }),
+        ...(category === "Other" && {
+          other: { totalAmount: Number(otherAmount), description: otherDescription.trim() || undefined },
+        }),
       });
       Alert.alert("✅ સફળ!", "ખર્ચ સફળતાપૂર્વક ઉમેરાયો!", [{ text: "ઠીક છે" }]);
       setCategory("");
@@ -583,6 +598,9 @@ export default function AddExpense() {
       setMachineQty("");
       setMachineRate("");
       setNotes("");
+      setIrrigationAmount("");
+      setOtherAmount("");
+      setOtherDescription("");
     } catch (error: any) {
       Alert.alert("❌ ભૂલ", error?.message ?? "કંઈક ખોટું થયું.");
     } finally {
@@ -1146,6 +1164,49 @@ export default function AddExpense() {
                 </Text>
               </View>
             )}
+          </View>
+        )}
+
+        {/* ── IRRIGATION ── */}
+        {category === "Irrigation" && (
+          <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+            <View style={[styles.cardTitleRow, { borderLeftColor: "#0284C7" }]}>
+              <Text style={styles.cardTitle}>💧 સિંચાઈ ખર્ચ</Text>
+            </View>
+            <SectionLabel text="રકમ *" />
+            <NumericInput
+              value={irrigationAmount}
+              onChange={setIrrigationAmount}
+              placeholder="0"
+              prefix="₹"
+              onFocus={scrollToForm}
+            />
+          </View>
+        )}
+
+        {/* ── OTHER ── */}
+        {category === "Other" && (
+          <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+            <View style={[styles.cardTitleRow, { borderLeftColor: "#64748B" }]}>
+              <Text style={styles.cardTitle}>📦 અન્ય ખર્ચ</Text>
+            </View>
+            <SectionLabel text="રકમ *" />
+            <NumericInput
+              value={otherAmount}
+              onChange={setOtherAmount}
+              placeholder="0"
+              prefix="₹"
+              onFocus={scrollToForm}
+            />
+            <SectionLabel text="વિવરણ (ઐચ્છિક)" />
+            <TextInput
+              style={styles.notesInput}
+              value={otherDescription}
+              onChangeText={setOtherDescription}
+              placeholder="દા.ત. ઘર બાંધકામ, સાધન ખરીદી..."
+              placeholderTextColor="#5B6570"
+              onFocus={scrollToForm}
+            />
           </View>
         )}
 

@@ -30,6 +30,8 @@ const CATEGORY_CONFIG: Record<
   Pesticide: { label: "જંતુનાશક", icon: "🧴", color: "#DC2626", bg: "#FEE2E2" },
   Labour: { label: "મજૂરી", icon: "👷", color: "#D97706", bg: "#FEF3C7" },
   Machinery: { label: "મશીનરી", icon: "🚜", color: "#7C3AED", bg: "#EDE9FE" },
+  Irrigation: { label: "સિંચાઈ", icon: "💧", color: "#0284C7", bg: "#E0F2FE" },
+  Other: { label: "અન્ય", icon: "📦", color: "#64748B", bg: "#F1F5F9" },
 };
 
 const FILTER_TABS: {
@@ -43,10 +45,14 @@ const FILTER_TABS: {
   { value: "Pesticide", label: "જંતુનાશક", icon: "🧴" },
   { value: "Labour", label: "મજૂરી", icon: "👷" },
   { value: "Machinery", label: "મશીનરી", icon: "🚜" },
+  { value: "Irrigation", label: "સિંચાઈ", icon: "💧" },
+  { value: "Other", label: "અન્ય", icon: "📦" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getExpenseAmount(exp: Expense): number {
+  if (typeof (exp as any).amount === "number" && !Number.isNaN((exp as any).amount))
+    return (exp as any).amount;
   switch (exp.category) {
     case "Seed":
       return exp.seed?.totalCost ?? 0;
@@ -58,6 +64,10 @@ function getExpenseAmount(exp: Expense): number {
       return exp.labourDaily?.totalCost ?? exp.labourContract?.amountGiven ?? 0;
     case "Machinery":
       return exp.machinery?.totalCost ?? 0;
+    case "Irrigation":
+      return exp.irrigation?.amount ?? 0;
+    case "Other":
+      return exp.other?.totalAmount ?? 0;
     default:
       return 0;
   }
@@ -77,6 +87,10 @@ function getExpenseSubtitle(exp: Expense): string {
       return `ઍડ્વાન્સ · ${exp.labourContract?.advanceReason ?? ""}`;
     case "Machinery":
       return `${exp.machinery?.implement ?? ""} · ${exp.machinery?.hoursOrAcres ?? 0} કલા./એ.`;
+    case "Irrigation":
+      return exp.notes ?? "સિંચાઈ ખર્ચ";
+    case "Other":
+      return exp.other?.description ?? exp.notes ?? "અન્ય ખર્ચ";
     default:
       return "";
   }
@@ -117,7 +131,7 @@ function ExpenseCard({
   item: Expense;
   onDelete: (id: string) => void;
 }) {
-  const cfg = CATEGORY_CONFIG[item.category];
+  const cfg = CATEGORY_CONFIG[item.category] ?? CATEGORY_CONFIG.Other;
   const amount = getExpenseAmount(item);
   const subtitle = getExpenseSubtitle(item);
   const isContract = item.category === "Labour" && !!item.labourContract;

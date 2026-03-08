@@ -345,6 +345,14 @@ export interface YearlyReportResponse {
     netProfit: number;
     totalCrops: number;
     totalArea: number;
+    /** Crop-linked income for this FY */
+    cropIncome?: number;
+    /** Crop-linked expense for this FY */
+    cropExpense?: number;
+    /** Extra income (no crop) for this FY */
+    extraIncome?: number;
+    /** Extra expense (no crop) for this FY */
+    extraExpense?: number;
   };
 }
 
@@ -370,6 +378,17 @@ export function getFinancialYearOptions(): string[] {
     `${startY}-${String((startY + 1) % 100).padStart(2, "0")}`,
     `${startY + 1}-${String((startY + 2) % 100).padStart(2, "0")}`,
   ];
+}
+
+/** Extended options for list filters: 2 past + current + next FY, e.g. ["2023-24", "2024-25", "2025-26", "2026-27"] */
+export function getFinancialYearOptionsExtended(): string[] {
+  const [startY] = getCurrentFinancialYear().split("-").map(Number);
+  const out: string[] = [];
+  for (let i = -2; i <= 1; i++) {
+    const y = startY + i;
+    out.push(`${y}-${String((y + 1) % 100).padStart(2, "0")}`);
+  }
+  return out;
 }
 
 // ── Harvest patch types ───────────────────────────────────────────────────────
@@ -505,7 +524,9 @@ export type ExpenseCategory =
   | "Fertilizer"
   | "Pesticide"
   | "Labour"
-  | "Machinery";
+  | "Machinery"
+  | "Irrigation"
+  | "Other";
 
 export type SeedType = "Company Brand" | "Local/Desi" | "Hybrid";
 export type FertilizerProduct = "Urea" | "DAP" | "NPK" | "Organic" | "Sulphur" | "Micronutrients";
@@ -567,6 +588,15 @@ export interface MachineryExpensePayload {
   rate: number;
 }
 
+export interface IrrigationExpensePayload {
+  amount: number;
+}
+
+export interface OtherExpensePayload {
+  totalAmount: number;
+  description?: string;
+}
+
 export interface ExpensePayload {
   /** Omit or null for general expense (સામાન્ય ખર્ચ) not linked to any crop */
   cropId?: string | null;
@@ -579,6 +609,8 @@ export interface ExpensePayload {
   labourDaily?: LabourDailyPayload;
   labourContract?: LabourContractPayload;
   machinery?: MachineryExpensePayload;
+  irrigation?: IrrigationExpensePayload;
+  other?: OtherExpensePayload;
 }
 
 // ── What the API returns (includes server-derived fields) ─────────────────────
@@ -601,7 +633,7 @@ export interface MachineryExpense extends MachineryExpensePayload {
 export interface Expense {
   _id: string;
   userId: string;
-  cropId: string;
+  cropId?: string | null;
   category: ExpenseCategory;
   /**
    * Top-level total cost — single source of truth for all report aggregations.
@@ -618,6 +650,8 @@ export interface Expense {
   labourDaily?: LabourDailyExpense;
   labourContract?: LabourContractPayload;
   machinery?: MachineryExpense;
+  irrigation?: { amount?: number };
+  other?: { totalAmount?: number; description?: string };
   createdAt: string;
   updatedAt: string;
 }
@@ -658,16 +692,17 @@ export const createExpense = async (payload: ExpensePayload): Promise<Expense> =
   return res.data.data;
 };
 
-/** GET /expenses — filter by cropId / category / year */
+/** GET /expenses — filter by cropId / category / year / financialYear */
 export const getExpenses = async (
   cropId?: string,
   category?: ExpenseCategory,
   year?: number,
   page = 1,
   limit = 100,
+  financialYear?: string,
 ): Promise<ExpenseListResponse> => {
   const res = await API.get<ExpenseListResponse>("/expenses", {
-    params: { cropId, category, year, page, limit },
+    params: { cropId, category, year, page, limit, financialYear },
   });
   return res.data;
 };
@@ -675,15 +710,17 @@ export const getExpenses = async (
 /**
  * GET /expenses/summary
  * Returns total expenses grouped by category + grandTotal.
- * @param year    e.g. 2025 — pass undefined for all-time
- * @param cropId  filter to a specific crop
+ * @param year           e.g. 2025 — pass undefined for all-time
+ * @param cropId         filter to a specific crop
+ * @param financialYear  e.g. "2025-26" — overrides year when set
  */
 export const getExpenseSummary = async (
   year?: number,
   cropId?: string,
+  financialYear?: string,
 ): Promise<ExpenseSummaryResponse> => {
   const res = await API.get<ExpenseSummaryResponse>("/expenses/summary", {
-    params: { year, cropId },
+    params: { year, cropId, financialYear },
   });
   return res.data;
 };
@@ -868,16 +905,17 @@ export const createIncome = async (payload: IncomePayload): Promise<Income> => {
   return res.data.data;
 };
 
-/** GET /income — filter by year / category / cropId */
+/** GET /income — filter by year / financialYear / category / cropId */
 export const getIncomes = async (
   page = 1,
   limit = 20,
   cropId?: string,
   category?: IncomeCategory,
   year?: number,
+  financialYear?: string,
 ): Promise<IncomeListResponse> => {
   const res = await API.get<IncomeListResponse>("/income", {
-    params: { page, limit, cropId, category, year },
+    params: { page, limit, cropId, category, year, financialYear },
   });
   return res.data;
 };
@@ -885,11 +923,15 @@ export const getIncomes = async (
 /**
  * GET /income/summary
  * Returns totals grouped by category + grandTotal.
- * @param year  e.g. 2025 — pass undefined for all-time
+ * @param year           e.g. 2025 — pass undefined for all-time
+ * @param financialYear  e.g. "2025-26" — overrides year when set
  */
-export const getIncomeSummary = async (year?: number): Promise<IncomeSummaryResponse> => {
+export const getIncomeSummary = async (
+  year?: number,
+  financialYear?: string,
+): Promise<IncomeSummaryResponse> => {
   const res = await API.get<IncomeSummaryResponse>("/income/summary", {
-    params: { year },
+    params: { year, financialYear },
   });
   return res.data;
 };
@@ -906,9 +948,10 @@ export const getIncomeSummary = async (year?: number): Promise<IncomeSummaryResp
 export const getIncomeAnalytics = async (
   year?: number,
   district?: District,
+  financialYear?: string,
 ): Promise<IncomeAnalyticsResponse> => {
   const res = await API.get<IncomeAnalyticsResponse>("/income/analytics", {
-    params: { year, district },
+    params: { year, district, financialYear },
   });
   return res.data;
 };

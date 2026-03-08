@@ -5,7 +5,9 @@ import { useProfile } from "@/contexts/ProfileContext";
 import {
   API,
   getCrops,
+  getCurrentFinancialYear,
   getExpenses,
+  getFinancialYearOptions,
   getIncomes,
   getMyProfile,
   getYearlyReport,
@@ -215,12 +217,16 @@ function getCropName(
 
 // ── Expense helpers ───────────────────────────
 function expenseAmount(e: Expense): number {
+  const top = (e as any).amount;
+  if (typeof top === "number" && !Number.isNaN(top)) return top;
   if (e.category === "Seed") return e.seed?.totalCost ?? 0;
   if (e.category === "Fertilizer") return e.fertilizer?.totalCost ?? 0;
   if (e.category === "Pesticide") return e.pesticide?.cost ?? 0;
   if (e.category === "Labour")
     return e.labourDaily?.totalCost ?? e.labourContract?.amountGiven ?? 0;
   if (e.category === "Machinery") return e.machinery?.totalCost ?? 0;
+  if (e.category === "Irrigation") return e.irrigation?.amount ?? 0;
+  if (e.category === "Other") return e.other?.totalAmount ?? 0;
   return 0;
 }
 
@@ -231,6 +237,8 @@ function expenseLabel(e: Expense): string {
     Pesticide: `દવા - ${e.pesticide?.category ?? ""}`,
     Labour: "મજૂરી",
     Machinery: `મ. - ${e.machinery?.implement ?? ""}`,
+    Irrigation: "સિંચાઈ",
+    Other: e.other?.description ? `અન્ય - ${e.other.description}` : "અન્ય ખર્ચ",
   };
   return m[e.category] ?? e.category;
 }
@@ -242,6 +250,8 @@ function expenseIcon(cat: ExpenseCategory): string {
     Pesticide: "flask-outline",
     Labour: "people",
     Machinery: "cog-outline",
+    Irrigation: "water-outline",
+    Other: "ellipsis-horizontal-outline",
   };
   return m[cat] ?? "receipt-outline";
 }
@@ -280,7 +290,9 @@ function incomeIcon(cat: IncomeCategory): string {
   return m[cat] ?? "cash";
 }
 
-// ── Merge & sort ──────────────────────────────
+// ── Merge & sort: combined expenses + incomes by date, show latest 5 total (તાજા વ્યવહાર) ─
+const RECENT_TXN_LIMIT = 5;
+
 function buildTransactions(
   expenses: Expense[],
   incomes: Income[],
@@ -322,7 +334,7 @@ function buildTransactions(
       if (Number.isNaN(ta)) return 1;
       return tb - ta;
     })
-    .slice(0, 5);
+    .slice(0, RECENT_TXN_LIMIT);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -849,22 +861,23 @@ export default function Dashboard() {
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerType, setPickerType] = useState<"expense" | "income">("expense");
   const [weather, setWeather] = useState(WEATHER_DEFAULT);
+  const [financialYear, setFinancialYear] = useState(getCurrentFinancialYear());
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const cropScrollRef = useRef<ScrollView>(null);
 
-  // ── Load all data via api.ts ─────────────────────────────────────────────────
+  // ── Load all data via api.ts (filtered by selected financial year) ───────────
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
       const [prof, cropRes, yearlyReport, expRes, incRes] = await Promise.all([
         getMyProfile(),
-        getCrops(),
-        getYearlyReport(),
-        getExpenses(undefined, undefined, undefined, 1, 30),
-        getIncomes(1, 30),
+        getCrops(1, 100, undefined, undefined, financialYear),
+        getYearlyReport(financialYear),
+        getExpenses(undefined, undefined, undefined, 1, 30, financialYear),
+        getIncomes(1, 30, undefined, undefined, undefined, financialYear),
       ]);
       setProfile(prof);
       setCrops(
@@ -889,10 +902,13 @@ export default function Dashboard() {
       setLoadingTxns(false);
       setRefreshing(false);
     }
-  }, [t]);
+  }, [t, financialYear]);
 
   useEffect(() => {
     loadData();
+  }, [loadData]);
+
+  useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -1137,6 +1153,22 @@ export default function Dashboard() {
           />
         }
       >
+        {/* ── Financial year selector ── */}
+        <View style={styles.fyRow}>
+          {getFinancialYearOptions().map((y) => (
+            <TouchableOpacity
+              key={y}
+              style={[styles.fyChip, financialYear === y && styles.fyChipActive]}
+              onPress={() => setFinancialYear(y)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.fyChipText, financialYear === y && styles.fyChipTextActive]}>
+                {y}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* ── Net Profit Card ── */}
         <Animated.View
           style={[
@@ -1616,6 +1648,24 @@ const styles = StyleSheet.create({
   weatherStat: { fontSize: 16, color: C.textMuted, fontWeight: "700" },
 
   scrollContent: { paddingTop: 20 },
+  fyRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 14,
+  },
+  fyChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: C.surface,
+    borderWidth: 1.5,
+    borderColor: C.borderLight,
+  },
+  fyChipActive: { backgroundColor: C.green700, borderColor: C.green700 },
+  fyChipText: { fontSize: 14, fontWeight: "700", color: C.textSecondary },
+  fyChipTextActive: { color: "#fff" },
   section: { marginHorizontal: 16, marginBottom: 22 },
   myCropsSection: {
     marginHorizontal: 16,
