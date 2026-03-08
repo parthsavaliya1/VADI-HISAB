@@ -4,6 +4,7 @@
 
 import { useRefresh } from "@/contexts/RefreshContext";
 import { createExpense, type AdvanceReason } from "@/utils/api";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -156,21 +157,9 @@ export default function AddBhagyaUpad() {
       keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
     >
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
-      <LinearGradient
-        colors={["#E8F5E9", "#FFFFFF"]}
-        style={styles.header}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={20} color={C.green700} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>ભાગ્યા નો ઉપાડ</Text>
-          <View style={{ width: 36 }} />
-        </View>
-      </LinearGradient>
+      <View style={[styles.headerWrap, { backgroundColor: C.bg }]}>
+        <ScreenHeader title="ભાગ્યા નો ઉપાડ" style={{ marginBottom: 0, backgroundColor: C.bg }} />
+      </View>
 
       <ScrollView
         style={{ flex: 1, backgroundColor: C.bg }}
@@ -250,33 +239,7 @@ export default function AddBhagyaUpad() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 52,
-    paddingBottom: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderLight,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: C.green50,
-    borderWidth: 1,
-    borderColor: C.green100,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: C.textPrimary,
-  },
+  headerWrap: { borderBottomWidth: 1, borderBottomColor: C.borderLight },
   scroll: {
     padding: 20,
     paddingBottom: 40,

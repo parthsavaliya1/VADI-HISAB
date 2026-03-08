@@ -68,6 +68,10 @@ const C = {
   expensePale: "#FFEBEE",
   neutral: "#1565C0",
   neutralPale: "#E3F2FD",
+  /** Cool blue (cyan-leaning) for accents — eye-catching but cool, not warm */
+  coolBlue: "#00838F",
+  coolBluePale: "#E0F7FA",
+  coolBlueBorder: "#4DD0E1",
 
   gold: "#F9A825",
   goldPale: "#FFFDE7",
@@ -76,18 +80,21 @@ const C = {
   borderLight: "#EAF4EA",
 };
 
-// Default static weather (replaced by dynamic fetch when available)
-const WEATHER_DEFAULT = {
-  temp: "—",
-  condition: "લોડ થઈ રહ્યું છે...",
-  humidity: "—",
-  wind: "—",
-  weatherCode: undefined as number | undefined,
-  tempNum: undefined as number | undefined,
-};
+// Default static weather (replaced by dynamic fetch when available) — condition set from t() where t is available
+function getWeatherDefault(t: (s: string, k: string) => string) {
+  return {
+    temp: "—",
+    condition: t("dashboard", "weatherLoading"),
+    humidity: "—",
+    wind: "—",
+    weatherCode: undefined as number | undefined,
+    tempNum: undefined as number | undefined,
+  };
+}
 // Open-Meteo rain codes (for weather box theme)
 const WEATHER_RAIN_CODES = new Set([51, 61, 63, 65, 80, 81, 82, 95, 96, 99]);
-function getWeatherTheme(weather: typeof WEATHER_DEFAULT): "rain" | "clear" | "hot" {
+type WeatherState = ReturnType<typeof getWeatherDefault>;
+function getWeatherTheme(weather: WeatherState): "rain" | "clear" | "hot" {
   const code = weather.weatherCode ?? 0;
   const temp = weather.tempNum ?? 0;
   if (WEATHER_RAIN_CODES.has(code)) return "rain";
@@ -95,20 +102,17 @@ function getWeatherTheme(weather: typeof WEATHER_DEFAULT): "rain" | "clear" | "h
   return "clear";
 }
 
-// English crop name (from API) → Gujarati display name (matches add-crop CROPS)
-const CROP_NAME_GUJARATI: Record<string, string> = {
-  Cotton: "કપાસ",
-  Groundnut: "મગફળી",
-  Jeera: "જીરું",
-  Garlic: "લસણ",
-  Onion: "ડુંગળી",
-  Chana: "ચણા",
-  Wheat: "ઘઉં",
-  Bajra: "બાજરી",
-  Maize: "મકાઈ",
-};
-function cropDisplayName(name: string): string {
-  return CROP_NAME_GUJARATI[name] ?? name;
+/** Crop display name from translations */
+function cropDisplayName(name: string, t: (s: string, k: string) => string): string {
+  return t("cropNames", name) || name;
+}
+
+/** Season label from translations */
+function seasonCategoryLabel(season: string | undefined, t: (s: string, k: string) => string): string {
+  if (season === "Kharif") return t("common", "kharif");
+  if (season === "Rabi") return t("common", "rabi");
+  if (season === "Summer") return t("common", "summer");
+  return season ?? "—";
 }
 
 /** Area unit in Gujarati (વીઘા / એકર) */
@@ -212,13 +216,14 @@ function formatDisplayDate(iso: string | undefined): string {
 
 function getCropName(
   cropId: string | { _id: string; cropName: string } | undefined,
-  crops?: Crop[],
+  crops: Crop[] | undefined,
+  t: (s: string, k: string) => string,
 ): string {
   if (!cropId) return "—";
-  if (typeof cropId === "object") return cropDisplayName(cropId.cropName ?? "—");
+  if (typeof cropId === "object") return cropDisplayName(cropId.cropName ?? "—", t);
   if (crops?.length) {
     const c = crops.find((x) => x._id === cropId);
-    if (c) return cropDisplayName(c.cropName ?? "—");
+    if (c) return cropDisplayName(c.cropName ?? "—", t);
   }
   return "—";
 }
@@ -238,17 +243,22 @@ function expenseAmount(e: Expense): number {
   return 0;
 }
 
-function expenseLabel(e: Expense): string {
-  const m: Record<ExpenseCategory, string> = {
-    Seed: `બીજ - ${e.seed?.seedType ?? ""}`,
-    Fertilizer: `ખાતર - ${e.fertilizer?.productName ?? ""}`,
-    Pesticide: `દવા - ${e.pesticide?.category ?? ""}`,
-    Labour: "મજૂરી",
-    Machinery: `મ. - ${e.machinery?.implement ?? ""}`,
-    Irrigation: "સિંચાઈ",
-    Other: e.other?.description ? `અન્ય - ${e.other.description}` : "અન્ય ખર્ચ",
-  };
-  return m[e.category] ?? e.category;
+function expenseLabel(
+  e: Expense,
+  tParam: (s: string, k: string, p: Record<string, string | number>) => string,
+): string {
+  switch (e.category) {
+    case "Seed": return tParam("txn", "expenseSeed", { detail: e.seed?.seedType ?? "" });
+    case "Fertilizer": return tParam("txn", "expenseFertilizer", { detail: e.fertilizer?.productName ?? "" });
+    case "Pesticide": return tParam("txn", "expensePesticide", { detail: e.pesticide?.category ?? "" });
+    case "Labour": return tParam("txn", "expenseLabour", { detail: "" });
+    case "Machinery": return tParam("txn", "expenseMachinery", { detail: e.machinery?.implement ?? "" });
+    case "Irrigation": return tParam("txn", "expenseIrrigation", { detail: "" });
+    case "Other": return e.other?.description
+      ? tParam("txn", "expenseOther", { detail: e.other.description })
+      : tParam("txn", "expenseOtherPlain", { detail: "" });
+    default: return e.category;
+  }
 }
 
 function expenseIcon(cat: ExpenseCategory): string {
@@ -278,14 +288,17 @@ function incomeAmount(i: Income): number {
   return 0;
 }
 
-function incomeLabel(i: Income): string {
-  const m: Record<IncomeCategory, string> = {
-    "Crop Sale": `વેચાણ - ${i.cropSale?.marketName || "VADI"}`,
-    Subsidy: `સ. - ${i.subsidy?.schemeType ?? ""}`,
-    "Rental Income": `ભાડા - ${i.rentalIncome?.assetType ?? ""}`,
-    Other: `અ. - ${i.otherIncome?.source ?? ""}`,
-  };
-  return m[i.category] ?? i.category;
+function incomeLabel(
+  i: Income,
+  tParam: (s: string, k: string, p: Record<string, string | number>) => string,
+): string {
+  switch (i.category) {
+    case "Crop Sale": return tParam("txn", "incomeCropSale", { market: i.cropSale?.marketName || "VADI" });
+    case "Subsidy": return tParam("txn", "incomeSubsidy", { detail: i.subsidy?.schemeType ?? "" });
+    case "Rental Income": return tParam("txn", "incomeRental", { detail: i.rentalIncome?.assetType ?? "" });
+    case "Other": return tParam("txn", "incomeOther", { detail: i.otherIncome?.source ?? "" });
+    default: return i.category;
+  }
 }
 
 function incomeIcon(cat: IncomeCategory): string {
@@ -305,13 +318,14 @@ function buildTransactions(
   expenses: Expense[],
   incomes: Income[],
   t: (s: string, k: string) => string,
+  tParam: (s: string, k: string, p: Record<string, string | number>) => string,
   crops: Crop[] = [],
 ): Transaction[] {
   const expTxns: Transaction[] = expenses.map((e) => ({
     _id: e._id,
     type: "expense" as const,
-    label: expenseLabel(e),
-    crop: getCropName(e.cropId as any, crops),
+    label: expenseLabel(e, tParam),
+    crop: getCropName(e.cropId as any, crops, t),
     amount: -expenseAmount(e),
     date: formatRelativeDate(e.date, t),
     rawDate: e.date,
@@ -324,8 +338,8 @@ function buildTransactions(
     return {
       _id: i._id,
       type: "income" as const,
-      label: incomeLabel(i),
-      crop: getCropName(i.cropId, crops),
+      label: incomeLabel(i, tParam),
+      crop: getCropName(i.cropId, crops, t),
       amount: incomeAmount(i),
       date: formatRelativeDate(rawDate, t),
       rawDate,
@@ -465,6 +479,7 @@ function PressableCard({
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function CropPickerModal({
   t,
+  tParam,
   visible,
   crops,
   onSelect,
@@ -475,6 +490,7 @@ function CropPickerModal({
   onSelectGeneralIncome,
 }: {
   t: (s: string, k: string) => string;
+  tParam: (s: string, k: string, p: Record<string, string | number>) => string;
   visible: boolean;
   crops: Crop[];
   onSelect: (c: Crop) => void;
@@ -564,14 +580,14 @@ function CropPickerModal({
                     </Text>
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.sheetCropName}>{cropDisplayName(crop.cropName)}</Text>
+                    <Text style={styles.sheetCropName}>{cropDisplayName(crop.cropName, t)}</Text>
                     <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                       <Text style={styles.sheetCropMeta}>
                         {crop.season === "Kharif"
-                          ? "☔ ખરીફ"
+                          ? `☔ ${t("common", "kharif")}`
                           : crop.season === "Rabi"
-                            ? "❄️ રવી"
-                            : "☀️ ઉનાળો"}
+                            ? `❄️ ${t("common", "rabi")}`
+                            : `☀️ ${t("common", "summer")}`}
                         {" · "}
                         <Text style={styles.bighaFont}>{formatVighaDisplay(crop.area)} </Text>
                         {areaUnitLabel(crop.areaUnit, t)}
@@ -579,7 +595,7 @@ function CropPickerModal({
                       {crop.landType === "bhagma" && crop.bhagmaPercentage != null && (
                         <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
                           <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
-                            ભાગમા {crop.bhagmaPercentage}%
+                            {tParam("dashboard", "bhagmaPct", { pct: crop.bhagmaPercentage ?? 0 })}
                           </Text>
                         </View>
                       )}
@@ -610,10 +626,10 @@ function CropPickerModal({
                       ]}
                     >
                       {crop.status === "Active"
-                        ? "સક્રિય"
+                        ? t("common", "statusActive")
                         : crop.status === "Harvested"
-                          ? "લણણી"
-                          : "બંધ"}
+                          ? t("common", "statusHarvested")
+                          : t("common", "statusClosed")}
                     </Text>
                   </View>
                   <Ionicons
@@ -639,7 +655,7 @@ function CropPickerModal({
                   <Ionicons name="wallet-outline" size={30} color="#D97706" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sheetCropName}>ભાગ્યા નો ઉપાડ</Text>
+                  <Text style={styles.sheetCropName}>{t("dashboard", "bhagyaUpad")}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
@@ -658,7 +674,7 @@ function CropPickerModal({
                   <Ionicons name="receipt-outline" size={30} color={C.expense} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sheetCropName}>સામાન્ય ખર્ચ / અન્ય ખર્ચ</Text>
+                  <Text style={styles.sheetCropName}>{t("dashboard", "generalExpense")}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
@@ -676,7 +692,7 @@ function CropPickerModal({
                   <Ionicons name="wallet-outline" size={30} color={C.income} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sheetCropName}>સામાન્ય આવક</Text>
+                  <Text style={styles.sheetCropName}>{t("dashboard", "generalIncome")}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.income} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
@@ -752,7 +768,7 @@ function QuickActions({
         </PressableCard>
       </View>
 
-      {/* ટ્રેક્ટર આવક — only when farmer has tractor in profile */}
+      {/* ટ્રેક્ટર આવક — cool blue (not warm) */}
       {profile?.tractorAvailable && (
         <PressableCard
           onPress={() => router.push("/income/add-tractor-income" as any)}
@@ -761,18 +777,18 @@ function QuickActions({
           <View
             style={[
               styles.qaCardFull,
-              { backgroundColor: "#E8F5E9", borderColor: "#A5D6A7" },
+              { backgroundColor: C.coolBluePale, borderColor: C.coolBlueBorder },
             ]}
           >
-            <View style={[styles.qaIcon, { backgroundColor: "#C8E6C9" }]}>
-              <Ionicons name="construct-outline" size={26} color="#2E7D32" />
+            <View style={[styles.qaIcon, { backgroundColor: "#B2EBF2" }]}>
+              <Ionicons name="construct-outline" size={26} color={C.coolBlue} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.qaLabel, { color: "#2E7D32", fontWeight: "700" }]}>
-                ટ્રેક્ટર આવક ઉમેરો
+              <Text style={[styles.qaLabel, { color: C.coolBlue, fontWeight: "700" }]}>
+                {t("dashboard", "tractorAddIncome")}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+            <Ionicons name="chevron-forward" size={18} color={C.coolBlue} />
           </View>
         </PressableCard>
       )}
@@ -820,7 +836,7 @@ function RecentTransactions({
         <Text style={styles.sectionTitle}>🧾 {t("dashboard", "recentTxns")}</Text>
         <TouchableOpacity
           style={styles.seeAllBtn}
-          onPress={() => router.push("/(tabs)/profile" as any)}
+          onPress={() => router.push("/all-transactions" as any)}
         >
           <Text style={styles.seeAll}>{t("dashboard", "seeAll")}</Text>
           <Ionicons name="chevron-forward" size={14} color={C.green700} />
@@ -912,11 +928,12 @@ function RecentTransactions({
 // 🏠 Main Dashboard
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function Dashboard() {
-  const { t } = useLanguage();
+  const { t, tParam } = useLanguage();
   const { profile, setProfile } = useProfile();
   const { transactionsRefreshKey } = useRefresh();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [summary, setSummary] = useState<{ totalIncome: number; totalExpense: number; netProfit: number }>({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
+  const [bhagyaUpadTotal, setBhagyaUpadTotal] = useState(0);
   const [transactions, setTxns] = useState<Transaction[]>([]);
   const [selectedCrop, setSelected] = useState(0);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -924,7 +941,7 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerType, setPickerType] = useState<"expense" | "income">("expense");
-  const [weather, setWeather] = useState(WEATHER_DEFAULT);
+  const [weather, setWeather] = useState<WeatherState>(() => getWeatherDefault(t));
   const [financialYear, setFinancialYear] = useState(getCurrentFinancialYear());
 
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -954,9 +971,10 @@ export default function Dashboard() {
       const allExpense = cropExpense + extraExpense;
       setSummary({
         totalIncome: allIncome,
-        totalExpense: cropExpense, // show only sum of crop expenses in main "કુલ ખર્ચ"
-        netProfit: allIncome - allExpense, // profit still uses all expenses (crop + extra)
+        totalExpense: cropExpense, // કુલ ખર્ચ = crop expense only
+        netProfit: allIncome - cropExpense, // ચોખ્ખો નફો = આવક - ખર્ચ
       });
+      setBhagyaUpadTotal(extraExpense); // ભાગ્યા નો ઉપાડ (no-crop expense)
       setCrops(
         cropRes.data.map((c: Crop) => {
           const report = reportCrops.find((r: any) => r._id === c._id);
@@ -972,7 +990,7 @@ export default function Dashboard() {
       );
       const expenses = Array.isArray(expRes?.data) ? expRes.data : [];
       const incomes = Array.isArray(incRes?.data) ? incRes.data : [];
-      setTxns(buildTransactions(expenses, incomes as Income[], t, cropRes.data ?? []));
+      setTxns(buildTransactions(expenses, incomes as Income[], t, tParam, cropRes.data ?? []));
     } catch (err) {
       console.log("[Dashboard] loadData error:", (err as Error).message);
     } finally {
@@ -980,7 +998,7 @@ export default function Dashboard() {
       setLoadingTxns(false);
       setRefreshing(false);
     }
-  }, [t, financialYear]);
+  }, [t, tParam, financialYear]);
 
   useEffect(() => {
     loadData();
@@ -1026,23 +1044,10 @@ export default function Dashboard() {
         const humidity = Math.round(Number(c.relative_humidity_2m)) ?? 0;
         const windKmh = Math.round(Number(c.wind_speed_10m) ?? 0);
         const code = Number(c.weather_code) ?? 0;
-        const conditionMap: Record<number, string> = {
-          0: "સ્પષ્ટ",
-          1: "મુખ્યત્વે સ્પષ્ટ",
-          2: "આંશિક વાદળ",
-          3: "ઓવરકાસ્ટ",
-          45: "ધુમ્મસ",
-          48: "ધુમ્મસ",
-          51: "બૂંદાબંદી",
-          61: "હલકો વરસાદ",
-          63: "વરસાદ",
-          65: "ભારે વરસાદ",
-          80: "વરસાદ",
-          95: "તૂફાન",
-        };
+        const condition = t("weather", String(code)) || t("weather", "partlyCloudy");
         setWeather({
           temp: `${temp}°C`,
-          condition: conditionMap[code] ?? "આંશિક વાદળ",
+          condition,
           humidity: `${humidity}%`,
           wind: `${windKmh} km/h`,
           weatherCode: code,
@@ -1050,7 +1055,7 @@ export default function Dashboard() {
         });
       })
       .catch(() => {});
-  }, [profile?.district]);
+  }, [profile?.district, t]);
 
   const totalIncome = summary.totalIncome;
   const totalExpense = summary.totalExpense;
@@ -1247,7 +1252,7 @@ export default function Dashboard() {
           ))}
         </View>
 
-        {/* ── Net Profit Card ── */}
+        {/* ── Net Profit Card (કુલ ચોખ્ખો નફો) — extra spacing for readability ── */}
         <Animated.View
           style={[
             styles.section,
@@ -1325,14 +1330,22 @@ export default function Dashboard() {
                       <Text style={[styles.profitPerBighaValue, { color: C.income }]}>
                         {Math.round(incomePerBigha).toLocaleString("en-IN")}
                       </Text>
-                      <Text style={styles.profitPerBighaLabel}>આવક/વીઘા</Text>
+                      <Text style={styles.profitPerBighaLabel}>{t("dashboard", "incomePerBighaShort")}</Text>
                     </View>
                     <View style={styles.profitPerBighaItem}>
                       <Text style={[styles.profitPerBighaValue, { color: C.expense }]}>
                         {Math.round(expensePerBigha).toLocaleString("en-IN")}
                       </Text>
-                      <Text style={styles.profitPerBighaLabel}>ખર્ચ/વીઘા</Text>
+                      <Text style={styles.profitPerBighaLabel}>{t("dashboard", "expensePerBighaShort")}</Text>
                     </View>
+                  </View>
+                )}
+                {bhagyaUpadTotal > 0 && (
+                  <View style={styles.bhagyaUpadRow}>
+                    <Text style={styles.bhagyaUpadLabel}>{t("dashboard", "bhagyaUpad")}</Text>
+                    <Text style={styles.bhagyaUpadValue}>
+                      ₹{Math.round(bhagyaUpadTotal).toLocaleString("en-IN")}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -1423,11 +1436,12 @@ export default function Dashboard() {
                               </Text>
                             </View>
                             <View style={styles.cropCardRight}>
-                              <Text style={styles.cropName} numberOfLines={2}>{cropDisplayName(crop.cropName)}</Text>
+                              <Text style={styles.cropName} numberOfLines={2}>{cropDisplayName(crop.cropName, t)}</Text>
+                              <Text style={styles.cropCategory}>{seasonCategoryLabel(crop.season, t)}</Text>
                               <Text style={styles.cropMetaLine}>{cropDate}</Text>
                               {areaLine ? <Text style={styles.cropMetaLine}>{areaLine}</Text> : null}
                               <View style={styles.cropBadge}>
-                                <Text style={styles.cropBadgeText}>● સક્રિય</Text>
+                                <Text style={styles.cropBadgeText}>● {t("common", "statusActive")}</Text>
                               </View>
                             </View>
                           </LinearGradient>
@@ -1502,17 +1516,18 @@ export default function Dashboard() {
                     </View>
                     <View style={styles.detailHeaderText}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <Text style={styles.detailName}>{cropDisplayName(c.cropName)}</Text>
+                        <Text style={styles.detailName}>{cropDisplayName(c.cropName, t)}</Text>
+                        <Text style={styles.detailCategory}>{seasonCategoryLabel(c.season, t)}</Text>
                         {c.landType === "bhagma" && c.bhagmaPercentage != null && (
                           <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
                             <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
-                              ભાગમા {c.bhagmaPercentage}%
+                              {tParam("dashboard", "bhagmaPct", { pct: c.bhagmaPercentage ?? 0 })}
                             </Text>
                           </View>
                         )}
                       </View>
                       <Text style={styles.detailMeta}>
-                        {c.season === "Kharif" ? "ખરીફ" : c.season === "Rabi" ? "રવી" : "ઉનાળો"}
+                        {seasonCategoryLabel(c.season, t)}
                         {" · "}
                         {formatVighaDisplay(c.area)} {areaUnitLabel(c.areaUnit, t)}
                       </Text>
@@ -1530,7 +1545,7 @@ export default function Dashboard() {
 
                   <View style={styles.detailSummarySingleBox}>
                     <View style={styles.detailSummaryCell}>
-                      <Text style={[styles.detailSummaryCellLabel, { color: C.income }]}>આવક</Text>
+                      <Text style={[styles.detailSummaryCellLabel, { color: C.income }]}>{t("dashboard", "income")}</Text>
                       <View style={styles.detailSummaryCellValueWrap}>
                         <Text style={[styles.detailSummaryCellValue, { color: C.income }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                           {inc.toLocaleString("en-IN")}
@@ -1539,7 +1554,7 @@ export default function Dashboard() {
                     </View>
                     <Text style={styles.detailSummaryOp}>−</Text>
                     <View style={styles.detailSummaryCell}>
-                      <Text style={[styles.detailSummaryCellLabel, { color: C.expense }]}>ખર્ચ</Text>
+                      <Text style={[styles.detailSummaryCellLabel, { color: C.expense }]}>{t("dashboard", "expense")}</Text>
                       <View style={styles.detailSummaryCellValueWrap}>
                         <Text style={[styles.detailSummaryCellValue, { color: C.expense }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                           {exp.toLocaleString("en-IN")}
@@ -1548,7 +1563,7 @@ export default function Dashboard() {
                     </View>
                     <Text style={styles.detailSummaryOp}>=</Text>
                     <View style={styles.detailSummaryCell}>
-                      <Text style={[styles.detailSummaryCellLabel, { color: C.textPrimary }]}>નફો</Text>
+                      <Text style={[styles.detailSummaryCellLabel, { color: C.textPrimary }]}>{t("dashboard", "profit")}</Text>
                       <View style={styles.detailSummaryCellValueWrap}>
                         <Text style={[styles.detailSummaryCellValue, { color: C.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                           {net >= 0 ? "" : "−"}{Math.abs(net).toLocaleString("en-IN")}
@@ -1558,7 +1573,7 @@ export default function Dashboard() {
                   </View>
                   {c.landType === "bhagma" && (c as any).labourShare != null && (c as any).labourShare > 0 && (
                     <View style={styles.detailBhagmaRow}>
-                      <Text style={styles.detailBhagmaLabel}>મજૂર/યંત્ર ભાગ ({c.bhagmaPercentage}%)</Text>
+                      <Text style={styles.detailBhagmaLabel}>{tParam("dashboard", "labourShareLabel", { pct: c.bhagmaPercentage ?? 0 })}</Text>
                       <Text style={[styles.detailBhagmaValue, { color: C.expense }]}>
                         ₹{(c as any).labourShare.toLocaleString("en-IN")}
                       </Text>
@@ -1567,9 +1582,9 @@ export default function Dashboard() {
                   {areaBigha > 0 && (
                     <View style={styles.detailUnitRow}>
                       <Text style={styles.detailUnitText}>
-                        <Text style={{ color: C.income, fontWeight: "700" }}>આવક/વીઘા</Text> {Math.round(incPerBigha).toLocaleString("en-IN")}
+                        <Text style={{ color: C.income, fontWeight: "700" }}>{t("dashboard", "incomePerBigha")}</Text> {Math.round(incPerBigha).toLocaleString("en-IN")}
                         {"  ·  "}
-                        <Text style={{ color: C.expense, fontWeight: "700" }}>ખર્ચ/વીઘા</Text> {Math.round(expPerBigha).toLocaleString("en-IN")}
+                        <Text style={{ color: C.expense, fontWeight: "700" }}>{t("dashboard", "expensePerBigha")}</Text> {Math.round(expPerBigha).toLocaleString("en-IN")}
                       </Text>
                     </View>
                   )}
@@ -1615,6 +1630,7 @@ export default function Dashboard() {
 
       <CropPickerModal
         t={t}
+        tParam={tParam}
         visible={pickerVisible}
         crops={crops}
         type={pickerType}
@@ -1765,7 +1781,7 @@ const styles = StyleSheet.create({
   },
   weatherStat: { fontSize: 16, color: C.textMuted, fontWeight: "700" },
 
-  scrollContent: { paddingTop: 20 },
+  scrollContent: { paddingTop: 8 },
   fyRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1782,7 +1798,7 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
   },
   fyChipActive: { backgroundColor: C.green700, borderColor: C.green700 },
-  fyChipText: { fontSize: 14, fontWeight: "700", color: C.textSecondary },
+  fyChipText: { fontSize: 18, fontWeight: "700", color: C.textSecondary },
   fyChipTextActive: { color: "#fff" },
   section: { marginHorizontal: 16, marginBottom: 22 },
   myCropsSection: {
@@ -1813,7 +1829,7 @@ const styles = StyleSheet.create({
   profitCard: {
     backgroundColor: C.surface,
     borderRadius: 18,
-    padding: 18,
+    padding: 22,
     flexDirection: "row",
     alignItems: "stretch",
     borderWidth: 1,
@@ -1830,12 +1846,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 14,
   },
   profitLabel: {
     fontSize: 18,
-    color: C.textMuted,
-    fontWeight: "800",
+    color: "#546E7A",
+    fontWeight: "600",
   },
   profitPakBadge: {
     flexDirection: "row",
@@ -1848,20 +1864,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  profitPakValue: { fontSize: 17, fontWeight: "800", color: C.textSecondary },
-  profitPakLabel: { fontSize: 13, color: C.textMuted, fontWeight: "700" },
+  profitPakValue: { fontSize: 17, fontWeight: "700", color: C.textSecondary },
+  profitPakLabel: { fontSize: 13, color: C.textMuted, fontWeight: "600" },
   profitAmountRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 2,
-    marginBottom: 16,
+    marginTop: 6,
+    marginBottom: 20,
   },
-  profitSign: { fontSize: 28, fontWeight: "800", marginBottom: 4 },
+  profitSign: { fontSize: 28, fontWeight: "700", marginBottom: 4 },
   netProfitAmount: {
     fontSize: 44,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: -1.5,
-    color: C.textPrimary,
+    color: "#374151",
   },
   profitSubRow: { flexDirection: "row", gap: 8 },
   profitSubItem: {
@@ -1875,8 +1892,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  profitSubValue: { fontSize: 19, fontWeight: "800" },
-  profitSubCaption: { fontSize: 14, color: C.textMuted, fontWeight: "700" },
+  profitSubValue: { fontSize: 19, fontWeight: "700" },
+  profitSubCaption: { fontSize: 14, color: C.textMuted, fontWeight: "600" },
   profitPerBighaRow: {
     flexDirection: "row",
     gap: 8,
@@ -1896,8 +1913,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  profitPerBighaValue: { fontSize: 17, fontWeight: "800" },
+  profitPerBighaValue: { fontSize: 17, fontWeight: "700" },
   profitPerBighaLabel: { fontSize: 12, color: C.textMuted, fontWeight: "600" },
+
+  bhagyaUpadRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "#FFF8E1",
+    borderWidth: 1,
+    borderColor: "#FFECB3",
+  },
+  bhagyaUpadLabel: { fontSize: 13, color: "#E65100", fontWeight: "700" },
+  bhagyaUpadValue: { fontSize: 16, fontWeight: "800", color: "#BF360C" },
 
   qaRow: { flexDirection: "row", gap: 10 },
   qaHalf: { flex: 1 },
@@ -1986,7 +2018,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(46, 125, 50, 0.12)",
   },
   cropBadgeText: { fontSize: 13, fontWeight: "800", color: C.green700 },
-  cropName: { fontSize: 20, fontWeight: "800", color: C.textPrimary, marginBottom: 6 },
+  cropName: { fontSize: 20, fontWeight: "800", color: C.textPrimary, marginBottom: 2 },
+  cropCategory: { fontSize: 13, color: C.textMuted, fontWeight: "600", marginBottom: 6 },
   cropMetaLine: {
     fontSize: 15,
     color: C.textSecondary,
@@ -2080,7 +2113,8 @@ const styles = StyleSheet.create({
   },
   detailEmoji: { fontSize: 40 },
   detailHeaderText: { flex: 1 },
-  detailName: { fontSize: 24, fontWeight: "800", color: C.textPrimary, marginBottom: 4 },
+  detailName: { fontSize: 24, fontWeight: "800", color: C.textPrimary, marginBottom: 2 },
+  detailCategory: { fontSize: 14, color: C.textMuted, fontWeight: "600", marginLeft: 6 },
   detailMeta: { fontSize: 16, color: C.textMuted, marginTop: 2, fontWeight: "600" },
   detailDate: { fontSize: 14, color: C.textMuted, marginTop: 6, fontWeight: "600" },
   editBtn: {

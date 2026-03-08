@@ -231,11 +231,15 @@ export interface FarmerProfilePayload {
   /** Services offered when tractor available: Rotavator, RAP, Bagi, Savda, etc. */
   implementsAvailable?: TractorService[];
   labourTypes: LabourType[];
+  /** Data sharing / analytics consent (stored on farmer profile) */
+  dataSharing?: boolean;
 }
 
 export interface FarmerProfile extends FarmerProfilePayload {
   _id: string;
   user: string;
+  /** From profile.data_sharing; null = not set */
+  analyticsConsent?: boolean | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -501,8 +505,10 @@ export interface CompareReportResponse {
   myTotalExpense: number;
   myNetProfit: number;
   myTotalArea: number;
+  myIncomePerBigha: number;
   avgIncome: number;
   avgExpense: number;
+  avgIncomePerBigha: number;
   percentileIncome: number | null;
   percentileExpense: number | null;
   sampleSize: number;
@@ -726,6 +732,27 @@ export const getExpenseSummary = async (
 ): Promise<ExpenseSummaryResponse> => {
   const res = await API.get<ExpenseSummaryResponse>("/expenses/summary", {
     params: { year, cropId, financialYear },
+  });
+  return res.data;
+};
+
+/** GET /expenses/analytics — per-bigha comparison for exact idea (unit data) */
+export interface ExpenseAnalyticsResponse {
+  success: boolean;
+  financialYear: string;
+  mySummary: { _id: string; total: number }[];
+  myByCategory: Record<string, number>;
+  myArea: number;
+  myPerBighaByCategory: Record<string, number>;
+  avgByCategory: Record<string, number>;
+  avgPerBighaByCategory: Record<string, number>;
+  sampleSize: number;
+}
+export const getExpenseAnalytics = async (
+  financialYear?: string,
+): Promise<ExpenseAnalyticsResponse> => {
+  const res = await API.get<ExpenseAnalyticsResponse>("/expenses/analytics", {
+    params: { financialYear: financialYear || getCurrentFinancialYear() },
   });
   return res.data;
 };

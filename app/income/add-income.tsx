@@ -953,7 +953,7 @@ export default function AddIncomeScreen() {
       {/* ── Year: only for general income; for crop income year comes from crop ── */}
       {!isEdit && isGeneralIncome && (
         <View style={styles.yearCard}>
-          <Text style={styles.yearLabel}>📅 વર્ષ પસંદ કરો (જૂન–મે)</Text>
+          <Text style={styles.yearLabel}>વર્ષ પસંદ કરો (જૂન–મે)</Text>
           <View style={styles.yearRow}>
             {yearOptions.map((fy) => {
               const active = selectedFinancialYear === fy;
@@ -1005,7 +1005,7 @@ export default function AddIncomeScreen() {
 
       {!isEdit && hasCropSelected && selectedCrop?.year && (
         <View style={styles.yearCard}>
-          <Text style={styles.yearLabel}>📅 પાકનું વર્ષ (જૂન–મે)</Text>
+          <Text style={styles.yearLabel}>પાકનું વર્ષ (જૂન–મે)</Text>
           <Text style={styles.cropYearText}>{selectedCrop.year}</Text>
         </View>
       )}
@@ -1289,7 +1289,7 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
   },
   yearLabel: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: "700",
     color: C.textMuted,
     marginBottom: 10,
@@ -1312,7 +1312,7 @@ const styles = StyleSheet.create({
     borderColor: C.green700,
   },
   yearPillText: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: "700",
     color: C.textSecondary,
   },

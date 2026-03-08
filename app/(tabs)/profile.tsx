@@ -4,22 +4,20 @@ import {
     getTalukaItems,
     getVillageItems,
 } from "@/data/gujarati-location";
+import { FarmerProfileCard } from "@/components/FarmerProfileCard";
 import type { FarmerProfile as APIFarmerProfile } from "@/utils/api";
-import { getMyProfile, logout, saveConsent, updateProfile } from "@/utils/api";
+import { getMyProfile, logout, updateProfile } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
     Animated,
     Dimensions,
-    KeyboardAvoidingView,
-    Modal,
     Platform,
     Pressable,
     ScrollView,
+    Share,
     StatusBar,
     StyleSheet,
     Switch,
@@ -28,9 +26,26 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import Svg, { Circle } from "react-native-svg";
 
-const { height: SCREEN_H } = Dimensions.get("window");
+// Optional: image capture & share (app works without these; run: npx expo install expo-media-library expo-sharing react-native-view-shot)
+let MediaLibrary: typeof import("expo-media-library") | null = null;
+let Sharing: typeof import("expo-sharing") | null = null;
+let ViewShotComponent: React.ComponentType<any> | null = null;
+try {
+  MediaLibrary = require("expo-media-library");
+} catch (_) {}
+try {
+  Sharing = require("expo-sharing");
+} catch (_) {}
+try {
+  ViewShotComponent = require("react-native-view-shot").default;
+} catch (_) {}
+const hasImageShare = !!(Sharing && ViewShotComponent);
+const hasImageDownload = !!(MediaLibrary && ViewShotComponent);
+import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import { KeyboardAvoidingView, Modal } from "react-native";
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Gujarati UI labels
@@ -73,8 +88,6 @@ const T = {
     dataSharing: "ડેટા શેરિંગ",
     dataSharingSub: "ગામ-સ્તરના આંકડા",
     dataSharingNote: "તમારો ડેટા ગામ-સ્તરના સરેરાશ અહેવાલ માટે ઉપયોગ થશે.",
-    vadiScore: "વાદી સ્કોર",
-    vadiScoreSub: "અમારી રેટિંગ — તમારી ખેતી સંભવિકતા",
     namePH: "નામ દાખલ કરો",
     landPH: "જમીન",
     farmer: "ખેડૂત",
@@ -82,6 +95,17 @@ const T = {
     language: "ભાષા",
     gujarati: "ગુજરાતી",
     english: "અંગ્રેજી",
+    farmerCard: "મારી ખેડૂત કાર્ડ",
+    farmerCardSub: "ડાઉનલોડ કરો અથવા શેર કરો",
+    shareCard: "શેર કરો",
+    downloadCard: "ડાઉનલોડ (ચિત્ર)",
+    closeCard: "બંધ કરો",
+    contactUs: "અમારો સંપર્ક કરો",
+    contactSub: "ઇમેઇલ, ફોન — સહાયતા માટે",
+    email: "ઇમેઇલ",
+    phone: "ફોન",
+    savedToGallery: "કાર્ડ ગેલેરીમાં સાચવ્યું",
+    shareImage: "ચિત્ર શેર કરો",
 };
 
 // ─── English key → Gujarati label lookup maps ────────────────────────────────
@@ -170,7 +194,7 @@ function apiToDraft(p: APIFarmerProfile | null): ProfileDraft {
         tractorAvailable: p.tractorAvailable,
         implementsAvailable,
         labourTypes,
-        dataSharing: (p as any).analyticsConsent ?? false,
+        dataSharing: p.analyticsConsent ?? false,
     };
 }
 
@@ -549,63 +573,6 @@ function CardHeader({ emoji, title }: { emoji: string; title: string }) {
     );
 }
 
-/** Compute Vadi Score 0–100 from profile completeness (farmer potential rating) */
-function computeVadiScore(p: APIFarmerProfile | null): number {
-    if (!p) return 0;
-    let score = 0;
-    if (p.name?.trim()) score += 15;
-    if (p.district) score += 15;
-    if ((p as any).taluka) score += 8;
-    if (p.village) score += 12;
-    if (p.totalLand?.value) score += 15;
-    const water = Array.isArray((p as any).waterSources) ? (p as any).waterSources : (p as any).waterSource ? [(p as any).waterSource] : [];
-    if (water.length) score += 10;
-    const labour = Array.isArray((p as any).labourTypes) ? (p as any).labourTypes : (p as any).labourType ? [(p as any).labourType] : [];
-    if (labour.length) score += 7;
-    if (p.tractorAvailable) score += 5;
-    if ((p as any).analyticsConsent) score += 3;
-    if (p.farms?.length) score += 5;
-    return Math.min(100, score);
-}
-
-const SCORE_RING_SIZE = 120;
-const SCORE_RING_STROKE = 10;
-const SCORE_RING_R = (SCORE_RING_SIZE - SCORE_RING_STROKE) / 2;
-const SCORE_CIRCUMFERENCE = 2 * Math.PI * SCORE_RING_R;
-
-function VadiScoreCircle({ score }: { score: number }) {
-    const dash = (score / 100) * SCORE_CIRCUMFERENCE;
-    return (
-        <View style={styles.scoreRingWrap}>
-            <Svg width={SCORE_RING_SIZE} height={SCORE_RING_SIZE} style={styles.scoreRingSvg}>
-                <Circle
-                    cx={SCORE_RING_SIZE / 2}
-                    cy={SCORE_RING_SIZE / 2}
-                    r={SCORE_RING_R}
-                    stroke="#E8EDE6"
-                    strokeWidth={SCORE_RING_STROKE}
-                    fill="transparent"
-                />
-                <Circle
-                    cx={SCORE_RING_SIZE / 2}
-                    cy={SCORE_RING_SIZE / 2}
-                    r={SCORE_RING_R}
-                    stroke="#5DAF5D"
-                    strokeWidth={SCORE_RING_STROKE}
-                    fill="transparent"
-                    strokeDasharray={`${dash} ${SCORE_CIRCUMFERENCE}`}
-                    strokeLinecap="round"
-                    transform={`rotate(-90, ${SCORE_RING_SIZE / 2}, ${SCORE_RING_SIZE / 2})`}
-                />
-            </Svg>
-            <View style={styles.scoreRingCenter} pointerEvents="none">
-                <Text style={styles.scoreRingValue}>{score}</Text>
-                <Text style={styles.scoreRingMax}>/100</Text>
-            </View>
-        </View>
-    );
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Screen
 // ─────────────────────────────────────────────────────────────────────────────
@@ -616,6 +583,8 @@ export default function Profile() {
     const [draft, setDraft] = useState<ProfileDraft | null>(null);
     const [phone, setPhone] = useState<string>("");
     const [editVisible, setEditVisible] = useState(false);
+    const [cardVisible, setCardVisible] = useState(false);
+    const cardShotRef = useRef<{ capture: () => Promise<string> } | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [loadError, setLoadError] = useState("");
@@ -665,20 +634,18 @@ export default function Profile() {
         if (!draft.totalLand.trim() || isNaN(Number(draft.totalLand))) { Alert.alert(T.errTitle, T.errLand); return; }
         setSaving(true);
         try {
-            const [updated] = await Promise.all([
-                updateProfile({
-                    name: draft.name,
-                    district: draft.district,
-                    taluka: draft.taluka,
-                    village: draft.village,
-                    totalLand: { value: parseFloat(draft.totalLand), unit: draft.totalLandUnit },
-                    waterSources: draft.waterSources as any,
-                    tractorAvailable: draft.tractorAvailable,
-                    implementsAvailable: draft.implementsAvailable,
-                    labourTypes: draft.labourTypes as any,
-                }),
-                saveConsent(draft.dataSharing),
-            ]);
+            const updated = await updateProfile({
+                name: draft.name,
+                district: draft.district,
+                taluka: draft.taluka,
+                village: draft.village,
+                totalLand: { value: parseFloat(draft.totalLand), unit: draft.totalLandUnit },
+                waterSources: draft.waterSources as any,
+                tractorAvailable: draft.tractorAvailable,
+                implementsAvailable: draft.implementsAvailable,
+                labourTypes: draft.labourTypes as any,
+                dataSharing: draft.dataSharing,
+            });
             setApiProfile(updated.profile);
             setEditVisible(false);
             setDraft(null);
@@ -695,6 +662,80 @@ export default function Profile() {
             { text: T.logoutNo, style: "cancel" },
             { text: T.logoutYes, style: "destructive", onPress: async () => { await logout(); router.replace("/(auth)/login"); } },
         ]);
+    };
+
+    const buildShareMessage = () => {
+        const p = apiProfile!;
+        const taluka = (p as any).taluka ?? "";
+        const districtDisplay = getLocationLabel("district", { district: p.district });
+        const talukaDisplay = taluka ? getLocationLabel("taluka", { district: p.district, taluka }) : "—";
+        const villageDisplay = p.village ? getLocationLabel("village", { district: p.district, taluka, village: p.village }) : "—";
+        const waterSources = Array.isArray((p as any).waterSources) ? (p as any).waterSources : ((p as any).waterSource != null ? [(p as any).waterSource] : []);
+        const labourTypes = Array.isArray((p as any).labourTypes) ? (p as any).labourTypes : ((p as any).labourType != null ? [(p as any).labourType] : []);
+        const implementsAvailable = Array.isArray((p as any).implementsAvailable) ? (p as any).implementsAvailable : [];
+        const landDisplay = `${p.totalLand?.value ?? "?"} ${p.totalLand?.unit === "bigha" ? "વીઘા" : "એકર"}`;
+        const waterDisplay = toLabels(WATER_OPTIONS, waterSources);
+        const labourDisplay = toLabels(LABOUR_OPTIONS, labourTypes);
+        const tractorServicesDisplay = implementsAvailable.length > 0 ? toLabels(TRACTOR_SERVICE_OPTIONS, implementsAvailable) : null;
+        let msg = `🌾 VADI-Hisaab — ખેડૂત પ્રોફાઇલ\n\nનામ: ${p.name}\nજિલ્લો: ${districtDisplay}\nતાલુકો: ${talukaDisplay}\nગામ: ${villageDisplay}\nકુલ જમીન: ${landDisplay}\nપાણીનો સ્ત્રોત: ${waterDisplay}\nમજૂર પ્રકાર: ${labourDisplay}\nટ્રેક્ટર: ${p.tractorAvailable ? "હા" : "ના"}`;
+        if (p.tractorAvailable && tractorServicesDisplay) msg += `\nટ્રેક્ટર સેવાઓ: ${tractorServicesDisplay}`;
+        const farms = Array.isArray((p as any).farms) ? (p as any).farms : [];
+        if (farms.length) msg += "\nફાર્મ: " + farms.map((f: any) => `${f.name || "ફાર્મ"} ${f.area ?? 0} વીઘા`).join(", ");
+        msg += "\n\n— VADI-Hisaab એપથી શેર કર્યું";
+        return msg;
+    };
+
+    const captureCardImage = async (): Promise<string | null> => {
+        if (!ViewShotComponent || !cardShotRef.current?.capture) return null;
+        try {
+            return await cardShotRef.current.capture();
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const handleDownloadCard = async () => {
+        if (!MediaLibrary) {
+            Alert.alert(T.errTitle, "ડાઉનલોડ માટે એપમાં expo-media-library ઇન્સ્ટોલ કરો.");
+            return;
+        }
+        const uri = await captureCardImage();
+        if (!uri) {
+            Alert.alert(T.errTitle, "કાર્ડ ચિત્ર બનાવવામાં નિષ્ફળ.");
+            return;
+        }
+        try {
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== "granted") {
+                Alert.alert(T.errTitle, "ગેલેરી સાચવવા માટે પરવાનગી આપો.");
+                return;
+            }
+            await MediaLibrary.saveToLibraryAsync(uri);
+            Alert.alert(T.saveSuccess, T.savedToGallery);
+        } catch (e: any) {
+            Alert.alert(T.errTitle, e?.message ?? "ડાઉનલોડ નિષ્ફળ.");
+        }
+    };
+
+    const handleShareCard = async () => {
+        if (hasImageShare && Sharing) {
+            const uri = await captureCardImage();
+            if (uri) {
+                try {
+                    const isAvailable = await Sharing.isAvailableAsync();
+                    if (isAvailable) {
+                        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: T.shareImage });
+                        return;
+                    }
+                } catch (e: any) {
+                    Alert.alert(T.errTitle, e?.message ?? "શેર નિષ્ફળ.");
+                    return;
+                }
+            }
+        }
+        try {
+            await Share.share({ message: buildShareMessage(), title: T.farmerCard });
+        } catch (_) {}
     };
 
     if (loading) {
@@ -729,7 +770,6 @@ export default function Profile() {
     const tractorServicesDisplay = implementsAvailable.length > 0 ? toLabels(TRACTOR_SERVICE_OPTIONS, implementsAvailable) : null;
 
     const profilePhotoUrl = (p as any).profileImage ?? (p as any).photo ?? (p as any).avatar ?? null;
-    const vadiScore = computeVadiScore(p);
 
     return (
         <View style={styles.container}>
@@ -784,45 +824,67 @@ export default function Profile() {
                         </View>
                     </Animated.View>
 
-                    {/* ══ Vadi Score — farmer potential rating ══ */}
-                    <View style={styles.scoreCard}>
-                        <Text style={styles.scoreLabel}>{T.vadiScore}</Text>
-                        <Text style={styles.scoreSub}>{T.vadiScoreSub}</Text>
-                        <VadiScoreCircle score={vadiScore} />
-                    </View>
+                    {/* ══ Farmer profile card — view / share ══ */}
+                    <Pressable style={styles.farmerCardBtn} onPress={() => setCardVisible(true)}>
+                        <Ionicons name="card-outline" size={22} color="#0F766E" />
+                        <Text style={styles.farmerCardBtnText}>{T.farmerCard}</Text>
+                        <Text style={styles.farmerCardBtnSub}>{T.farmerCardSub}</Text>
+                    </Pressable>
 
-                    {/* Language */}
-                    <View style={styles.langRow}>
-                        <Text style={styles.langLabel}>{t("common", "language")}</Text>
-                        <View style={styles.langChips}>
-                            <Pressable style={[styles.langChip, lang === "gu" && styles.langChipActive]} onPress={() => setLang("gu")}>
-                                <Text style={[styles.langChipText, lang === "gu" && styles.langChipTextActive]}>{t("common", "gujarati")}</Text>
-                            </Pressable>
-                            <Pressable style={[styles.langChip, lang === "en" && styles.langChipActive]} onPress={() => setLang("en")}>
-                                <Text style={[styles.langChipText, lang === "en" && styles.langChipTextActive]}>{t("common", "english")}</Text>
-                            </Pressable>
+                    {/* ══ Settings: Language + Data sharing ══ */}
+                    <View style={styles.settingsCard}>
+                        <Text style={styles.settingsCardTitle}>⚙️ સેટિંગ્સ</Text>
+                        <View style={styles.settingsRow}>
+                            <Text style={styles.settingsLabel}>{t("common", "language")}</Text>
+                            <View style={styles.langChips}>
+                                <Pressable style={[styles.langChip, lang === "gu" && styles.langChipActive]} onPress={() => setLang("gu")}>
+                                    <Text style={[styles.langChipText, lang === "gu" && styles.langChipTextActive]}>{t("common", "gujarati")}</Text>
+                                </Pressable>
+                                <Pressable style={[styles.langChip, lang === "en" && styles.langChipActive]} onPress={() => setLang("en")}>
+                                    <Text style={[styles.langChipText, lang === "en" && styles.langChipTextActive]}>{t("common", "english")}</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                        <View style={[styles.settingsRow, { borderTopWidth: 1, borderTopColor: "#E8EDE6", paddingTop: 14, marginTop: 6 }]}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.settingsLabel}>{T.dataSharing}</Text>
+                                <Text style={styles.settingsSub}>{(p.analyticsConsent ? "ચાલુ" : "બંધ") + " — સુધારો માટે ઉપર સુધારો દબાવો"}</Text>
+                            </View>
                         </View>
                     </View>
 
-                    {/* Minimal quick links — no menu card */}
-                    <View style={styles.quickLinks}>
-                        <Pressable style={styles.quickLink} onPress={() => router.push("/all-income")}>
-                            <Ionicons name="trending-up-outline" size={20} color="#2E7D32" />
-                            <Text style={styles.quickLinkText}>બધી આવક</Text>
-                        </Pressable>
-                        <Pressable style={styles.quickLink} onPress={() => router.push("/all-expense")}>
-                            <Ionicons name="trending-down-outline" size={20} color="#C62828" />
-                            <Text style={styles.quickLinkText}>બધા ખર્ચ</Text>
-                        </Pressable>
-                        <Pressable style={styles.quickLink} onPress={() => Alert.alert("અમારો સંપર્ક કરો", "ઇમેઇલ: support@vadihisaab.com\nફોન: +91 XXXXX XXXXX", [{ text: "ઠીક છે" }])}>
-                            <Ionicons name="call-outline" size={20} color="#1565C0" />
-                            <Text style={styles.quickLinkText}>સંપર્ક</Text>
-                        </Pressable>
-                        <Pressable style={styles.quickLink} onPress={() => Alert.alert("અમારા વિશે", "VADI-Hisaab — ખેડૂત માટે સ્માર્ટ હિસાબ.\n\n" + T.version, [{ text: "ઠીક છે" }])}>
-                            <Ionicons name="information-circle-outline" size={20} color="#5C6BC0" />
-                            <Text style={styles.quickLinkText}>અમારા વિશે</Text>
-                        </Pressable>
+                    {/* Contact us — big menu */}
+                    <Pressable style={styles.contactCard} onPress={() => Alert.alert(T.contactUs, "ઇમેઇલ: support@vadihisaab.com\nફોન: +91 XXXXX XXXXX\n\nસહાયતા માટે સંપર્ક કરો.", [{ text: "ઠીક છે" }])}>
+                        <View style={styles.contactCardInner}>
+                            <View style={styles.contactIconWrap}>
+                                <Ionicons name="call" size={32} color="#fff" />
+                            </View>
+                            <View style={styles.contactTextWrap}>
+                                <Text style={styles.contactCardTitle}>{T.contactUs}</Text>
+                                <Text style={styles.contactCardSub}>{T.contactSub}</Text>
+                                <View style={styles.contactRow}>
+                                    <Ionicons name="mail-outline" size={18} color="#0F766E" />
+                                    <Text style={styles.contactDetail}>support@vadihisaab.com</Text>
+                                </View>
+                                <View style={styles.contactRow}>
+                                    <Ionicons name="call-outline" size={18} color="#0F766E" />
+                                    <Text style={styles.contactDetail}>+91 XXXXX XXXXX</Text>
+                                </View>
+                            </View>
+                        </View>
+                    </Pressable>
+
+                    {/* About us — short 2–3 line description */}
+                    <View style={styles.aboutSection}>
+                        <Text style={styles.aboutSectionTitle}>અમારા વિશે</Text>
+                        <Text style={styles.aboutSectionBody}>
+                            VADI-Hisaab ખેડૂતો માટે હિસાબ અને નફો ટ્રેક કરવાનું એપ છે. પાક, ખર્ચ અને આવક એક જગ્યાએ નોંધો, અહેવાલ જુઓ અને નફો સ્પષ્ટ રીતે સમજો.
+                        </Text>
                     </View>
+                    <Pressable style={styles.aboutLink} onPress={() => Alert.alert("અમારા વિશે", "VADI-Hisaab — ખેડૂત માટે સ્માર્ટ હિસાબ.\n\n" + T.version, [{ text: "ઠીક છે" }])}>
+                        <Ionicons name="information-circle-outline" size={20} color="#64748B" />
+                        <Text style={styles.aboutLinkText}>વધુ માહિતી</Text>
+                    </Pressable>
 
                     <Pressable onPress={handleLogout} style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}>
                         <Ionicons name="log-out-outline" size={18} color="#DC2626" />
@@ -844,6 +906,58 @@ export default function Profile() {
                     onClose={() => { setEditVisible(false); setDraft(null); }}
                 />
             )}
+
+            {/* Full farmer profile card modal — share / download */}
+            <Modal visible={cardVisible} transparent animationType="fade">
+                <View style={styles.cardModalBackdrop}>
+                    <View style={styles.cardModalContent}>
+                        <ScrollView
+                            contentContainerStyle={styles.cardModalScroll}
+                            showsVerticalScrollIndicator={false}
+                            bounces={false}
+                        >
+                            {ViewShotComponent ? (
+                                <ViewShotComponent
+                                    ref={cardShotRef}
+                                    options={{ format: "png", result: "tmpfile", quality: 1 }}
+                                    style={{ backgroundColor: "transparent" }}
+                                >
+                                    <FarmerProfileCard
+                                        profile={p}
+                                        districtLabel={districtDisplay}
+                                        talukaLabel={talukaDisplay}
+                                        villageLabel={villageDisplay}
+                                        cardWidth={Math.min(SCREEN_W - 48, 360)}
+                                    />
+                                </ViewShotComponent>
+                            ) : (
+                                <FarmerProfileCard
+                                    profile={p}
+                                    districtLabel={districtDisplay}
+                                    talukaLabel={talukaDisplay}
+                                    villageLabel={villageDisplay}
+                                    cardWidth={Math.min(SCREEN_W - 48, 360)}
+                                />
+                            )}
+                        </ScrollView>
+                        <View style={styles.cardModalActions}>
+                            {hasImageDownload && (
+                                <Pressable style={styles.cardModalDownloadBtn} onPress={handleDownloadCard}>
+                                    <Ionicons name="download-outline" size={22} color="#fff" />
+                                    <Text style={styles.cardModalShareBtnText}>{T.downloadCard}</Text>
+                                </Pressable>
+                            )}
+                            <Pressable style={styles.cardModalShareBtn} onPress={handleShareCard}>
+                                <Ionicons name="share-social" size={22} color="#fff" />
+                                <Text style={styles.cardModalShareBtnText}>{T.shareCard}</Text>
+                            </Pressable>
+                            <Pressable style={styles.cardModalCloseBtn} onPress={() => setCardVisible(false)}>
+                                <Text style={styles.cardModalCloseBtnText}>{T.closeCard}</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -878,24 +992,112 @@ const styles = StyleSheet.create({
     farmerMeta: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12 },
     farmerMetaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
     farmerMetaText: { fontSize: 13, color: "#5C6B5E", fontWeight: "600" },
-    scoreCard: { backgroundColor: "#fff", borderRadius: 24, marginHorizontal: 18, marginBottom: 18, paddingVertical: 24, paddingHorizontal: 20, alignItems: "center", shadowColor: "#1A2E1C", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
-    scoreLabel: { fontSize: 18, fontWeight: "800", color: "#1A2E1C", marginBottom: 4 },
-    scoreSub: { fontSize: 12, color: "#6B7B6E", marginBottom: 18 },
-    scoreRingWrap: { width: SCORE_RING_SIZE, height: SCORE_RING_SIZE, position: "relative", alignItems: "center", justifyContent: "center" },
-    scoreRingSvg: { position: "absolute" },
-    scoreRingCenter: { alignItems: "center", justifyContent: "center" },
-    scoreRingValue: { fontSize: 36, fontWeight: "900", color: "#2E7D32" },
-    scoreRingMax: { fontSize: 16, fontWeight: "700", color: "#8B9B8E", marginTop: -2 },
-    langRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 18, marginHorizontal: 18 },
-    langLabel: { fontSize: 13, color: "#5C6B5E", fontWeight: "600" },
+    farmerCardBtn: {
+        backgroundColor: "#fff",
+        borderRadius: 20,
+        marginHorizontal: 18,
+        marginBottom: 18,
+        padding: 18,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        borderWidth: 2,
+        borderColor: "#99F6E4",
+        shadowColor: "#0F766E",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    farmerCardBtnText: { fontSize: 17, fontWeight: "800", color: "#0F172A", flex: 1 },
+    farmerCardBtnSub: { fontSize: 13, fontWeight: "600", color: "#64748B" },
+    cardModalBackdrop: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 24,
+    },
+    cardModalContent: {
+        backgroundColor: "#F0F4F3",
+        borderRadius: 24,
+        maxHeight: "90%",
+        width: "100%",
+        overflow: "hidden",
+    },
+    cardModalScroll: { padding: 24, paddingBottom: 16, alignItems: "center" },
+    cardModalActions: { flexDirection: "row", flexWrap: "wrap", gap: 10, padding: 16, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#E2E8F0" },
+    cardModalDownloadBtn: {
+        flex: 1,
+        minWidth: 100,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: "#0D5C4A",
+        paddingVertical: 14,
+        borderRadius: 14,
+    },
+    cardModalShareBtn: {
+        flex: 1,
+        minWidth: 100,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: "#0F766E",
+        paddingVertical: 14,
+        borderRadius: 14,
+    },
+    cardModalShareBtnText: { fontSize: 16, fontWeight: "800", color: "#fff" },
+    cardModalCloseBtn: { paddingVertical: 14, paddingHorizontal: 20, justifyContent: "center" },
+    cardModalCloseBtnText: { fontSize: 16, fontWeight: "700", color: "#64748B" },
+    contactCard: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 22,
+        marginHorizontal: 18,
+        marginBottom: 14,
+        padding: 20,
+        borderWidth: 2,
+        borderColor: "#0F766E",
+        shadowColor: "#0D5C4A",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 4,
+    },
+    contactCardInner: { flexDirection: "row", alignItems: "flex-start", gap: 18 },
+    contactIconWrap: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: "#0F766E",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    contactTextWrap: { flex: 1 },
+    contactCardTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A", marginBottom: 4 },
+    contactCardSub: { fontSize: 15, fontWeight: "600", color: "#64748B", marginBottom: 12 },
+    contactRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
+    contactDetail: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
+    aboutSection: { paddingHorizontal: 20, paddingVertical: 16, marginBottom: 12, backgroundColor: "#F1F5F4", borderRadius: 14, borderWidth: 1, borderColor: "#E2E8E6" },
+    aboutSectionTitle: { fontSize: 16, fontWeight: "800", color: "#334155", marginBottom: 8 },
+    aboutSectionBody: { fontSize: 15, color: "#64748B", lineHeight: 22, fontWeight: "500" },
+    aboutLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16 },
+    aboutLinkText: { fontSize: 15, fontWeight: "700", color: "#64748B" },
     langChips: { flexDirection: "row", gap: 8 },
     langChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#EEF4EE", borderWidth: 1, borderColor: "#D8E6D8" },
     langChipActive: { backgroundColor: "#E0F0E0", borderColor: "#5DAF5D" },
     langChipText: { fontSize: 14, color: "#5C6B5E", fontWeight: "600" },
     langChipTextActive: { color: "#1B5E20", fontWeight: "700" },
-    quickLinks: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12, marginHorizontal: 18, marginBottom: 18 },
-    quickLink: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fff", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1, borderColor: "#E8EDE6", minWidth: 100 },
-    quickLinkText: { fontSize: 14, fontWeight: "700", color: "#2D4230" },
+    settingsCard: { backgroundColor: "#fff", borderRadius: 20, marginHorizontal: 18, marginBottom: 18, padding: 18, shadowColor: "#1A2E1C", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 },
+    settingsCardTitle: { fontSize: 17, fontWeight: "800", color: "#1A2E1C", marginBottom: 14 },
+    settingsRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 },
+    settingsLabel: { fontSize: 15, color: "#2D4230", fontWeight: "700" },
+    settingsSub: { fontSize: 12, color: "#6B7B6E", marginTop: 2 },
+    footerLinks: { flexDirection: "row", alignItems: "center", justifyContent: "center", flexWrap: "wrap", marginBottom: 16 },
+    footerLinkText: { fontSize: 14, fontWeight: "700", color: "#0F766E" },
+    footerLinkDot: { fontSize: 14, color: "#9CA3AF" },
     card: { backgroundColor: "#fff", borderRadius: 20, marginHorizontal: 16, marginBottom: 14, paddingHorizontal: 16, paddingVertical: 14, shadowColor: "#0A0E0B", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
     cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: "#EAF4EA" },
     cardHeaderEmoji: { fontSize: 20 },

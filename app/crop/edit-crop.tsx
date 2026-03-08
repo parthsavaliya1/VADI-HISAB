@@ -15,8 +15,8 @@ import {
   type CropSeason,
   type ProfileFarm,
 } from "@/utils/api";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -242,20 +242,9 @@ export default function EditCropScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
-      <LinearGradient
-        colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]}
-        style={[styles.header, { paddingTop }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.headerBackBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color={C.green700} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>✏️ પાક ફેરફાર</Text>
-          <View style={{ width: 36 }} />
-        </View>
-      </LinearGradient>
+      <View style={[styles.headerWrap, { backgroundColor: C.bg }]}>
+        <ScreenHeader title="✏️ પાક ફેરફાર" style={{ marginBottom: 0, backgroundColor: C.bg }} />
+      </View>
 
       <ScrollView
         style={styles.scroll}
@@ -264,7 +253,7 @@ export default function EditCropScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <SectionLabel text="📅 વર્ષ (જૂન–જૂન)" />
+          <SectionLabel text="વર્ષ (જૂન–જૂન)" />
           <View style={styles.yearRow}>
             {yearOptions.map((fy) => (
               <TouchableOpacity
@@ -504,29 +493,7 @@ const styles = StyleSheet.create({
   },
   backBtnText: { fontSize: 16, fontWeight: "700", color: C.green700 },
 
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderLight,
-    overflow: "hidden",
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerBackBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: C.green50,
-    borderWidth: 1,
-    borderColor: C.green100,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
+  headerWrap: { borderBottomWidth: 1, borderBottomColor: C.borderLight },
 
   scroll: { flex: 1, backgroundColor: C.bg },
   scrollContent: { padding: 16, paddingBottom: 24 },
@@ -555,7 +522,7 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
   },
   yearPillActive: { backgroundColor: C.green100, borderColor: C.green700 },
-  yearPillText: { fontSize: 15, fontWeight: "700", color: C.textSecondary },
+  yearPillText: { fontSize: 18, fontWeight: "700", color: C.textSecondary },
   yearPillTextActive: { color: C.green700 },
 
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },

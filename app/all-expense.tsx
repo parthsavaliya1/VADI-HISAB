@@ -1,3 +1,4 @@
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getExpenses,
@@ -144,12 +145,8 @@ export default function AllExpenseScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color={C.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>💸 બધા ખર્ચ</Text>
-        <View style={styles.backBtn} />
+      <View style={styles.headerWrap}>
+        <ScreenHeader title="💸 બધા ખર્ચ" style={{ marginBottom: 0, backgroundColor: C.bg }} />
       </View>
 
       {/* Financial year filter */}
@@ -239,19 +236,7 @@ export default function AllExpenseScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 54,
-    paddingBottom: 14,
-    backgroundColor: C.bg,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderLight,
-  },
-  backBtn: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
-  headerTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary },
+  headerWrap: { backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.borderLight },
   filterWrap: { marginHorizontal: 16, marginTop: 12, marginBottom: 4 },
   filterLabel: { fontSize: 14, fontWeight: "700", color: C.textMuted, marginBottom: 8 },
   filterChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

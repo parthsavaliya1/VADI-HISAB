@@ -125,7 +125,19 @@
             "today": "આજે",
             "yesterday": "ગઈ કાલે",
             "daysAgo": "{n} દિવસ",
-            "scrollHint": "સ્વાઈપ કરો"
+            "scrollHint": "સ્વાઈપ કરો",
+            "tractorAddIncome": "ટ્રેક્ટર આવક ઉમેરો",
+            "incomePerBigha": "આવક/વીઘા",
+            "expensePerBigha": "ખર્ચ/વીઘા",
+            "profit": "નફો",
+            "bhagmaPct": "ભાગમા {pct}%",
+            "labourShareLabel": "મજૂર/યંત્ર ભાગ ({pct}%)",
+            "weatherLoading": "લોડ થઈ રહ્યું છે...",
+            "bhagyaUpad": "ભાગ્યા નો ઉપાડ",
+            "generalExpense": "સામાન્ય ખર્ચ / અન્ય ખર્ચ",
+            "generalIncome": "સામાન્ય આવક",
+            "incomePerBighaShort": "આવક/વીઘા",
+            "expensePerBighaShort": "ખર્ચ/વીઘા"
         },
         "crop": {
             "myCropList": "મારી પાક સૂચિ",
@@ -154,7 +166,18 @@
             "error": "ભૂલ",
             "harvestTitle": "લણણી",
             "harvestPrompt": "વ્યવહારિક ઉત્પાદન (કિ.ગ્રા.) દાખલ કરો (વૈકલ્પિક):",
-            "loadingCrops": "પાક લોડ થઈ રહ્યો છે..."
+            "loadingCrops": "પાક લોડ થઈ રહ્યો છે...",
+            "noActiveCrops": "કોઈ સક્રિય પાક નથી",
+            "noCropsInFilter": "{filter} પાક નથી",
+            "addCropBelow": "નવો પાક ઉમેરવા નીચે બટન દબાવો",
+            "filterOrAdd": "ફિલ્ટર બદલો અથવા નવો પાક ઉમેરો",
+            "addNewCropBtn": "નવો પાક ઉમેરો",
+            "cropsCount": "{count} પાક · {year}",
+            "myCropListTitle": "મારી પાક સૂચિ",
+            "sowingLabel": "વાવણી",
+            "harvestDateLabel": "લણણી",
+            "statusShort": "સ્ટેટ",
+            "yearFilterLabel": "વર્ષ (જૂન – જૂન)"
         },
         "common": {
             "bigha": "વીઘા",
@@ -165,7 +188,60 @@
             "logout": "લૉગ આઉટ",
             "language": "ભાષા",
             "gujarati": "ગુજરાતી",
-            "english": "અંગ્રેજી"
+            "english": "અંગ્રેજી",
+            "statusActive": "સક્રિય",
+            "statusHarvested": "લણણી",
+            "statusClosed": "બંધ",
+            "all": "બધા",
+            "error": "ભૂલ",
+            "cancel": "રદ કરો",
+            "ok": "ઠીક છે"
+        },
+        "weather": {
+            "0": "સ્પષ્ટ",
+            "1": "મુખ્યત્વે સ્પષ્ટ",
+            "2": "આંશિક વાદળ",
+            "3": "ઓવરકાસ્ટ",
+            "45": "ધુમ્મસ",
+            "48": "ધુમ્મસ",
+            "51": "બૂંદાબંદી",
+            "61": "હલકો વરસાદ",
+            "63": "વરસાદ",
+            "65": "ભારે વરસાદ",
+            "80": "વરસાદ",
+            "95": "તૂફાન",
+            "partlyCloudy": "આંશિક વાદળ"
+        },
+        "cropNames": {
+            "Cotton": "કપાસ",
+            "Groundnut": "મગફળી",
+            "Jeera": "જીરું",
+            "Garlic": "લસણ",
+            "Onion": "ડુંગળી",
+            "Chana": "ચણા",
+            "Wheat": "ઘઉં",
+            "Bajra": "બાજરી",
+            "Maize": "મકાઈ"
+        },
+        "txn": {
+            "expenseSeed": "બીજ - {detail}",
+            "expenseFertilizer": "ખાતર - {detail}",
+            "expensePesticide": "દવા - {detail}",
+            "expenseLabour": "મજૂરી",
+            "expenseMachinery": "મ. - {detail}",
+            "expenseIrrigation": "સિંચાઈ",
+            "expenseOther": "અન્ય - {detail}",
+            "expenseOtherPlain": "અન્ય ખર્ચ",
+            "incomeCropSale": "વેચાણ - {market}",
+            "incomeSubsidy": "સ. - {detail}",
+            "incomeRental": "ભાડા - {detail}",
+            "incomeOther": "અ. - {detail}"
+        },
+        "tabs": {
+            "home": "ઘર",
+            "crop": "પાક",
+            "report": "અહેવાલ",
+            "profile": "પ્રોફાઇલ"
         }
     },
     "en": {
@@ -294,7 +370,18 @@
             "today": "Today",
             "yesterday": "Yesterday",
             "daysAgo": "{n} days",
-            "scrollHint": "Swipe"
+            "scrollHint": "Swipe",
+            "bhagyaUpad": "Sharecropping expense",
+            "generalExpense": "General / Other expense",
+            "generalIncome": "General income",
+            "incomePerBighaShort": "Income/bigha",
+            "expensePerBighaShort": "Expense/bigha",
+            "tractorAddIncome": "Add Tractor Income",
+            "incomePerBigha": "Income/bigha",
+            "expensePerBigha": "Expense/bigha",
+            "bhagmaPct": "Sharecropping {pct}%",
+            "labourShareLabel": "Labour/machine share ({pct}%)",
+            "weatherLoading": "Loading..."
         },
         "crop": {
             "myCropList": "My Crop List",
@@ -323,7 +410,18 @@
             "error": "Error",
             "harvestTitle": "Harvest",
             "harvestPrompt": "Enter actual yield (kg) — optional:",
-            "loadingCrops": "Loading crops..."
+            "loadingCrops": "Loading crops...",
+            "noActiveCrops": "No active crops",
+            "noCropsInFilter": "No {filter} crops",
+            "addCropBelow": "Tap the button below to add a new crop",
+            "filterOrAdd": "Change filter or add a new crop",
+            "addNewCropBtn": "Add new crop",
+            "cropsCount": "{count} crops · {year}",
+            "myCropListTitle": "My crop list",
+            "sowingLabel": "Sowing",
+            "harvestDateLabel": "Harvest",
+            "statusShort": "Status",
+            "yearFilterLabel": "Year (Jun – Jun)"
         },
         "common": {
             "bigha": "Bigha",
@@ -334,7 +432,60 @@
             "logout": "Logout",
             "language": "Language",
             "gujarati": "Gujarati",
-            "english": "English"
+            "english": "English",
+            "statusActive": "Active",
+            "statusHarvested": "Harvested",
+            "statusClosed": "Closed",
+            "all": "All",
+            "error": "Error",
+            "cancel": "Cancel",
+            "ok": "OK"
+        },
+        "weather": {
+            "0": "Clear",
+            "1": "Mainly clear",
+            "2": "Partly cloudy",
+            "3": "Overcast",
+            "45": "Fog",
+            "48": "Fog",
+            "51": "Drizzle",
+            "61": "Light rain",
+            "63": "Rain",
+            "65": "Heavy rain",
+            "80": "Rain",
+            "95": "Storm",
+            "partlyCloudy": "Partly cloudy"
+        },
+        "cropNames": {
+            "Cotton": "Cotton",
+            "Groundnut": "Groundnut",
+            "Jeera": "Jeera",
+            "Garlic": "Garlic",
+            "Onion": "Onion",
+            "Chana": "Chana",
+            "Wheat": "Wheat",
+            "Bajra": "Bajra",
+            "Maize": "Maize"
+        },
+        "txn": {
+            "expenseSeed": "Seed - {detail}",
+            "expenseFertilizer": "Fertilizer - {detail}",
+            "expensePesticide": "Pesticide - {detail}",
+            "expenseLabour": "Labour",
+            "expenseMachinery": "Mach. - {detail}",
+            "expenseIrrigation": "Irrigation",
+            "expenseOther": "Other - {detail}",
+            "expenseOtherPlain": "Other expense",
+            "incomeCropSale": "Sale - {market}",
+            "incomeSubsidy": "Subs. - {detail}",
+            "incomeRental": "Rental - {detail}",
+            "incomeOther": "Other - {detail}"
+        },
+        "tabs": {
+            "home": "Home",
+            "crop": "Crops",
+            "report": "Report",
+            "profile": "Profile"
         }
     }
 }

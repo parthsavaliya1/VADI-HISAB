@@ -1,3 +1,4 @@
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
@@ -60,55 +61,53 @@ const C = {
   borderLight: "#EAF4EA",
 };
 
-// ─── Season & Status config ───────────────────────────────────────────────────
-const SEASON_META: Record<string, { label: string; icon: string; color: string; pale: string }> = {
-  Kharif: { label: "ખરીફ", icon: "☔", color: "#0EA5E9", pale: "#E0F2FE" },
-  Rabi: { label: "રવી", icon: "❄️", color: "#6366F1", pale: "#EEF2FF" },
-  Summer: { label: "ઉનાળો", icon: "☀️", color: "#F59E0B", pale: "#FEF3C7" },
+// ─── Season & Status config (labels from translations in component) ───────────
+const SEASON_ICONS: Record<string, string> = {
+  Kharif: "☔",
+  Rabi: "❄️",
+  Summer: "☀️",
+};
+const SEASON_COLORS: Record<string, { color: string; pale: string }> = {
+  Kharif: { color: "#0EA5E9", pale: "#E0F2FE" },
+  Rabi: { color: "#6366F1", pale: "#EEF2FF" },
+  Summer: { color: "#F59E0B", pale: "#FEF3C7" },
 };
 
-// સક્રિય (Active) — teal so it stands out from other greens
 const ACTIVE_COLOR = "#0D9488";
 const ACTIVE_PALE = "#CCFBF1";
-const STATUS_META: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  Active: { label: "સક્રિય", bg: ACTIVE_PALE, text: ACTIVE_COLOR, dot: ACTIVE_COLOR },
-  Harvested: { label: "લણણી", bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
-  Closed: { label: "બંધ", bg: C.expensePale, text: C.expense, dot: "#EF4444" },
+const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
+  Active: { bg: ACTIVE_PALE, text: ACTIVE_COLOR, dot: ACTIVE_COLOR },
+  Harvested: { bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
+  Closed: { bg: C.expensePale, text: C.expense, dot: "#EF4444" },
 };
 
-const FILTER_TABS = [
-  { key: "all", label: "બધા" },
-  { key: "Active", label: "સક્રિય" },
-  { key: "Harvested", label: "લણણી" },
-  { key: "Closed", label: "બંધ" },
-];
+function getFilterTabs(t: (s: string, k: string) => string) {
+  return [
+    { key: "all", label: t("common", "all") },
+    { key: "Active", label: t("common", "statusActive") },
+    { key: "Harvested", label: t("common", "statusHarvested") },
+    { key: "Closed", label: t("common", "statusClosed") },
+  ];
+}
 
-// English crop name (from API) → Gujarati display name (matches add-crop / dashboard)
-const CROP_NAME_GUJARATI: Record<string, string> = {
-  Cotton: "કપાસ",
-  Groundnut: "મગફળી",
-  Jeera: "જીરું",
-  Garlic: "લસણ",
-  Onion: "ડુંગળી",
-  Chana: "ચણા",
-  Wheat: "ઘઉં",
-  Bajra: "બાજરી",
-  Maize: "મકાઈ",
-};
-function cropDisplayName(name: string): string {
-  return CROP_NAME_GUJARATI[name] ?? name;
+function cropDisplayName(name: string, t: (s: string, k: string) => string): string {
+  return t("cropNames", name) || name;
 }
 
 // ─── Crop card ────────────────────────────────────────────────────────────────
 function CropCard({
   item,
   index,
+  t,
+  tParam,
   onDelete,
   onStatusChange,
   onHarvest,
 }: {
   item: Crop;
   index: number;
+  t: (s: string, k: string) => string;
+  tParam: (s: string, k: string, p: Record<string, string | number>) => string;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: CropStatus) => void;
   onHarvest: (id: string) => void;
@@ -157,8 +156,11 @@ function CropCard({
     Animated.spring(menuAnim, { toValue: next ? 1 : 0, useNativeDriver: true }).start();
   };
 
-  const season = SEASON_META[item.season ?? ""] ?? { label: item.season, icon: "🌾", color: C.textMuted, pale: C.green50 };
-  const status = STATUS_META[item.status ?? "Active"] ?? STATUS_META.Active;
+  const seasonKey = item.season ?? "";
+  const seasonLabel = seasonKey === "Kharif" ? t("common", "kharif") : seasonKey === "Rabi" ? t("common", "rabi") : seasonKey === "Summer" ? t("common", "summer") : (item.season ?? "");
+  const seasonIcon = SEASON_ICONS[seasonKey] ?? "🌾";
+  const statusStyle = STATUS_STYLE[item.status ?? "Active"] ?? STATUS_STYLE.Active;
+  const statusLabel = item.status === "Active" ? t("common", "statusActive") : item.status === "Harvested" ? t("common", "statusHarvested") : t("common", "statusClosed");
   const [cropPale, cropColor] = getCropColors(item.cropName);
 
   return (
@@ -177,7 +179,7 @@ function CropCard({
             onPress={() => { closeSwipe(); onHarvest(item._id); }}
           >
             <Ionicons name="leaf" size={20} color="#fff" />
-            <Text style={styles.swipeBtnText}>લણણી</Text>
+            <Text style={styles.swipeBtnText}>{t("crop", "harvest")}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -190,7 +192,7 @@ function CropCard({
             }}
           >
             <Ionicons name="swap-horizontal" size={20} color="#fff" />
-            <Text style={styles.swipeBtnText}>સ્ટેટ</Text>
+            <Text style={styles.swipeBtnText}>{t("crop", "statusShort")}</Text>
           </TouchableOpacity>
         )}
 
@@ -199,7 +201,7 @@ function CropCard({
           onPress={() => { closeSwipe(); router.push(`/crop/edit-crop?id=${item._id}` as any); }}
         >
           <Ionicons name="create-outline" size={20} color="#fff" />
-          <Text style={styles.swipeBtnText}>ફેરફાર</Text>
+          <Text style={styles.swipeBtnText}>{t("crop", "edit")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -207,7 +209,7 @@ function CropCard({
           onPress={() => { closeSwipe(); onDelete(item._id); }}
         >
           <Ionicons name="trash-outline" size={20} color="#fff" />
-          <Text style={styles.swipeBtnText}>કાઢો</Text>
+          <Text style={styles.swipeBtnText}>{t("crop", "delete")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -227,7 +229,7 @@ function CropCard({
             </View>
 
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.cropName}>{cropDisplayName(item.cropName)}</Text>
+              <Text style={styles.cropName}>{cropDisplayName(item.cropName, t)}</Text>
 
               {/* subType + batchLabel — NEW fields shown here */}
               {(item.subType || item.batchLabel) ? (
@@ -241,7 +243,7 @@ function CropCard({
               <View style={styles.tagsRow}>
                 <View style={[styles.tag, { backgroundColor: cropPale }]}>
                   <Text style={[styles.tagText, { color: cropColor }]}>
-                    {season.icon} {season.label}
+                    {seasonIcon} {seasonLabel}
                   </Text>
                 </View>
 
@@ -249,7 +251,7 @@ function CropCard({
                 {item.year ? (
                   <View style={[styles.tag, { backgroundColor: C.green50 }]}>
                     <Text style={[styles.tagText, { color: C.green700 }]}>
-                      📅 {item.year}
+                      {item.year}
                     </Text>
                   </View>
                 ) : null}
@@ -257,14 +259,14 @@ function CropCard({
                 {item.landType === "bhagma" && item.bhagmaPercentage != null && (
                   <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
                     <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
-                      ભાગમા {item.bhagmaPercentage}%
+                      {tParam("dashboard", "bhagmaPct", { pct: item.bhagmaPercentage ?? 0 })}
                     </Text>
                   </View>
                 )}
-                <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-                  <View style={[styles.statusDot, { backgroundColor: status.dot }]} />
-                  <Text style={[styles.statusText, { color: status.text }]}>
-                    {status.label}
+                <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                  <View style={[styles.statusDot, { backgroundColor: statusStyle.dot }]} />
+                  <Text style={[styles.statusText, { color: statusStyle.text }]}>
+                    {statusLabel}
                   </Text>
                 </View>
               </View>
@@ -289,9 +291,9 @@ function CropCard({
                   style={[styles.dropMenuItem, item.status === s && styles.dropMenuItemActive]}
                   onPress={() => { toggleMenu(); onStatusChange(item._id, s); }}
                 >
-                  <View style={[styles.statusDot, { backgroundColor: STATUS_META[s].dot }]} />
+                  <View style={[styles.statusDot, { backgroundColor: STATUS_STYLE[s].dot }]} />
                   <Text style={[styles.dropMenuText, item.status === s && { color: C.green700, fontWeight: "700" }]}>
-                    {STATUS_META[s].label}
+                    {s === "Active" ? t("common", "statusActive") : s === "Harvested" ? t("common", "statusHarvested") : t("common", "statusClosed")}
                   </Text>
                   {item.status === s && (
                     <Ionicons name="checkmark" size={14} color={C.green700} style={{ marginLeft: "auto" }} />
@@ -309,7 +311,7 @@ function CropCard({
                   >
                     <Ionicons name="leaf-outline" size={14} color="#B45309" />
                     <Text style={[styles.dropMenuText, { color: "#B45309" }]}>
-                      લણણી + ઉત્પાદન નોંધો
+                      {t("crop", "harvestAndYield")}
                     </Text>
                   </TouchableOpacity>
                 </>
@@ -321,14 +323,14 @@ function CropCard({
                 onPress={() => { toggleMenu(); router.push(`/crop/edit-crop?id=${item._id}` as any); }}
               >
                 <Ionicons name="create-outline" size={14} color={C.textSecondary} />
-                <Text style={styles.dropMenuText}>ફેરફાર કરો</Text>
+                <Text style={styles.dropMenuText}>{t("crop", "editCrop")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.dropMenuItem}
                 onPress={() => { toggleMenu(); onDelete(item._id); }}
               >
                 <Ionicons name="trash-outline" size={14} color={C.expense} />
-                <Text style={[styles.dropMenuText, { color: C.expense }]}>કાઢી નાખો</Text>
+                <Text style={[styles.dropMenuText, { color: C.expense }]}>{t("crop", "deleteCrop")}</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -347,7 +349,7 @@ function CropCard({
               <View style={styles.footerItem}>
                 <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
                 <Text style={styles.footerText}>
-                  વાવણી: {new Date(item.sowingDate).toLocaleDateString("gu-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  {t("crop", "sowingLabel")}: {new Date(item.sowingDate).toLocaleDateString("gu-IN", { day: "numeric", month: "short", year: "numeric" })}
                 </Text>
               </View>
             ) : null}
@@ -357,7 +359,7 @@ function CropCard({
               <View style={styles.footerItem}>
                 <Ionicons name="leaf-outline" size={13} color="#B45309" />
                 <Text style={[styles.footerText, { color: "#B45309" }]}>
-                  લણણી: {new Date(item.harvestDate).toLocaleDateString("gu-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  {t("crop", "harvestDateLabel")}: {new Date(item.harvestDate).toLocaleDateString("gu-IN", { day: "numeric", month: "short", year: "numeric" })}
                 </Text>
               </View>
             ) : null}
@@ -372,7 +374,7 @@ function CropCard({
             {index === 0 && !swiped && (
               <View style={styles.swipeHint}>
                 <Ionicons name="chevron-back" size={10} color={C.green100} />
-                <Text style={styles.swipeHintText}>← સ્વાઈપ કરો</Text>
+                <Text style={styles.swipeHintText}>← {t("crop", "swipeHint")}</Text>
               </View>
             )}
           </View>
@@ -388,13 +390,15 @@ const YEAR_OPTIONS = getFinancialYearOptions();
 function YearFilter({
   selectedYear,
   onSelectYear,
+  t,
 }: {
   selectedYear: string;
   onSelectYear: (y: string) => void;
+  t: (s: string, k: string) => string;
 }) {
   return (
     <View style={styles.yearFilterWrap}>
-      <Text style={styles.yearFilterLabel}>📅 વર્ષ (જૂન – જૂન)</Text>
+      <Text style={styles.yearFilterLabel}>{t("crop", "yearFilterLabel")}</Text>
       <View style={styles.yearRow}>
         {YEAR_OPTIONS.map((y) => (
           <TouchableOpacity
@@ -426,7 +430,7 @@ function YearFilter({
   );
 }
 
-// ─── Stats header (સક્રિય, લણણી, બંધ are clickable filters) ───────────────────
+// ─── Stats header (status filters + total bigha) ───────────────────────────────
 function StatsBar({
   crops,
   filteredCrops,
@@ -435,16 +439,18 @@ function StatsBar({
   totalLandBigha,
   activeFilter,
   onFilterChange,
+  t,
+  tParam,
 }: {
   crops: Crop[];
-  /** Crops after status filter — કુલ વીઘા is sum of these only (not all) */
   filteredCrops: Crop[];
   selectedYear: string;
   onSelectYear: (y: string) => void;
-  /** User's total land in bigha (from profile) — for fill % */
   totalLandBigha: number;
   activeFilter: string;
   onFilterChange: (k: string) => void;
+  t: (s: string, k: string) => string;
+  tParam: (s: string, k: string, p: Record<string, string | number>) => string;
 }) {
   const active = crops.filter((c) => c.status === "Active").length;
   const harvested = crops.filter((c) => c.status === "Harvested").length;
@@ -481,27 +487,21 @@ function StatsBar({
           </TouchableOpacity>
           <View style={styles.statsTitleRow}>
             <View>
-              <Text style={styles.statsGreeting}>🌾 મારી પાક સૂચિ</Text>
+              <Text style={styles.statsGreeting}>🌾 {t("crop", "myCropListTitle")}</Text>
               <Text style={styles.statsSubtitle}>
-                {crops.length} પાક · {selectedYear}
+                {tParam("crop", "cropsCount", { count: crops.length, year: selectedYear })}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.statsAddBtn}
-              onPress={() => router.push("/crop/add-crop")}
-            >
-              <Ionicons name="add" size={20} color={C.green700} />
-            </TouchableOpacity>
           </View>
         </View>
 
-        <YearFilter selectedYear={selectedYear} onSelectYear={onSelectYear} />
+        <YearFilter selectedYear={selectedYear} onSelectYear={onSelectYear} t={t} />
 
         <View style={styles.statsGrid}>
           {[
-            { key: "Active", label: "સક્રિય", value: active, color: ACTIVE_COLOR, bg: ACTIVE_PALE, icon: "leaf-outline" as const },
-            { key: "Harvested", label: "લણણી", value: harvested, color: "#B45309", bg: "#FEF3C7", icon: "checkmark-circle-outline" as const },
-            { key: "Closed", label: "બંધ", value: closed, color: C.expense, bg: C.expensePale, icon: "close-circle-outline" as const },
+            { key: "Active", labelKey: "statusActive", value: active, color: ACTIVE_COLOR, bg: ACTIVE_PALE, icon: "leaf-outline" as const },
+            { key: "Harvested", labelKey: "statusHarvested", value: harvested, color: "#B45309", bg: "#FEF3C7", icon: "checkmark-circle-outline" as const },
+            { key: "Closed", labelKey: "statusClosed", value: closed, color: C.expense, bg: C.expensePale, icon: "close-circle-outline" as const },
           ].map((s) => {
             const isActive = activeFilter === s.key;
             return (
@@ -515,11 +515,11 @@ function StatsBar({
                 onPress={() => onFilterChange(s.key)}
                 activeOpacity={0.8}
               >
-                <Ionicons name={s.icon} size={16} color={s.color} style={{ marginBottom: 4 }} />
+                <Ionicons name={s.icon} size={20} color={s.color} style={{ marginBottom: 4 }} />
                 <Text style={[styles.statValue, { color: s.color }]}>
                   {typeof s.value === "number" && s.value % 1 !== 0 ? s.value.toFixed(1) : s.value}
                 </Text>
-                <Text style={styles.statLabel}>{s.label}</Text>
+                <Text style={styles.statLabel}>{t("common", s.labelKey)}</Text>
               </TouchableOpacity>
             );
           })}
@@ -539,7 +539,7 @@ function StatsBar({
               <Text style={[styles.statValueBigha, { color: C.green700 }]}>
                 {Math.round(usedBigha)}
               </Text>
-              <Text style={styles.statLabelBigha}>કુલ વીઘા</Text>
+              <Text style={styles.statLabelBigha}>{t("crop", "totalBigha")}</Text>
             </View>
           </View>
         </View>
@@ -553,27 +553,30 @@ function FilterTabs({
   active,
   onChange,
   counts,
+  t,
 }: {
   active: string;
   onChange: (k: string) => void;
   counts: Record<string, number>;
+  t: (s: string, k: string) => string;
 }) {
+  const tabs = getFilterTabs(t);
   return (
     <View style={styles.filterRow}>
-      {FILTER_TABS.map((t) => (
+      {tabs.map((tab) => (
         <TouchableOpacity
-          key={t.key}
-          style={[styles.filterTab, active === t.key && styles.filterTabActive]}
-          onPress={() => onChange(t.key)}
+          key={tab.key}
+          style={[styles.filterTab, active === tab.key && styles.filterTabActive]}
+          onPress={() => onChange(tab.key)}
           activeOpacity={0.75}
         >
-          <Text style={[styles.filterTabText, active === t.key && styles.filterTabTextActive]}>
-            {t.label}
+          <Text style={[styles.filterTabText, active === tab.key && styles.filterTabTextActive]}>
+            {tab.label}
           </Text>
-          {counts[t.key] !== undefined && (
-            <View style={[styles.filterBadge, active === t.key && styles.filterBadgeActive]}>
-              <Text style={[styles.filterBadgeText, active === t.key && { color: "#fff" }]}>
-                {counts[t.key]}
+          {counts[tab.key] !== undefined && (
+            <View style={[styles.filterBadge, active === tab.key && styles.filterBadgeActive]}>
+              <Text style={[styles.filterBadgeText, active === tab.key && { color: "#fff" }]}>
+                {counts[tab.key]}
               </Text>
             </View>
           )}
@@ -584,11 +587,13 @@ function FilterTabs({
 }
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
-function EmptyState({ filter }: { filter: string }) {
+function EmptyState({ filter, t, tParam }: { filter: string; t: (s: string, k: string) => string; tParam: (s: string, k: string, p: Record<string, string | number>) => string }) {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(anim, { toValue: 1, useNativeDriver: true }).start();
   }, []);
+  const tabs = getFilterTabs(t);
+  const filterLabel = tabs.find((f) => f.key === filter)?.label ?? filter;
   return (
     <Animated.View style={[styles.empty, { opacity: anim, transform: [{ scale: anim }] }]}>
       <View style={styles.emptyIconWrap}>
@@ -596,13 +601,13 @@ function EmptyState({ filter }: { filter: string }) {
       </View>
       <Text style={styles.emptyTitle}>
         {filter === "Active"
-          ? "કોઈ સક્રિય પાક નથી"
-          : `${FILTER_TABS.find((f) => f.key === filter)?.label} પાક નથી`}
+          ? t("crop", "noActiveCrops")
+          : tParam("crop", "noCropsInFilter", { filter: filterLabel })}
       </Text>
       <Text style={styles.emptyDesc}>
         {filter === "Active"
-          ? "નવો પાક ઉમેરવા + બટન દબાવો"
-          : "ફિલ્ટર બદલો અથવા નવો પાક ઉમેરો"}
+          ? t("crop", "addCropBelow")
+          : t("crop", "filterOrAdd")}
       </Text>
       {filter === "Active" && (
         <TouchableOpacity
@@ -610,7 +615,7 @@ function EmptyState({ filter }: { filter: string }) {
           onPress={() => router.push("/crop/add-crop")}
         >
           <Ionicons name="add-circle-outline" size={16} color={C.green700} />
-          <Text style={styles.emptyBtnText}>નવો પાક ઉમેરો</Text>
+          <Text style={styles.emptyBtnText}>{t("crop", "addNewCropBtn")}</Text>
         </TouchableOpacity>
       )}
     </Animated.View>
@@ -619,6 +624,7 @@ function EmptyState({ filter }: { filter: string }) {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function CropScreen() {
+  const { t, tParam } = useLanguage();
   const { profile, setProfile } = useProfile();
   const { transactionsRefreshKey } = useRefresh();
   const [crops, setCrops] = useState<Crop[]>([]);
@@ -639,12 +645,12 @@ export default function CropScreen() {
       const res = await getCrops(1, 200, undefined, undefined, selectedYear);
       setCrops(res.data);
     } catch (err: any) {
-      Alert.alert("ભૂલ", err.message);
+      Alert.alert(t("common", "error"), err.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedYear]);
+  }, [selectedYear, t]);
 
   useEffect(() => {
     setLoading(true);
@@ -658,17 +664,17 @@ export default function CropScreen() {
 
   // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = (id: string) => {
-    Alert.alert("ખાતરી કરો", "શું તમે આ પાક કાઢવા માંગો છો?\nબધા સંબંધિત ખર્ચ અને આવક પણ કાઢવામાં આવશે.", [
-      { text: "રદ કરો", style: "cancel" },
+    Alert.alert(t("crop", "confirmDelete"), t("crop", "confirmDeleteMsg"), [
+      { text: t("crop", "cancel"), style: "cancel" },
       {
-        text: "કાઢી નાખો",
+        text: t("crop", "deleteConfirm"),
         style: "destructive",
         onPress: async () => {
           try {
             await deleteCrop(id);
             setCrops((prev) => prev.filter((c) => c._id !== id));
           } catch (err: any) {
-            Alert.alert("ભૂલ", err.message);
+            Alert.alert(t("common", "error"), err.message);
           }
         },
       },
@@ -681,7 +687,7 @@ export default function CropScreen() {
       const updated = await updateCropStatus(id, status);
       setCrops((prev) => prev.map((c) => (c._id === id ? { ...c, ...updated } : c)));
     } catch (err: any) {
-      Alert.alert("ભૂલ", err.message);
+      Alert.alert(t("common", "error"), err.message);
     }
   };
 
@@ -697,7 +703,7 @@ export default function CropScreen() {
         ),
       );
     } catch (err: any) {
-      Alert.alert("ભૂલ", err.message);
+      Alert.alert(t("common", "error"), err.message);
     }
   };
 
@@ -714,7 +720,7 @@ export default function CropScreen() {
       <View style={styles.loaderWrap}>
         <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
         <ActivityIndicator size="large" color={C.green700} />
-        <Text style={styles.loadingText}>પાક લોડ થઈ રહ્યો છે...</Text>
+        <Text style={styles.loadingText}>{t("crop", "loadingCrops")}</Text>
       </View>
     );
   }
@@ -731,10 +737,12 @@ export default function CropScreen() {
           totalLandBigha={totalLandBigha}
           activeFilter={filter}
           onFilterChange={setFilter}
+          t={t}
+          tParam={tParam}
         />
 
       {filtered.length === 0 ? (
-            <EmptyState filter={filter} />
+            <EmptyState filter={filter} t={t} tParam={tParam} />
           ) : (
             <FlatList
               data={filtered}
@@ -743,6 +751,8 @@ export default function CropScreen() {
                 <CropCard
                   item={item}
                   index={index}
+                  t={t}
+                  tParam={tParam}
                   onDelete={handleDelete}
                   onStatusChange={handleStatusChange}
                   onHarvest={handleHarvest}
@@ -761,21 +771,6 @@ export default function CropScreen() {
             />
           )}
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push("/crop/add-crop")}
-        activeOpacity={0.85}
-      >
-        <LinearGradient
-          colors={[C.green700, C.green500]}
-          style={styles.fabGrad}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Ionicons name="add" size={28} color="#fff" />
-        </LinearGradient>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -823,7 +818,7 @@ const styles = StyleSheet.create({
   statsGreeting: { fontSize: 21, fontWeight: "800", color: C.textPrimary },
   statsSubtitle: { fontSize: 15, color: C.textMuted, marginTop: 3, fontWeight: "700" },
   yearFilterWrap: { marginBottom: 16 },
-  yearFilterLabel: { fontSize: 15, fontWeight: "700", color: C.textSecondary, marginBottom: 8 },
+  yearFilterLabel: { fontSize: 18, fontWeight: "700", color: C.textSecondary, marginBottom: 8 },
   yearRow: { flexDirection: "row", gap: 10 },
   yearChip: {
     flex: 1,
@@ -837,13 +832,8 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
   },
   yearChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
-  yearChipText: { fontSize: 16, fontWeight: "700", color: C.textMuted },
+  yearChipText: { fontSize: 19, fontWeight: "700", color: C.textMuted },
   yearChipTextActive: { color: C.green700 },
-  statsAddBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: C.green50, borderWidth: 1.5, borderColor: C.green100,
-    justifyContent: "center", alignItems: "center",
-  },
   statsGrid: { flexDirection: "row", gap: 8 },
   statBox: {
     flex: 1, borderRadius: 14, padding: 12, alignItems: "center",
@@ -853,8 +843,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: C.green700,
   },
-  statValue: { fontSize: 20, fontWeight: "900", marginBottom: 2 },
-  statLabel: { fontSize: 12, color: C.textMuted, fontWeight: "700", textAlign: "center" },
+  statValue: { fontSize: 24, fontWeight: "900", marginBottom: 2 },
+  statLabel: { fontSize: 15, color: C.textMuted, fontWeight: "700", textAlign: "center" },
   statBoxBigha: { alignItems: "flex-start" },
   statBoxBighaOuter: {
     position: "relative",
@@ -899,7 +889,7 @@ const styles = StyleSheet.create({
   filterBadgeActive: { backgroundColor: C.green700 },
   filterBadgeText: { fontSize: 11, fontWeight: "700", color: C.textMuted },
 
-  listContent: { padding: 14, paddingBottom: 110 },
+  listContent: { padding: 14, paddingBottom: 24 },
 
   cardWrapper: { marginBottom: 12 },
   swipeActions: {
@@ -924,7 +914,7 @@ const styles = StyleSheet.create({
   cropSubInfo: { fontSize: 15, color: C.textSecondary, fontWeight: "700", marginBottom: 5 },
   tagsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  tagText: { fontSize: 13, fontWeight: "700" },
+  tagText: { fontSize: 16, fontWeight: "700" },
   bhagmaBadge: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
@@ -988,10 +978,4 @@ const styles = StyleSheet.create({
   },
   emptyBtnText: { fontSize: 17, fontWeight: "800", color: "#5D4037" },
 
-  fab: {
-    position: "absolute", bottom: 28, right: 20, borderRadius: 20, overflow: "hidden",
-    shadowColor: C.green700, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
-  },
-  fabGrad: { width: 58, height: 58, justifyContent: "center", alignItems: "center" },
 });

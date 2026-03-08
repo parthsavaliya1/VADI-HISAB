@@ -15,8 +15,8 @@ import {
   type Income,
   type IncomeCategory,
 } from "@/utils/api";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -191,22 +191,9 @@ export default function TransactionDetailsScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
-      <LinearGradient
-        colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]}
-        style={[styles.header, { paddingTop }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.decorCircle1} />
-        <View style={styles.decorCircle2} />
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.headerBackBtn} onPress={() => router.back()} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={20} color={C.green700} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>વ્યવહાર વિગત</Text>
-          <View style={{ width: 36 }} />
-        </View>
-      </LinearGradient>
+      <View style={[styles.headerWrap, { backgroundColor: C.bg }]}>
+        <ScreenHeader title="વ્યવહાર વિગત" style={{ marginBottom: 0, backgroundColor: C.bg }} />
+      </View>
 
       <ScrollView
         style={styles.scroll}
@@ -378,47 +365,7 @@ const styles = StyleSheet.create({
   },
   backBtnText: { fontSize: 16, fontWeight: "700", color: C.green700 },
 
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderLight,
-    overflow: "hidden",
-  },
-  decorCircle1: {
-    position: "absolute",
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: C.green100 + "80",
-    top: -40,
-    right: -30,
-  },
-  decorCircle2: {
-    position: "absolute",
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: C.green100 + "50",
-    bottom: 8,
-    left: 16,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerBackBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: C.green50,
-    borderWidth: 1,
-    borderColor: C.green100,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
+  headerWrap: { borderBottomWidth: 1, borderBottomColor: C.borderLight },
 
   scroll: { flex: 1, backgroundColor: C.bg },
   scrollContent: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 24, flexGrow: 1 },

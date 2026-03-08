@@ -714,7 +714,7 @@ export default function AddCrop() {
                 <Text style={styles.stepDesc}>પાક ક્યા વર્ષ અને સિઝનનો છે? (જૂન થી જૂન)</Text>
 
                 {/* Financial year selector — 2025-26 = June 2025 to May 2026 */}
-                <Text style={styles.fieldLabel}>📅 વર્ષ (જૂન – જૂન)</Text>
+                <Text style={styles.fieldLabel}>વર્ષ (જૂન – જૂન)</Text>
                 <View style={styles.yearRow}>
                   {YEAR_OPTIONS.map((y) => (
                     <TouchableOpacity
@@ -1415,7 +1415,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
   },
   yearChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
-  yearChipText: { fontSize: 16, fontWeight: "700", color: C.textMuted },
+  yearChipText: { fontSize: 19, fontWeight: "700", color: C.textMuted },
   yearChipTextActive: { color: C.green700 },
 
   // Step 0 seasonal screen wrapper

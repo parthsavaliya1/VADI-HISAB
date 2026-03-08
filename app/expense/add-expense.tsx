@@ -796,7 +796,7 @@ export default function AddExpense() {
         {/* ── Financial year selector only for general expense; for crop expense year comes from crop ── */}
         {isGeneralExpense ? (
           <View style={styles.yearCard}>
-            <Text style={styles.yearLabel}>📅 વર્ષ પસંદ કરો (જૂન–મે)</Text>
+            <Text style={styles.yearLabel}>વર્ષ પસંદ કરો (જૂન–મે)</Text>
             <View style={styles.yearRow}>
               {yearOptions.map((fy) => {
                 const active = selectedFinancialYear === fy;
@@ -815,7 +815,7 @@ export default function AddExpense() {
           </View>
         ) : isCropExpense && selectedCrop?.year ? (
           <View style={styles.yearCard}>
-            <Text style={styles.yearLabel}>📅 પાકનું વર્ષ (જૂન–મે)</Text>
+            <Text style={styles.yearLabel}>પાકનું વર્ષ (જૂન–મે)</Text>
             <Text style={styles.cropYearText}>{selectedCrop.year}</Text>
           </View>
         ) : null}
@@ -1437,7 +1437,7 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
   },
   yearLabel: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: "700",
     color: C.textMuted,
     marginBottom: 10,
@@ -1460,7 +1460,7 @@ const styles = StyleSheet.create({
     borderColor: C.green700,
   },
   yearPillText: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: "700",
     color: C.textSecondary,
   },

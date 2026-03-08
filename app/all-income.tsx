@@ -1,3 +1,4 @@
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getCrops,
@@ -198,12 +199,8 @@ export default function AllIncomeScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color={C.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>💰 બધી આવક</Text>
-        <View style={styles.backBtn} />
+      <View style={styles.headerWrap}>
+        <ScreenHeader title="💰 બધી આવક" style={{ marginBottom: 0, backgroundColor: C.bg }} />
       </View>
 
       {/* Financial year filter */}
@@ -273,23 +270,11 @@ export default function AllIncomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 54,
-    paddingBottom: 14,
-    backgroundColor: C.bg,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderLight,
-  },
-  backBtn: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
-  headerTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary },
+  headerWrap: { backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.borderLight },
   loadWrap: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   loadText: { fontSize: 16, color: C.textMuted, fontWeight: "600" },
   yearFilterWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  yearFilterLabel: { fontSize: 14, fontWeight: "700", color: C.textMuted, marginBottom: 8 },
+  yearFilterLabel: { fontSize: 18, fontWeight: "700", color: C.textMuted, marginBottom: 8 },
   yearChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   yearChip: {
     paddingHorizontal: 14,
@@ -300,7 +285,7 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
   },
   yearChipActive: { borderColor: C.green700, backgroundColor: C.incomePale },
-  yearChipText: { fontSize: 14, fontWeight: "700", color: C.textMuted },
+  yearChipText: { fontSize: 18, fontWeight: "700", color: C.textMuted },
   yearChipTextActive: { color: C.green700, fontWeight: "800" },
   totalBar: {
     flexDirection: "row",
