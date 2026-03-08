@@ -6,11 +6,13 @@ import {
 } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -104,8 +106,15 @@ export default function ReportScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <Text style={styles.headerTitle}>📊 અહેવાલ</Text>
-        <Text style={styles.headerSub}>વાર્ષિક આવક-ખર્ચ સારાંશ</Text>
+        <View style={styles.headerRow}>
+          <Pressable style={styles.backBtn} onPress={() => router.back()} android_ripple={{ color: "rgba(0,0,0,0.1)" }}>
+            <Ionicons name="arrow-back" size={24} color={C.textPrimary} />
+          </Pressable>
+          <View style={styles.headerTitles}>
+            <Text style={styles.headerTitle}>📊 અહેવાલ</Text>
+            <Text style={styles.headerSub}>વાર્ષિક આવક-ખર્ચ સારાંશ</Text>
+          </View>
+        </View>
 
         <View style={styles.yearRow}>
           {years.map((y) => (
@@ -200,6 +209,9 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
     marginBottom: 16,
   },
+  headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center", marginRight: 12 },
+  headerTitles: { flex: 1 },
   headerTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary },
   headerSub: { fontSize: 16, color: C.textMuted, marginTop: 4, fontWeight: "600" },
   yearRow: { flexDirection: "row", gap: 10, marginTop: 16 },

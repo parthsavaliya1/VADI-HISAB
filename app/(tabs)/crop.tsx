@@ -462,19 +462,24 @@ function StatsBar({
         <View style={styles.decorCircle1} />
         <View style={styles.decorCircle2} />
 
-        <View style={styles.statsTitleRow}>
-          <View>
-            <Text style={styles.statsGreeting}>🌾 મારી પાક સૂચિ</Text>
-            <Text style={styles.statsSubtitle}>
-              {crops.length} પાક · {selectedYear}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.statsAddBtn}
-            onPress={() => router.push("/crop/add-crop")}
-          >
-            <Ionicons name="add" size={20} color={C.green700} />
+        <View style={styles.statsHeaderRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={24} color={C.textPrimary} />
           </TouchableOpacity>
+          <View style={styles.statsTitleRow}>
+            <View>
+              <Text style={styles.statsGreeting}>🌾 મારી પાક સૂચિ</Text>
+              <Text style={styles.statsSubtitle}>
+                {crops.length} પાક · {selectedYear}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.statsAddBtn}
+              onPress={() => router.push("/crop/add-crop")}
+            >
+              <Ionicons name="add" size={20} color={C.green700} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <YearFilter selectedYear={selectedYear} onSelectYear={onSelectYear} />
@@ -925,9 +930,24 @@ const styles = StyleSheet.create({
     position: "absolute", width: 90, height: 90, borderRadius: 45,
     backgroundColor: "#C8E6C950", bottom: 8, left: 16,
   },
+  statsHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
   statsTitleRow: {
-    flexDirection: "row", justifyContent: "space-between",
-    alignItems: "flex-start", marginBottom: 16,
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   statsGreeting: { fontSize: 21, fontWeight: "800", color: C.textPrimary },
   statsSubtitle: { fontSize: 15, color: C.textMuted, marginTop: 3, fontWeight: "700" },
