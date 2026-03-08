@@ -131,7 +131,7 @@ interface IncomeDocument {
 // 🗂️ Static data
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const CATEGORIES: { value: IncomeCategory; label: string; emoji: string }[] = [
-  { value: "Crop Sale", label: "પાક વેચાણ", emoji: "🌾" },
+  { value: "Crop Sale", label: "આવક", emoji: "🌾" },
   { value: "Subsidy", label: "સબસિડી", emoji: "🏛️" },
   { value: "Rental Income", label: "ભાડાની આવક", emoji: "🚜" },
   { value: "Other", label: "અન્ય", emoji: "💼" },
@@ -164,12 +164,20 @@ const ASSET_TYPES = [
 ];
 
 const OTHER_SOURCES = [
+  "ભુકો",
   "મજૂરી",
   "પશુ-પાલન",
   "ડેરી",
   "અંશ-સમય કામ",
   "લોન",
   "અન્ય",
+];
+
+// સામાન્ય આવક: પશુપાલન, ડેરી, અન્ય (manual type)
+const GENERAL_INCOME_OPTIONS: { value: "pasupan" | "deri" | "other"; label: string; emoji: string }[] = [
+  { value: "pasupan", label: "પશુપાલન", emoji: "🐄" },
+  { value: "deri", label: "ડેરી", emoji: "🥛" },
+  { value: "other", label: "અન્ય", emoji: "✏️" },
 ];
 
 const BAJAR_OPTIONS = [
@@ -515,28 +523,12 @@ function SubsidyForm({
   const set = (k: keyof SubsidyData, v: string) =>
     onChange({ ...data, [k]: v });
   return (
-    <>
-      <View style={styles.fieldWrap}>
-        <FieldLabel text="યોજનાનો પ્રકાર *" />
-        <ChipPicker
-          options={SCHEME_TYPES}
-          value={data.schemeType}
-          onChange={(v) => set("schemeType", v)}
-        />
-      </View>
-      <NumField
-        label="રકમ *"
-        value={data.amount}
-        onChange={(v) => set("amount", v)}
-        suffix=""
-      />
-      <TxtField
-        label="સંદર્ભ નંબર"
-        value={data.referenceNumber}
-        onChange={(v) => set("referenceNumber", v)}
-        placeholder="વૈકલ્પિક"
-      />
-    </>
+    <NumField
+      label="રકમ *"
+      value={data.amount}
+      onChange={(v) => set("amount", v)}
+      suffix=""
+    />
   );
 }
 
@@ -621,12 +613,6 @@ function OtherIncomeForm({
         onChange={(v) => set("amount", v)}
         suffix=""
       />
-      <TxtField
-        label="વિગત"
-        value={data.description}
-        onChange={(v) => set("description", v)}
-        placeholder="વૈકલ્પિક"
-      />
     </>
   );
 }
@@ -652,6 +638,7 @@ export default function AddIncomeScreen() {
   const [selectedCropId, setSelectedCropId] = useState<string>("");
 
   // General income = only "Other" (no category picker). Crop from dashboard = hide Rental Income; else all.
+  // Crop income: વેચાણ, સબસિડી, ભુકો (Crop Sale, Subsidy, Other). General: only Other.
   const visibleCategories = useMemo(() => {
     if (isGeneralIncome) return [CATEGORIES.find((c) => c.value === "Other")!].filter(Boolean);
     if (cropIdParam) return CATEGORIES.filter((c) => c.value !== "Rental Income");
@@ -662,7 +649,7 @@ export default function AddIncomeScreen() {
   const [subData, setSubData] = useState<SubFormData>(
     DEFAULT_DATA["Crop Sale"],
   );
-  const [date, setDate] = useState<Date>(() => new Date());
+  const [date, setDate] = useState<Date | null>(null);
   const effectiveCropId = selectedCropId || cropIdParam || null;
   const selectedCrop = crops.find((c) => c._id === effectiveCropId);
   const hasCropSelected = !!effectiveCropId && !isGeneralIncome;
@@ -672,6 +659,11 @@ export default function AddIncomeScreen() {
       setDate(financialYearToStartDate(selectedFinancialYear));
     }
   }, [selectedFinancialYear, isEdit, isGeneralIncome]);
+
+  // સામાન્ય આવક & વેચાણ આવક (new entry): use default date of entry (today). No date picker shown. When editing, use saved date.
+  const effectiveDate = !isEdit && (isGeneralIncome || hasCropSelected)
+    ? new Date()
+    : (date ?? financialYearToStartDate(getCurrentFinancialYear()));
 
   // Fetch crops when adding income linked to a crop (not general, not edit)
   useEffect(() => {
@@ -707,6 +699,7 @@ export default function AddIncomeScreen() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetchingEdit, setFetchingEdit] = useState(isEdit);
+  const [generalIncomeType, setGeneralIncomeType] = useState<"pasupan" | "deri" | "other" | null>(null);
 
   // ── Fetch existing income when editing ─────────────────────────────────────
   useEffect(() => {
@@ -734,6 +727,12 @@ export default function AddIncomeScreen() {
         }
 
         setSubData(stringified);
+        if (isGeneralIncome && doc.category === "Other" && doc.otherIncome?.source) {
+          const src = String(doc.otherIncome.source);
+          if (src === "પશુપાલન") setGeneralIncomeType("pasupan");
+          else if (src === "ડેરી") setGeneralIncomeType("deri");
+          else setGeneralIncomeType("other");
+        }
       } catch (err) {
         Alert.alert("ભૂલ", (err as Error).message ?? "ડેટા લોડ ન થઈ શક્યો");
         router.back();
@@ -746,7 +745,11 @@ export default function AddIncomeScreen() {
   // ── Category change ─────────────────────────────────────────────────────────
   const handleCategoryChange = (cat: IncomeCategory) => {
     setCategory(cat);
-    setSubData({ ...DEFAULT_DATA[cat] });
+    if (cat === "Other" && hasCropSelected) {
+      setSubData({ ...DEFAULT_DATA["Other"], source: "ભુકો" });
+    } else {
+      setSubData({ ...DEFAULT_DATA[cat] });
+    }
   };
 
   // ── Date picker ─────────────────────────────────────────────────────────────
@@ -769,7 +772,6 @@ export default function AddIncomeScreen() {
     }
     if (category === "Subsidy") {
       const d = subData as SubsidyData;
-      if (!d.schemeType) return "યોજનાનો પ્રકાર પસંદ કરો";
       if (!d.amount || parseFloat(d.amount) <= 0) return "માન્ય રકમ દાખલ કરો";
     }
     if (category === "Rental Income") {
@@ -782,8 +784,16 @@ export default function AddIncomeScreen() {
     }
     if (category === "Other") {
       const d = subData as OtherIncomeData;
-      if (!d.source) return "સ્રોત પસંદ કરો";
-      if (!d.amount || parseFloat(d.amount) <= 0) return "માન્ય રકમ દાખલ કરો";
+      if (hasCropSelected) {
+        if (!d.amount || parseFloat(d.amount) <= 0) return "માન્ય રકમ દાખલ કરો";
+      } else if (isGeneralIncome) {
+        if (generalIncomeType === null) return "પ્રકાર પસંદ કરો (પશુપાલન, ડેરી અથવા અન્ય)";
+        if (!d.amount || parseFloat(d.amount) <= 0) return "માન્ય રકમ દાખલ કરો";
+        if (generalIncomeType === "other" && !d.source?.trim()) return "આવકનો પ્રકાર ટાઈપ કરો";
+      } else {
+        if (!d.source) return "સ્રોત પસંદ કરો";
+        if (!d.amount || parseFloat(d.amount) <= 0) return "માન્ય રકમ દાખલ કરો";
+      }
     }
     return null;
   };
@@ -818,10 +828,20 @@ export default function AddIncomeScreen() {
       }
     }
 
+    if (fieldKey === "otherIncome" && hasCropSelected) {
+      parsed.source = "ભુકો";
+    }
+    if (fieldKey === "otherIncome" && isGeneralIncome && generalIncomeType) {
+      parsed.source = generalIncomeType === "pasupan" ? "પશુપાલન" : generalIncomeType === "deri" ? "ડેરી" : (parsed.source != null ? String(parsed.source) : (subData as OtherIncomeData).source?.trim() || "અન્ય");
+    }
+    if (fieldKey === "subsidy") {
+      if (!parsed.schemeType || parsed.schemeType === "") parsed.schemeType = "સબસિડી";
+    }
+
     const effectiveCropId = isGeneralIncome ? undefined : (selectedCropId || cropIdParam || undefined);
     return {
       category,
-      date: date.toISOString(),
+      date: effectiveDate.toISOString(),
       notes,
       ...(effectiveCropId ? { cropId: effectiveCropId } : {}),
       [fieldKey]: parsed,
@@ -868,8 +888,19 @@ export default function AddIncomeScreen() {
   const activeCat = CATEGORIES.find((c) => c.value === category)!;
 
   const headerPaddingTop = Platform.OS === "ios" ? 52 : 40;
-  const headerTitle = isEdit ? "આવક સુધારો" : isGeneralIncome ? "સામાન્ય આવક" : activeCat ? `${activeCat.label} આવક` : "આવક ઉમેરો";
-  const headerSub = isEdit ? "" : isGeneralIncome ? "કોઈ પાક સંલગ્ન નહીં — અહેવાલમાં ગણાશે" : cropIdParam ? "પાક સાથે જોડાઈ" : "આવક પ્રકાર પસંદ કરો";
+  const cropIncomeDisplayLabel = hasCropSelected && activeCat
+    ? (activeCat.value === "Crop Sale" ? "વેચાણ" : activeCat.value === "Other" ? "ભુકો" : activeCat.label)
+    : null;
+  const headerTitle = isEdit
+    ? "આવક સુધારો"
+    : isGeneralIncome
+      ? "સામાન્ય આવક"
+      : cropIncomeDisplayLabel
+        ? cropIncomeDisplayLabel
+        : activeCat
+          ? `${activeCat.label} આવક`
+          : "આવક ઉમેરો";
+  const headerSub = "";
 
   // ─── UI ─────────────────────────────────────────────────────────────────────
   return (
@@ -925,6 +956,38 @@ export default function AddIncomeScreen() {
           </View>
         </View>
       )}
+
+      {/* ── સામાન્ય આવક: પશુપાલન, ડેરી, અન્ય ── */}
+      {!isEdit && isGeneralIncome && (
+        <View style={styles.card}>
+          <View style={[styles.catGrid, styles.catRow]}>
+            {GENERAL_INCOME_OPTIONS.map((opt) => {
+              const active = generalIncomeType === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.catCard, styles.catCardRow, active && styles.catCardActive]}
+                  onPress={() => {
+                    setGeneralIncomeType(opt.value);
+                    if (opt.value === "other") setSubData((prev) => ({ ...(prev as OtherIncomeData), source: "" }));
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.catEmoji, styles.catEmojiRow]}>{opt.emoji}</Text>
+                  <Text
+                    style={[styles.catLabel, styles.catLabelRow, active && styles.catLabelActive]}
+                    numberOfLines={1}
+                  >
+                    {opt.label}
+                  </Text>
+                  {active && <View style={styles.catDot} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
       {!isEdit && hasCropSelected && selectedCrop?.year && (
         <View style={styles.yearCard}>
           <Text style={styles.yearLabel}>📅 પાકનું વર્ષ (જૂન–મે)</Text>
@@ -953,22 +1016,24 @@ export default function AddIncomeScreen() {
       {/* ── Category: hide when general income (direct Other form only) ── */}
       {!isGeneralIncome && (
         <View style={styles.card}>
-          <SectionLabel text="📂 આવકનો પ્રકાર" />
-          <View style={styles.catGrid}>
+          <View style={[styles.catGrid, hasCropSelected && styles.catRow]}>
             {visibleCategories.map((cat) => {
               const active = category === cat.value;
+              const displayLabel = hasCropSelected && cat.value === "Crop Sale" ? "વેચાણ" : hasCropSelected && cat.value === "Other" ? "ભુકો" : cat.label;
+              const displayEmoji = hasCropSelected && cat.value === "Other" ? "🪙" : cat.emoji;
               return (
                 <TouchableOpacity
                   key={cat.value}
-                  style={[styles.catCard, active && styles.catCardActive]}
+                  style={[styles.catCard, hasCropSelected && styles.catCardRow, active && styles.catCardActive]}
                   onPress={() => handleCategoryChange(cat.value)}
                   activeOpacity={0.75}
                 >
-                  <Text style={styles.catEmoji}>{cat.emoji}</Text>
+                  <Text style={[styles.catEmoji, hasCropSelected && styles.catEmojiRow]}>{displayEmoji}</Text>
                   <Text
-                    style={[styles.catLabel, active && styles.catLabelActive]}
+                    style={[styles.catLabel, hasCropSelected && styles.catLabelRow, active && styles.catLabelActive]}
+                    numberOfLines={1}
                   >
-                    {cat.label}
+                    {displayLabel}
                   </Text>
                   {active && <View style={styles.catDot} />}
                 </TouchableOpacity>
@@ -978,39 +1043,41 @@ export default function AddIncomeScreen() {
         </View>
       )}
 
-      {/* ── Date: default today, calendar icon in corner to change ── */}
-      <View style={styles.card}>
-        <SectionLabel text="📅 વેચાણની તારીખ (ડિફોલ્ટ: આજે)" />
-        <View style={styles.dateRowWithIcon}>
-          <Text style={styles.dateValueBig}>
-            {date.toLocaleDateString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })}
-          </Text>
-          <TouchableOpacity
-            style={styles.calendarIconBtn}
-            onPress={() => setShowPicker(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="calendar-outline" size={26} color={C.green700} />
-          </TouchableOpacity>
+      {/* ── Date: only when not સામાન્ય આવક and not વેચાણ (crop) income ── */}
+      {!isGeneralIncome && !hasCropSelected && !isEdit && (
+        <View style={styles.card}>
+          <SectionLabel text="📅 તારીખ" />
+          <View style={styles.dateRowWithIcon}>
+            <Text style={styles.dateValueBig}>
+              {effectiveDate.toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </Text>
+            <TouchableOpacity
+              style={styles.calendarIconBtn}
+              onPress={() => setShowPicker(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="calendar-outline" size={26} color={C.green700} />
+            </TouchableOpacity>
+          </View>
+          {showPicker && (
+            <DateTimePicker
+              value={effectiveDate}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              maximumDate={new Date()}
+              onChange={handleDateChange}
+            />
+          )}
         </View>
-        {showPicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            maximumDate={new Date()}
-            onChange={handleDateChange}
-          />
-        )}
-      </View>
+      )}
 
       {/* ── Dynamic sub-form ── */}
+      {((isGeneralIncome && generalIncomeType) || !isGeneralIncome) && (
       <View style={styles.card}>
-        <SectionLabel text={isGeneralIncome ? "💼 અન્ય આવક વિગત" : `${activeCat.emoji} ${activeCat.label} વિગત`} />
         {category === "Crop Sale" && (
           <CropSaleForm
             data={subData as CropSaleData}
@@ -1029,27 +1096,46 @@ export default function AddIncomeScreen() {
             onChange={(d) => setSubData(d)}
           />
         )}
-        {category === "Other" && (
+        {category === "Other" && hasCropSelected && (
+          <NumField
+            label="રકમ *"
+            value={(subData as OtherIncomeData).amount}
+            onChange={(v) => setSubData({ ...(subData as OtherIncomeData), amount: v })}
+            suffix=""
+          />
+        )}
+        {category === "Other" && isGeneralIncome && generalIncomeType && generalIncomeType !== "other" && (
+          <NumField
+            label="રકમ *"
+            value={(subData as OtherIncomeData).amount}
+            onChange={(v) => setSubData({ ...(subData as OtherIncomeData), amount: v })}
+            suffix=""
+          />
+        )}
+        {category === "Other" && isGeneralIncome && generalIncomeType === "other" && (
+          <>
+            <TxtField
+              label="આવકનો પ્રકાર (ટાઈપ કરો) *"
+              value={(subData as OtherIncomeData).source}
+              onChange={(v) => setSubData({ ...(subData as OtherIncomeData), source: v })}
+              placeholder="દા.ત. મજૂરી, લોન, વ્યાપાર..."
+            />
+            <NumField
+              label="રકમ *"
+              value={(subData as OtherIncomeData).amount}
+              onChange={(v) => setSubData({ ...(subData as OtherIncomeData), amount: v })}
+              suffix=""
+            />
+          </>
+        )}
+        {category === "Other" && !hasCropSelected && !isGeneralIncome && (
           <OtherIncomeForm
             data={subData as OtherIncomeData}
             onChange={(d) => setSubData(d)}
           />
         )}
       </View>
-
-      {/* ── Notes ── */}
-      <View style={styles.card}>
-        <SectionLabel text="📝 નોંધ" />
-        <TextInput
-          style={[styles.input, styles.inputMulti]}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="વધારાની માહિતી (વૈકલ્પિક)..."
-          placeholderTextColor={C.textMuted}
-          multiline
-          textAlignVertical="top"
-        />
-      </View>
+      )}
 
       {/* ── Submit ── */}
       <TouchableOpacity
@@ -1214,6 +1300,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     color: C.green700,
+  },
+  yearRowWithDate: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dateInCorner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   dateRowWithIcon: {
     flexDirection: "row",
@@ -1384,6 +1480,7 @@ const styles = StyleSheet.create({
 
   // Category grid
   catGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  catRow: { flexWrap: "nowrap", gap: 6 },
   catCard: {
     width: "47%",
     paddingVertical: 14,
@@ -1396,17 +1493,27 @@ const styles = StyleSheet.create({
     gap: 6,
     position: "relative",
   },
+  catCardRow: {
+    flex: 1,
+    width: 0,
+    minWidth: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    gap: 4,
+  },
   catCardActive: {
     backgroundColor: C.green50,
     borderColor: C.green500,
   },
   catEmoji: { fontSize: 26 },
+  catEmojiRow: { fontSize: 20 },
   catLabel: {
     fontSize: 16,
     fontWeight: "700",
     color: C.textSecondary,
     textAlign: "center",
   },
+  catLabelRow: { fontSize: 13, fontWeight: "700" },
   catLabelActive: { color: C.green700, fontWeight: "800" },
   catDot: {
     position: "absolute",

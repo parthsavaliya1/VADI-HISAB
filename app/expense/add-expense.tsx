@@ -14,7 +14,6 @@ import {
   type SeedType,
   type SharingOption,
 } from "@/utils/api";
-import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -306,9 +305,6 @@ export default function AddExpense() {
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
     () => paramYear && yearOptions.includes(paramYear) ? paramYear : getCurrentFinancialYear(),
   );
-  const [expenseDate, setExpenseDate] = useState<Date>(() => new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
   const [crops, setCrops] = useState<Crop[]>([]);
   const [selectedCropId, setSelectedCropId] = useState<string | "">("");
   const [generalDescription, setGeneralDescription] = useState("");
@@ -318,11 +314,8 @@ export default function AddExpense() {
   const selectedCrop = crops.find((c) => c._id === cropId);
   const isCropExpense = !isGeneralExpense && !!cropId;
 
-  useEffect(() => {
-    if (isGeneralExpense) {
-      setExpenseDate(financialYearToStartDate(selectedFinancialYear));
-    }
-  }, [selectedFinancialYear, isGeneralExpense]);
+  // Default date of entry (today). No date picker shown.
+  const effectiveExpenseDate = new Date();
 
   // Order: Active (live) first, then Harvested, then Closed
   const cropStatusOrder = (s: string | undefined) =>
@@ -505,7 +498,7 @@ export default function AddExpense() {
         await createExpense({
           cropId: null,
           category: "Labour",
-          date: expenseDate.toISOString(),
+          date: effectiveExpenseDate.toISOString(),
           notes: generalDescription.trim(),
           labourContract: {
             advanceReason: "Other",
@@ -520,7 +513,7 @@ export default function AddExpense() {
       await createExpense({
         cropId: cropId as string,
         category: category as ExpenseCategory,
-        date: expenseDate.toISOString(),
+        date: effectiveExpenseDate.toISOString(),
         notes: notes.trim() || undefined,
         ...(category === "Seed" && {
           seed: {
@@ -669,9 +662,6 @@ export default function AddExpense() {
                 <Text style={styles.headerTitle}>ખર્ચ ઉમેરો</Text>
               )}
             </View>
-            <Text style={styles.headerSub}>
-              {isGeneralExpense ? "ખર્ચનો પ્રકાર અને રકમ દાખલ કરો — અહેવાલમાં ગણાશે" : activeCat ? "વિગત ભરો અને સાચવો" : "ખર્ચ પ્રકાર પસંદ કરો"}
-            </Text>
           </View>
           <View style={{ width: 36 }} />
         </View>
@@ -711,37 +701,6 @@ export default function AddExpense() {
             <Text style={styles.cropYearText}>{selectedCrop.year}</Text>
           </View>
         ) : null}
-
-        {/* ── Expense date: default today, calendar icon to change (for crop expense) ── */}
-        {!isGeneralExpense && (
-          <View style={styles.dateCard}>
-            <Text style={styles.dateLabel}>📅 ખર્ચની તારીખ</Text>
-            <View style={styles.dateRow}>
-              <Text style={styles.dateValue}>
-                {expenseDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-              </Text>
-              <TouchableOpacity
-                style={styles.calendarIconBtn}
-                onPress={() => setShowDatePicker(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="calendar-outline" size={24} color={C.green700} />
-              </TouchableOpacity>
-            </View>
-            {showDatePicker && (
-              <DateTimePicker
-                value={expenseDate}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                maximumDate={new Date()}
-                onChange={(e: DateTimePickerEvent, d?: Date) => {
-                  setShowDatePicker(false);
-                  if (d) setExpenseDate(d);
-                }}
-              />
-            )}
-          </View>
-        )}
 
         {/* ── General expense: description + amount — not linked to any crop; no crop required ── */}
         {isGeneralExpense ? (
@@ -1407,6 +1366,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     color: C.green700,
+  },
+  yearRowWithDate: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dateInCorner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   dateCard: {
     backgroundColor: C.surface,

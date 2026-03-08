@@ -621,7 +621,6 @@ function CropPickerModal({
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sheetCropName}>સામાન્ય ખર્ચ / અન્ય ખર્ચ</Text>
-                  <Text style={styles.sheetCropMeta}>કોઈ પાક સંલગ્ન નહીં</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
@@ -639,8 +638,7 @@ function CropPickerModal({
                   <Ionicons name="wallet-outline" size={30} color={C.income} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sheetCropName}>સામાન્ય આવક / અન્ય આવક</Text>
-                  <Text style={styles.sheetCropMeta}>કોઈ પાક સંલગ્ન નહીં</Text>
+                  <Text style={styles.sheetCropName}>સામાન્ય આવક</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.income} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
