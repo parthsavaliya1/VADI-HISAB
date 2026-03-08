@@ -2,13 +2,14 @@
 // ભાગ્યા નો ઉપાડ — simple: type (કરિયાણું, ઉધાર, medical, other), amount, note
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { createExpense, type AdvanceReason } from "@/utils/api";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -112,6 +113,19 @@ function SelectPicker({
 
 export default function AddBhagyaUpad() {
   const { refreshTransactions } = useRefresh();
+  const keyboardHeight = useKeyboardHeight();
+  const scrollRef = useRef<ScrollView>(null);
+  const formSectionYRef = useRef(0);
+  const scrollToForm = useCallback(() => {
+    // When keyboard is open, use larger offset so inputs stay visible above keyboard
+    const offset = keyboardHeight > 0 ? 380 : 80;
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, formSectionYRef.current - offset),
+        animated: true,
+      });
+    }, 280);
+  }, [keyboardHeight]);
   const [type, setType] = useState<AdvanceReason | "">("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -153,8 +167,8 @@ export default function AddBhagyaUpad() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: C.bg }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
       <View style={[styles.headerWrap, { backgroundColor: C.bg }]}>
@@ -162,12 +176,17 @@ export default function AddBhagyaUpad() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1, backgroundColor: C.bg }}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 60 : 60 },
+        ]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card}>
+        <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
           <SectionLabel text="પ્રકાર પસંદ કરો *" />
           <SelectPicker
             options={BHAGYA_UPAD_TYPES}
@@ -185,6 +204,7 @@ export default function AddBhagyaUpad() {
               placeholder="0"
               placeholderTextColor="#5B6570"
               keyboardType="numeric"
+              onFocus={scrollToForm}
             />
           </View>
           {type === "Other" && (
@@ -199,6 +219,7 @@ export default function AddBhagyaUpad() {
                 multiline
                 numberOfLines={2}
                 textAlignVertical="top"
+                onFocus={scrollToForm}
               />
             </>
           )}
@@ -242,7 +263,6 @@ const styles = StyleSheet.create({
   headerWrap: { borderBottomWidth: 1, borderBottomColor: C.borderLight },
   scroll: {
     padding: 20,
-    paddingBottom: 40,
   },
   card: {
     backgroundColor: C.surface,

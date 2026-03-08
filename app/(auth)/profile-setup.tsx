@@ -24,6 +24,7 @@ import {
     getVillageItems,
     type VillageItem,
 } from "@/data/gujarati-location";
+import { useLocations } from "@/hooks/useLocations";
 import translations from "@/translations.json";
 import type { District, LabourType, TractorService, WaterSource } from "@/utils/api";
 import { completeProfile, getMe } from "@/utils/api";
@@ -138,12 +139,16 @@ const DropdownButton = ({
     displayLabel,      // ← Gujarati label for display (looked up from key)
     placeholder,
     disabled = false,
+    loading = false,
+    error = null,
     onPress,
 }: {
     label: string;
     displayLabel: string;
     placeholder: string;
     disabled?: boolean;
+    loading?: boolean;
+    error?: string | null;
     onPress: () => void;
 }) => (
     <View style={styles.fieldGroup}>
@@ -158,14 +163,25 @@ const DropdownButton = ({
             ]}
             android_ripple={{ color: C.green100 }}
         >
-            <Text
-                style={[styles.dropdownBtnText, !displayLabel && styles.dropdownBtnPlaceholder]}
-                numberOfLines={1}
-            >
-                {displayLabel || placeholder}
-            </Text>
+            {loading ? (
+                <View style={styles.dropdownLoadingWrap}>
+                    <ActivityIndicator size="small" color={C.green700} />
+                    <Text style={styles.dropdownBtnPlaceholder}>{placeholder}</Text>
+                </View>
+            ) : (
+                <Text
+                    style={[
+                        styles.dropdownBtnText,
+                        !displayLabel && styles.dropdownBtnPlaceholder,
+                        error ? styles.dropdownBtnError : null,
+                    ]}
+                    numberOfLines={1}
+                >
+                    {error || displayLabel || placeholder}
+                </Text>
+            )}
             <Text style={styles.dropdownArrow}>
-                {disabled ? "—" : displayLabel ? "✓" : "▾"}
+                {disabled ? "—" : loading ? "" : displayLabel ? "✓" : "▾"}
             </Text>
         </Pressable>
     </View>
@@ -395,17 +411,33 @@ export default function ProfileSetup() {
         setForm((prev) => ({ ...prev, village: item.value }));
     };
 
-    // ── Derive display labels from English keys at render time ────────────
-    // No extra state — just a lookup. Free and instant.
-    const districtItems = getDistrictItems();
-    const talukaItems = form.district ? getTalukaItems(form.district) : [];
-    const villageItems = (form.district && form.taluka)
+    // ── Locations: fetch from API with fallback to static data on error ───
+    const {
+        districtItems: apiDistrictItems,
+        talukaItems: apiTalukaItems,
+        villageItems: apiVillageItems,
+        districtsLoading,
+        talukasLoading,
+        villagesLoading,
+        districtsError,
+        talukasError,
+        villagesError,
+    } = useLocations(form.district, form.taluka);
+
+    // Fallback to static data when API fails
+    const staticDistrictItems = getDistrictItems();
+    const staticTalukaItems = form.district ? getTalukaItems(form.district) : [];
+    const staticVillageItems = (form.district && form.taluka)
         ? getVillageItems(form.district, form.taluka)
         : [];
 
-    const districtLabel = districtItems.find(d => d.value === form.district)?.label ?? "";
-    const talukaLabel = talukaItems.find(t => t.value === form.taluka)?.label ?? "";
-    const villageLabel = villageItems.find(v => v.value === form.village)?.label ?? "";
+    const districtItems = districtsError ? staticDistrictItems : apiDistrictItems;
+    const talukaItems = talukasError ? staticTalukaItems : apiTalukaItems;
+    const villageItems = villagesError ? staticVillageItems : apiVillageItems;
+
+    const districtLabel = districtItems.find((d) => d.value === form.district)?.label ?? "";
+    const talukaLabel = talukaItems.find((t) => t.value === form.taluka)?.label ?? "";
+    const villageLabel = villageItems.find((v) => v.value === form.village)?.label ?? "";
 
     // ── Submit — send English keys to API ─────────────────────────────────
 
@@ -506,6 +538,8 @@ export default function ProfileSetup() {
                             label={t.district ?? "જિલ્લો"}
                             displayLabel={districtLabel}
                             placeholder="જિલ્લો પસંદ કરો..."
+                            loading={districtsLoading}
+                            error={districtsError}
                             onPress={() => setShowDistrict(true)}
                         />
 
@@ -515,6 +549,8 @@ export default function ProfileSetup() {
                             displayLabel={talukaLabel}
                             placeholder={form.district ? "તાલુકો પસંદ કરો..." : "પહેલા જિલ્લો પસંદ કરો"}
                             disabled={!form.district}
+                            loading={talukasLoading}
+                            error={talukasError}
                             onPress={() => setShowTaluka(true)}
                         />
 
@@ -524,6 +560,8 @@ export default function ProfileSetup() {
                             displayLabel={villageLabel}
                             placeholder={form.taluka ? "ગામ પસંદ કરો..." : "પહેલા તાલુકો પસંદ કરો"}
                             disabled={!form.taluka}
+                            loading={villagesLoading}
+                            error={villagesError}
                             onPress={() => setShowVillage(true)}
                         />
 
@@ -710,6 +748,8 @@ const styles = StyleSheet.create({
     dropdownBtnDisabled: { opacity: 0.4, backgroundColor: C.borderLight },
     dropdownBtnText: { fontSize: 15, color: C.textPrimary, fontWeight: "600", flex: 1 },
     dropdownBtnPlaceholder: { color: C.textMuted, fontWeight: "400" },
+    dropdownBtnError: { color: C.expense },
+    dropdownLoadingWrap: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
     dropdownArrow: { fontSize: 16, color: C.green700, marginLeft: 8, fontWeight: "700" },
     textInputWrap: { flexDirection: "row", alignItems: "center", borderWidth: 2, borderRadius: 14, borderColor: C.borderLight, backgroundColor: C.surfaceGreen, paddingHorizontal: 14 },
     textInputWrapFocused: { borderColor: C.green700, backgroundColor: C.surfaceGreen },

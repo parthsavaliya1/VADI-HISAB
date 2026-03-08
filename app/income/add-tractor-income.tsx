@@ -4,6 +4,7 @@
  * farmerPhone and paymentStatus (stored in existing incomes table).
  */
 
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { createIncome, type RentalAssetType } from "@/utils/api";
 import DateTimePicker, {
@@ -13,10 +14,11 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Contacts from "expo-contacts";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -142,12 +144,35 @@ export default function AddTractorIncomeScreen() {
   };
 
   const paddingTop = Platform.OS === "ios" ? 52 : 40;
+  const keyboardHeight = useKeyboardHeight();
+  const scrollRef = useRef<ScrollView>(null);
+  const formSectionYRef = useRef(0);
+  const scrollToForm = useCallback(() => {
+    // When keyboard is open, use larger offset so lower fields stay visible above keyboard
+    const offset = keyboardHeight > 0 ? 420 : 100;
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, formSectionYRef.current - offset),
+        animated: true,
+      });
+    }, 280);
+  }, [keyboardHeight]);
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+    >
     <ScrollView
+      ref={scrollRef}
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 80 },
+      ]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       showsVerticalScrollIndicator={false}
     >
       <LinearGradient
@@ -188,7 +213,7 @@ export default function AddTractorIncomeScreen() {
         </View>
       </View>
 
-      <View style={styles.card}>
+      <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
         <Text style={styles.label}>ખેડૂત / ગ્રાહકનું નામ *</Text>
         <TextInput
           style={styles.input}
@@ -196,6 +221,7 @@ export default function AddTractorIncomeScreen() {
           onChangeText={setFarmerName}
           placeholder="નામ લખો અથવા નીચે પસંદ કરો"
           placeholderTextColor={C.textMuted}
+          onFocus={scrollToForm}
         />
         <TouchableOpacity style={styles.contactBtn} onPress={pickContact}>
           <Ionicons name="people-outline" size={22} color={C.green700} />
@@ -215,6 +241,7 @@ export default function AddTractorIncomeScreen() {
           placeholder="0"
           placeholderTextColor={C.textMuted}
           keyboardType="decimal-pad"
+          onFocus={scrollToForm}
         />
       </View>
 
@@ -227,6 +254,7 @@ export default function AddTractorIncomeScreen() {
           placeholder="0"
           placeholderTextColor={C.textMuted}
           keyboardType="decimal-pad"
+          onFocus={scrollToForm}
         />
       </View>
 
@@ -284,6 +312,7 @@ export default function AddTractorIncomeScreen() {
           placeholder="વૈકલ્પિક"
           placeholderTextColor={C.textMuted}
           multiline
+          onFocus={scrollToForm}
         />
       </View>
 
@@ -304,8 +333,8 @@ export default function AddTractorIncomeScreen() {
         </View>
       </TouchableOpacity>
 
-      <View style={{ height: 80 }} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -6,12 +6,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
 // ─── Base URL ─────────────────────────────────
-// 🔧 LOCAL: Replace IP with YOUR computer's IP (run: ipconfig / ifconfig)
-//           Phone & computer must be on SAME WiFi
-// 🚀 PROD:  Uncomment the render/production line
-
-const BASE_URL = "http://192.168.1.5:8000/api"; // 🔧 Change IP here
-// const BASE_URL = "https://vadi-backend.onrender.com/api"; // 🚀 Production
+// 🔧 Use EXPO_PUBLIC_API_URL from .env (e.g. http://192.168.1.5:8000/api for local)
+// 🚀 PROD: Set EXPO_PUBLIC_API_URL=https://your-api.onrender.com/api
+const BASE_URL =
+  (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ||
+  "http://192.168.1.5:8000/api";
 
 // ─── Axios Instance ───────────────────────────
 export const API = axios.create({
@@ -205,6 +204,37 @@ export const logout = async (): Promise<void> => {
 
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📍 LOCATIONS (District / Taluka / Village — dynamic from API)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export type DropdownItem = { value: string; label: string };
+export type VillageItem = { value: string; label: string };
+
+/** GET /locations/districts — returns [{ value, label }] */
+export const getLocationsDistricts = async (): Promise<DropdownItem[]> => {
+  const res = await API.get<DropdownItem[]>("/locations/districts");
+  return Array.isArray(res.data) ? res.data : [];
+};
+
+/** GET /locations/talukas?district=X — returns [{ value, label }] */
+export const getLocationsTalukas = async (district: string): Promise<DropdownItem[]> => {
+  const res = await API.get<DropdownItem[]>("/locations/talukas", { params: { district } });
+  return Array.isArray(res.data) ? res.data : [];
+};
+
+/** GET /locations/villages?district=X&taluka=Y — returns [{ value, label }] */
+export const getLocationsVillages = async (
+  district: string,
+  taluka: string,
+): Promise<VillageItem[]> => {
+  const res = await API.get<VillageItem[]>("/locations/villages", {
+    params: { district, taluka },
+  });
+  return Array.isArray(res.data) ? res.data : [];
+};
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 👤 PROFILE TYPES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -291,6 +321,8 @@ export interface CropPayload {
   cropEmoji?: string;
   /** Variety/sub-type e.g. "Desi", "GW-496" */
   subType?: string;
+  /** Batch/lot label if applicable */
+  batchLabel?: string;
   /** Financial year June–June e.g. "2025-26" */
   year?: string;
   /** Farm name from profile (e.g. "vadi") for area validation */

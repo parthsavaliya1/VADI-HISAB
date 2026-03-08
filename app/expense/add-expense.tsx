@@ -1,5 +1,6 @@
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import {
   createExpense,
   getExpenseById,
@@ -708,16 +709,19 @@ export default function AddExpense() {
 
   const activeCat = CATEGORIES.find((c) => c.value === category);
   const paddingTop = Platform.OS === "ios" ? 52 : 40;
+  const keyboardHeight = useKeyboardHeight();
   const scrollRef = useRef<ScrollView>(null);
   const formSectionYRef = useRef(0);
   const scrollToForm = useCallback(() => {
+    // When keyboard is open, use larger offset so lower fields (e.g. દર દર બૅગ) stay visible above keyboard
+    const offset = keyboardHeight > 0 ? 420 : 100;
     setTimeout(() => {
       scrollRef.current?.scrollTo({
-        y: Math.max(0, formSectionYRef.current - 100),
+        y: Math.max(0, formSectionYRef.current - offset),
         animated: true,
       });
-    }, 300);
-  }, []);
+    }, 280);
+  }, [keyboardHeight]);
 
   if (fetchingEdit) {
     return (
@@ -788,7 +792,10 @@ export default function AddExpense() {
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1, backgroundColor: C.bg }}
-        contentContainerStyle={[styles.scroll, { paddingBottom: 360 }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 100 : 120 },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         keyboardDismissMode="on-drag"

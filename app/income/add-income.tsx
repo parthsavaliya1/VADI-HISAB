@@ -8,6 +8,7 @@
  * ✅ All labels, errors, placeholders in Gujarati
  */
 
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
   createIncome,
@@ -26,7 +27,7 @@ import DateTimePicker, {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /** Financial year "2025-26" → June 1, 2025 (start of FY) */
 function financialYearToStartDate(fy: string): Date {
@@ -44,6 +45,7 @@ function getYearOptions(): string[] {
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -352,12 +354,14 @@ function NumField({
   onChange,
   placeholder,
   suffix,
+  onFocus,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   suffix?: string;
+  onFocus?: () => void;
 }) {
   return (
     <View style={styles.fieldWrap}>
@@ -370,6 +374,7 @@ function NumField({
           onChangeText={onChange}
           placeholder={placeholder ?? "0"}
           placeholderTextColor={C.textMuted}
+          onFocus={onFocus}
         />
         {suffix ? <Text style={styles.inputSuffix}>{suffix}</Text> : null}
       </View>
@@ -383,12 +388,14 @@ function TxtField({
   onChange,
   placeholder,
   multiline,
+  onFocus,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   multiline?: boolean;
+  onFocus?: () => void;
 }) {
   return (
     <View style={styles.fieldWrap}>
@@ -401,6 +408,7 @@ function TxtField({
         placeholderTextColor={C.textMuted}
         multiline={multiline}
         textAlignVertical={multiline ? "top" : "center"}
+        onFocus={onFocus}
       />
     </View>
   );
@@ -425,9 +433,11 @@ function DerivedCard({ label, value }: { label: string; value: string }) {
 function CropSaleForm({
   data,
   onChange,
+  onInputFocus,
 }: {
   data: CropSaleData;
   onChange: (d: CropSaleData) => void;
+  onInputFocus?: () => void;
 }) {
   const set = (k: keyof CropSaleData, v: string) =>
     onChange({ ...data, [k]: v });
@@ -450,6 +460,7 @@ function CropSaleForm({
                 onChangeText={(v) => set("quantityKg", v)}
                 placeholder="0"
                 placeholderTextColor={C.textMuted}
+                onFocus={onInputFocus}
               />
               <Text style={styles.inputSuffix}>
                 {qtyUnitMal ? "મણ" : "કિ.ગ્રા."}
@@ -483,6 +494,7 @@ function CropSaleForm({
             onChangeText={(v) => set("pricePerKg", v)}
             placeholder="0"
             placeholderTextColor={C.textMuted}
+            onFocus={onInputFocus}
           />
         </View>
       </View>
@@ -518,9 +530,11 @@ function CropSaleForm({
 function SubsidyForm({
   data,
   onChange,
+  onInputFocus,
 }: {
   data: SubsidyData;
   onChange: (d: SubsidyData) => void;
+  onInputFocus?: () => void;
 }) {
   const set = (k: keyof SubsidyData, v: string) =>
     onChange({ ...data, [k]: v });
@@ -530,6 +544,7 @@ function SubsidyForm({
       value={data.amount}
       onChange={(v) => set("amount", v)}
       suffix=""
+      onFocus={onInputFocus}
     />
   );
 }
@@ -537,9 +552,11 @@ function SubsidyForm({
 function RentalIncomeForm({
   data,
   onChange,
+  onInputFocus,
 }: {
   data: RentalIncomeData;
   onChange: (d: RentalIncomeData) => void;
+  onInputFocus?: () => void;
 }) {
   const set = (k: keyof RentalIncomeData, v: string) =>
     onChange({ ...data, [k]: v });
@@ -562,6 +579,7 @@ function RentalIncomeForm({
         value={data.rentedToName}
         onChange={(v) => set("rentedToName", v)}
         placeholder="વૈકલ્પિક"
+        onFocus={onInputFocus}
       />
       <View style={styles.row2}>
         <View style={{ flex: 1 }}>
@@ -569,6 +587,7 @@ function RentalIncomeForm({
             label="કલાક / દિવસ *"
             value={data.hoursOrDays}
             onChange={(v) => set("hoursOrDays", v)}
+            onFocus={onInputFocus}
           />
         </View>
         <View style={{ flex: 1 }}>
@@ -577,6 +596,7 @@ function RentalIncomeForm({
             value={data.ratePerUnit}
             onChange={(v) => set("ratePerUnit", v)}
             suffix=""
+            onFocus={onInputFocus}
           />
         </View>
       </View>
@@ -593,9 +613,11 @@ function RentalIncomeForm({
 function OtherIncomeForm({
   data,
   onChange,
+  onInputFocus,
 }: {
   data: OtherIncomeData;
   onChange: (d: OtherIncomeData) => void;
+  onInputFocus?: () => void;
 }) {
   const set = (k: keyof OtherIncomeData, v: string) =>
     onChange({ ...data, [k]: v });
@@ -614,6 +636,7 @@ function OtherIncomeForm({
         value={data.amount}
         onChange={(v) => set("amount", v)}
         suffix=""
+        onFocus={onInputFocus}
       />
     </>
   );
@@ -896,6 +919,19 @@ export default function AddIncomeScreen() {
   const activeCat = CATEGORIES.find((c) => c.value === category)!;
 
   const headerPaddingTop = Platform.OS === "ios" ? 52 : 40;
+  const keyboardHeight = useKeyboardHeight();
+  const scrollRef = useRef<ScrollView>(null);
+  const formSectionYRef = useRef(0);
+  const scrollToForm = useCallback(() => {
+    // When keyboard is open, use larger offset so lower fields stay visible above keyboard
+    const offset = keyboardHeight > 0 ? 420 : 100;
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, formSectionYRef.current - offset),
+        animated: true,
+      });
+    }, 280);
+  }, [keyboardHeight]);
   const cropIncomeDisplayLabel = hasCropSelected && activeCat
     ? (activeCat.value === "Crop Sale" ? "વેચાણ" : activeCat.value === "Other" ? "ભુકો" : activeCat.label)
     : null;
@@ -912,10 +948,20 @@ export default function AddIncomeScreen() {
 
   // ─── UI ─────────────────────────────────────────────────────────────────────
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+    >
     <ScrollView
+      ref={scrollRef}
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 60 },
+      ]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       showsVerticalScrollIndicator={false}
     >
       {/* ── Header (same as add-expense: gradient, back, title, subtitle, top space) ── */}
@@ -1092,23 +1138,26 @@ export default function AddIncomeScreen() {
 
       {/* ── Dynamic sub-form ── */}
       {((isGeneralIncome && generalIncomeType) || !isGeneralIncome) && (
-      <View style={styles.card}>
+      <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
         {category === "Crop Sale" && (
           <CropSaleForm
             data={subData as CropSaleData}
             onChange={(d) => setSubData(d)}
+            onInputFocus={scrollToForm}
           />
         )}
         {category === "Subsidy" && (
           <SubsidyForm
             data={subData as SubsidyData}
             onChange={(d) => setSubData(d)}
+            onInputFocus={scrollToForm}
           />
         )}
         {category === "Rental Income" && (
           <RentalIncomeForm
             data={subData as RentalIncomeData}
             onChange={(d) => setSubData(d)}
+            onInputFocus={scrollToForm}
           />
         )}
         {category === "Other" && hasCropSelected && (
@@ -1117,6 +1166,7 @@ export default function AddIncomeScreen() {
             value={(subData as OtherIncomeData).amount}
             onChange={(v) => setSubData({ ...(subData as OtherIncomeData), amount: v })}
             suffix=""
+            onFocus={scrollToForm}
           />
         )}
         {category === "Other" && isGeneralIncome && generalIncomeType && generalIncomeType !== "other" && (
@@ -1125,6 +1175,7 @@ export default function AddIncomeScreen() {
             value={(subData as OtherIncomeData).amount}
             onChange={(v) => setSubData({ ...(subData as OtherIncomeData), amount: v })}
             suffix=""
+            onFocus={scrollToForm}
           />
         )}
         {category === "Other" && isGeneralIncome && generalIncomeType === "other" && (
@@ -1134,12 +1185,14 @@ export default function AddIncomeScreen() {
               value={(subData as OtherIncomeData).source}
               onChange={(v) => setSubData({ ...(subData as OtherIncomeData), source: v })}
               placeholder="દા.ત. મજૂરી, લોન, વ્યાપાર..."
+              onFocus={scrollToForm}
             />
             <NumField
               label="રકમ *"
               value={(subData as OtherIncomeData).amount}
               onChange={(v) => setSubData({ ...(subData as OtherIncomeData), amount: v })}
               suffix=""
+              onFocus={scrollToForm}
             />
           </>
         )}
@@ -1147,6 +1200,7 @@ export default function AddIncomeScreen() {
           <OtherIncomeForm
             data={subData as OtherIncomeData}
             onChange={(d) => setSubData(d)}
+            onInputFocus={scrollToForm}
           />
         )}
       </View>
@@ -1170,8 +1224,8 @@ export default function AddIncomeScreen() {
         )}
       </TouchableOpacity>
 
-      <View style={{ height: 60 }} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
