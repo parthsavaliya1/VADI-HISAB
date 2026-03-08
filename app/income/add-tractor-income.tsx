@@ -4,6 +4,7 @@
  * farmerPhone and paymentStatus (stored in existing incomes table).
  */
 
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { createIncome, type RentalAssetType } from "@/utils/api";
@@ -13,6 +14,7 @@ import DateTimePicker, {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Contacts from "expo-contacts";
+import Toast from "react-native-toast-message";
 import { router } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
@@ -128,9 +130,8 @@ export default function AddTractorIncomeScreen() {
         },
       });
       refreshTransactions();
-      Alert.alert("સફળ", "ટ્રેક્ટર આવક સાચવાઈ!", [
-        { text: "ઠીક", onPress: () => router.back() },
-      ]);
+      Toast.show({ type: "success", text1: "સફળ!", text2: "ટ્રેક્ટર આવક સાચવાઈ!" });
+      router.back();
     } catch (e) {
       Alert.alert("ભૂલ", (e as Error).message ?? "કંઈક ખોટું થયું.");
     } finally {
@@ -143,7 +144,7 @@ export default function AddTractorIncomeScreen() {
     if (d) setDate(d);
   };
 
-  const paddingTop = Platform.OS === "ios" ? 52 : 40;
+  const paddingTop = HEADER_PADDING_TOP;
   const keyboardHeight = useKeyboardHeight();
   const scrollRef = useRef<ScrollView>(null);
   const formSectionYRef = useRef(0);

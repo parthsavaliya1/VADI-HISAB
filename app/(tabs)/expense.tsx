@@ -1,4 +1,6 @@
 import { useRefresh } from "@/contexts/RefreshContext";
+import { HEADER_PADDING_TOP } from "@/constants/theme";
+import Toast from "react-native-toast-message";
 import {
   deleteExpense,
   getExpenses,
@@ -269,6 +271,7 @@ export default function ExpenseList() {
       await deleteExpense(id);
       setExpenses((prev) => prev.filter((e) => e._id !== id));
       refreshTransactions();
+      Toast.show({ type: "success", text1: "સફળ!", text2: "ખર્ચ કાઢી નાખ્યો." });
     } catch (err: any) {
       Alert.alert("❌ ભૂલ", err?.message ?? "કાઢી નહીં શક્યા.");
     }
@@ -419,7 +422,7 @@ export default function ExpenseList() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   header: {
-    paddingTop: 54,
+    paddingTop: HEADER_PADDING_TOP,
     paddingBottom: 18,
     paddingHorizontal: 20,
     overflow: "hidden",

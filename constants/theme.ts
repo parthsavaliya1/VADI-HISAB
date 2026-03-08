@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 /**
  * Shared app theme — cool teal/slate, used by ScreenHeader and report.
  */
@@ -17,3 +19,6 @@ export const AppTheme = {
   border: "#99F6E4",
   borderLight: "#E2E8F0",
 } as const;
+
+/** Consistent top padding for headers with back button across all screens */
+export const HEADER_PADDING_TOP = Platform.OS === "ios" ? 58 : 48;

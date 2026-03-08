@@ -17,6 +17,7 @@ import {
   type ProfileFarm,
 } from "@/utils/api";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -46,8 +47,6 @@ const C = {
   border: "#C8E6C9",
   borderLight: "#EAF4EA",
 };
-
-const paddingTop = Platform.OS === "ios" ? 52 : 40;
 
 const CROP_SUBTYPES: Record<string, string[]> = {
   Cotton: ["Bt-Cotton", "Shankar-6", "RCH-2", "MRC-7017"],
@@ -229,9 +228,12 @@ export default function EditCropScreen() {
     try {
       setSaving(true);
       await updateCrop(id, payload);
-      Alert.alert(`✅ ${t("editCrop", "successTitle")}`, t("editCrop", "successMsg"), [
-        { text: t("editCrop", "ok"), onPress: () => router.back() },
-      ]);
+      Toast.show({
+        type: "success",
+        text1: t("editCrop", "successTitle"),
+        text2: t("editCrop", "successMsg"),
+      });
+      router.back();
     } catch (e: any) {
       Alert.alert(t("editCrop", "errTitle"), e?.message ?? t("editCrop", "errTitle"));
     } finally {

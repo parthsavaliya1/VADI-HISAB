@@ -1,3 +1,5 @@
+import { HEADER_PADDING_TOP } from "@/constants/theme";
+import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -633,18 +635,20 @@ export default function AddCrop() {
       setSaving(true);
       if (isEdit && editId) {
         const crop = await updateCrop(editId, payload);
-        Alert.alert(
-          "✅ સફળ!",
-          `${(crop as any).cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} સાચવાયો!\n${Math.round(Number(form.area))} વીઘા · ${form.year}`,
-          [{ text: "ઠીક છે", onPress: () => router.replace("/(tabs)") }],
-        );
+        Toast.show({
+          type: "success",
+          text1: "સફળ!",
+          text2: `${(crop as any).cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} સાચવાયો!`,
+        });
+        router.replace("/(tabs)");
       } else {
         const crop = await createCrop(payload);
-        Alert.alert(
-          "✅ સફળ!",
-          `${(crop as any).cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} ઉમેરાયો!\n${Math.round(Number(form.area))} વીઘા · ${form.year} (જૂન–જૂન)`,
-          [{ text: "ઠીક છે", onPress: () => router.replace("/(tabs)") }],
-        );
+        Toast.show({
+          type: "success",
+          text1: "સફળ!",
+          text2: `${(crop as any).cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} ઉમેરાયો!`,
+        });
+        router.replace("/(tabs)");
       }
     } catch (error: any) {
       Alert.alert(
@@ -1320,7 +1324,7 @@ export default function AddCrop() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   header: {
-    paddingTop: 54,
+    paddingTop: HEADER_PADDING_TOP,
     paddingBottom: 18,
     paddingHorizontal: 20,
     overflow: "hidden",

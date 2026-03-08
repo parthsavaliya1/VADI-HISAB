@@ -1,8 +1,8 @@
-import { AppTheme } from "@/constants/theme";
+import { AppTheme, HEADER_PADDING_TOP } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
 
 export interface ScreenHeaderProps {
   title: string;
@@ -19,8 +19,6 @@ export interface ScreenHeaderProps {
   light?: boolean;
 }
 
-const paddingTop = Platform.OS === "ios" ? 52 : 40;
-
 export function ScreenHeader({
   title,
   subtitle,
@@ -35,7 +33,7 @@ export function ScreenHeader({
   const subColor = light ? "rgba(255,255,255,0.85)" : AppTheme.textMuted;
 
   return (
-    <View style={[styles.wrap, { paddingTop }, style]}>
+    <View style={[styles.wrap, { paddingTop: HEADER_PADDING_TOP }, style]}>
       <View style={styles.row}>
         {showBack ? (
           <Pressable

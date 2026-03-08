@@ -6,6 +6,7 @@ import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { createExpense, type AdvanceReason } from "@/utils/api";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -154,9 +155,8 @@ export default function AddBhagyaUpad() {
         },
       });
       refreshTransactions();
-      Alert.alert("✅ સફળ!", "ભાગ્યા નો ઉપાડ સાચવ્યો.", [
-        { text: "ઠીક છે", onPress: () => router.back() },
-      ]);
+      Toast.show({ type: "success", text1: "સફળ!", text2: "ભાગ્યા નો ઉપાડ સાચવ્યો." });
+      router.back();
     } catch (e: any) {
       Alert.alert("ભૂલ", e?.message ?? "સાચવતી વખતે ભૂલ.");
     } finally {

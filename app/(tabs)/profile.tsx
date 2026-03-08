@@ -1,4 +1,6 @@
 import { useLanguage } from "@/contexts/LanguageContext";
+import { UDYAM_REGISTRATION_NUMBER } from "@/constants/app";
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import {
     getDistrictItems,
     getTalukaItems,
@@ -7,6 +9,7 @@ import {
 import { FarmerProfileCard } from "@/components/FarmerProfileCard";
 import type { FarmerProfile as APIFarmerProfile } from "@/utils/api";
 import { getMyProfile, logout, updateProfile } from "@/utils/api";
+import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import {
@@ -600,7 +603,11 @@ export default function Profile() {
             setApiProfile(updated.profile);
             setEditVisible(false);
             setDraft(null);
-            Alert.alert(t("profileTab", "saveSuccess"), t("profileTab", "saveDone"));
+            Toast.show({
+              type: "success",
+              text1: t("profileTab", "saveSuccess"),
+              text2: t("profileTab", "saveDone"),
+            });
         } catch (err: any) {
             Alert.alert(t("profileTab", "errTitle"), err.message);
         } finally {
@@ -628,7 +635,7 @@ export default function Profile() {
         const waterDisplay = toLabels(WATER_OPTIONS, waterSources);
         const labourDisplay = toLabels(LABOUR_OPTIONS, labourTypes);
         const tractorServicesDisplay = implementsAvailable.length > 0 ? toLabels(TRACTOR_SERVICE_OPTIONS, implementsAvailable) : null;
-        let msg = `🌾 VADI-Hisaab — ${t("profileTab", "farmerProfileSharePrefix")}\n\n${t("profileTab", "shareName")}: ${p.name}\n${t("profileTab", "shareDistrict")}: ${districtDisplay}\n${t("profileTab", "shareTaluka")}: ${talukaDisplay}\n${t("profileTab", "shareVillage")}: ${villageDisplay}\n${t("profileTab", "shareTotalLand")}: ${landDisplay}\n${t("profileTab", "shareWater")}: ${waterDisplay}\n${t("profileTab", "shareLabour")}: ${labourDisplay}\n${t("profileTab", "shareTractor")}: ${p.tractorAvailable ? t("profileTab", "shareYes") : t("profileTab", "shareNo")}`;
+        let msg = `🌾 VADI — ${t("profileTab", "farmerProfileSharePrefix")}\n\n${t("profileTab", "shareName")}: ${p.name}\n${t("profileTab", "shareDistrict")}: ${districtDisplay}\n${t("profileTab", "shareTaluka")}: ${talukaDisplay}\n${t("profileTab", "shareVillage")}: ${villageDisplay}\n${t("profileTab", "shareTotalLand")}: ${landDisplay}\n${t("profileTab", "shareWater")}: ${waterDisplay}\n${t("profileTab", "shareLabour")}: ${labourDisplay}\n${t("profileTab", "shareTractor")}: ${p.tractorAvailable ? t("profileTab", "shareYes") : t("profileTab", "shareNo")}`;
         if (p.tractorAvailable && tractorServicesDisplay) msg += `\n${t("profileTab", "shareTractorServices")}: ${tractorServicesDisplay}`;
         const farms = Array.isArray((p as any).farms) ? (p as any).farms : [];
         if (farms.length) msg += "\n" + t("profileTab", "shareFarms") + ": " + farms.map((f: any) => `${f.name || t("profileTab", "shareFarm")} ${f.area ?? 0} ${t("common", "bigha")}`).join(", ");
@@ -662,7 +669,11 @@ export default function Profile() {
                 return;
             }
             await MediaLibrary.saveToLibraryAsync(uri);
-            Alert.alert(t("profileTab", "saveSuccess"), t("profileTab", "savedToGallery"));
+            Toast.show({
+              type: "success",
+              text1: t("profileTab", "saveSuccess"),
+              text2: t("profileTab", "savedToGallery"),
+            });
         } catch (e: any) {
             Alert.alert(t("profileTab", "errTitle"), e?.message ?? t("profileTab", "downloadFailed"));
         }
@@ -825,14 +836,18 @@ export default function Profile() {
                         </View>
                     </Pressable>
 
-                    {/* About us — short 2–3 line description */}
+                    {/* About us — short 2–3 line description + Udyam registration */}
                     <View style={styles.aboutSection}>
                         <Text style={styles.aboutSectionTitle}>{t("profileTab", "aboutUs")}</Text>
                         <Text style={styles.aboutSectionBody}>
                             {t("profileTab", "aboutBody")}
                         </Text>
+                        <View style={styles.udyamRow}>
+                            <Text style={styles.udyamLabel}>{t("profileTab", "udyamLabel")}</Text>
+                            <Text style={styles.udyamNumber}>{UDYAM_REGISTRATION_NUMBER}</Text>
+                        </View>
                     </View>
-                    <Pressable style={styles.aboutLink} onPress={() => Alert.alert(t("profileTab", "aboutUs"), t("profileTab", "aboutAlertBody") + "\n\n" + t("profileTab", "version"), [{ text: t("common", "ok") }])}>
+                    <Pressable style={styles.aboutLink} onPress={() => Alert.alert(t("profileTab", "aboutUs"), t("profileTab", "aboutAlertBody") + "\n\n" + t("profileTab", "udyamLabel") + ": " + UDYAM_REGISTRATION_NUMBER + "\n\n" + t("profileTab", "version"), [{ text: t("common", "ok") }])}>
                         <Ionicons name="information-circle-outline" size={20} color="#64748B" />
                         <Text style={styles.aboutLinkText}>{t("profileTab", "moreInfo")}</Text>
                     </Pressable>
@@ -881,7 +896,8 @@ export default function Profile() {
                                         districtLabel={districtDisplay}
                                         talukaLabel={talukaDisplay}
                                         villageLabel={villageDisplay}
-                                        cardWidth={Math.min(SCREEN_W - 48, 360)}
+                                        cardWidth={Math.min(SCREEN_W - 48, 440)}
+                                        cardHeight={260}
                                     />
                                 </ViewShotComponent>
                             ) : (
@@ -890,7 +906,8 @@ export default function Profile() {
                                     districtLabel={districtDisplay}
                                     talukaLabel={talukaDisplay}
                                     villageLabel={villageDisplay}
-                                    cardWidth={Math.min(SCREEN_W - 48, 360)}
+                                    cardWidth={Math.min(SCREEN_W - 48, 440)}
+                                    cardHeight={260}
                                 />
                             )}
                         </ScrollView>
@@ -929,7 +946,7 @@ const styles = StyleSheet.create({
     retryBtnText: { color: "#fff", fontWeight: "700", fontSize: 18 },
     bgDecor1: { position: "absolute", width: 260, height: 260, borderRadius: 130, backgroundColor: "#E2EDE0", top: -70, right: -70 },
     bgDecor2: { position: "absolute", width: 160, height: 160, borderRadius: 80, backgroundColor: "#E8F0E6", top: 180, left: -50 },
-    scrollContent: { paddingBottom: 20, paddingTop: Platform.OS === "ios" ? 52 : 36 },
+    scrollContent: { paddingBottom: 20, paddingTop: HEADER_PADDING_TOP },
     topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginBottom: 16 },
     topBarTitle: { fontSize: 24, fontWeight: "800", color: "#1A2E1C", letterSpacing: 0.2 },
     editFAB: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fff", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: "#C8E6C9", shadowColor: "#0A0E0B", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
@@ -1037,6 +1054,9 @@ const styles = StyleSheet.create({
     aboutSection: { paddingHorizontal: 20, paddingVertical: 16, marginBottom: 12, backgroundColor: "#F1F5F4", borderRadius: 14, borderWidth: 1, borderColor: "#E2E8E6" },
     aboutSectionTitle: { fontSize: 18, fontWeight: "800", color: "#334155", marginBottom: 8 },
     aboutSectionBody: { fontSize: 16, color: "#64748B", lineHeight: 24, fontWeight: "500" },
+    udyamRow: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#E2E8E6" },
+    udyamLabel: { fontSize: 13, fontWeight: "700", color: "#64748B", marginBottom: 4 },
+    udyamNumber: { fontSize: 15, fontWeight: "800", color: "#0D5C4A", letterSpacing: 0.5 },
     aboutLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16 },
     aboutLinkText: { fontSize: 16, fontWeight: "700", color: "#64748B" },
     langChips: { flexDirection: "row", gap: 8 },

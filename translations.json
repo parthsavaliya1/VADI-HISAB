@@ -1,7 +1,7 @@
 {
     "gu": {
         "login": {
-            "appName": "Vadi",
+            "appName": "VADI",
             "tagline": "ખેડૂત માટે સ્માર્ટ હિસાબ",
             "label": "મોબાઈલ નંબર",
             "placeholder": "10 આંકડા દાખલ કરો",
@@ -329,7 +329,7 @@
             "namePH": "નામ દાખલ કરો",
             "landPH": "જમીન",
             "farmer": "ખેડૂત",
-            "version": "VADI-Hisaab v1.0.0",
+            "version": "VADI v1.0.0",
             "farmerCard": "મારી ખેડૂત કાર્ડ",
             "farmerCardSub": "ડાઉનલોડ કરો અથવા શેર કરો",
             "shareCard": "શેર કરો",
@@ -353,9 +353,10 @@
             "on": "ચાલુ",
             "off": "બંધ",
             "aboutUs": "અમારા વિશે",
-            "aboutBody": "VADI-Hisaab ખેડૂતો માટે હિસાબ અને નફો ટ્રેક કરવાનું એપ છે. પાક, ખર્ચ અને આવક એક જગ્યાએ નોંધો, અહેવાલ જુઓ અને નફો સ્પષ્ટ રીતે સમજો.",
+            "aboutBody": "VADI ખેડૂતો માટે હિસાબ અને નફો ટ્રેક કરવાનું એપ છે. પાક, ખર્ચ અને આવક એક જગ્યાએ નોંધો, અહેવાલ જુઓ અને નફો સ્પષ્ટ રીતે સમજો.",
+            "udyamLabel": "ઉદ્યમ નોંધણી નંબર",
             "moreInfo": "વધુ માહિતી",
-            "aboutAlertBody": "VADI-Hisaab — ખેડૂત માટે સ્માર્ટ હિસાબ.",
+            "aboutAlertBody": "VADI — ખેડૂત માટે સ્માર્ટ હિસાબ.",
             "waterRain": "વરસાદ",
             "waterBorewell": "બોરવેલ",
             "waterCanal": "નહેર",
@@ -386,12 +387,12 @@
             "shareTractorServices": "ટ્રેક્ટર સેવાઓ",
             "shareFarms": "ફાર્મ",
             "shareFarm": "ફાર્મ",
-            "sharedFromApp": "VADI-Hisaab એપથી શેર કર્યું"
+            "sharedFromApp": "VADI એપથી શેર કર્યું"
         }
     },
     "en": {
         "login": {
-            "appName": "VADI-Hisaab",
+            "appName": "VADI",
             "tagline": "Smart farming records",
             "label": "Mobile Number",
             "placeholder": "Enter 10-digit number",
@@ -445,7 +446,7 @@
             "landPH": "Enter amount",
             "farmsLabel": "Farms / Land area *",
             "farmsHint": "Add at least one farm with name and area (bigha)",
-            "farmNamePH": "Vadi",
+            "farmNamePH": "Farm",
             "farmNamePH2": "Farm name",
             "addFarm": "Add another farm",
             "farmsAtLeastOne": "Please add at least one farm with name and area.",
@@ -718,7 +719,7 @@
             "namePH": "Enter name",
             "landPH": "Land",
             "farmer": "Farmer",
-            "version": "VADI-Hisaab v1.0.0",
+            "version": "VADI v1.0.0",
             "farmerCard": "My farmer card",
             "farmerCardSub": "Download or share",
             "shareCard": "Share",
@@ -742,9 +743,10 @@
             "on": "On",
             "off": "Off",
             "aboutUs": "About us",
-            "aboutBody": "VADI-Hisaab is an app for farmers to track accounts and profit. Note crops, expense and income in one place, view reports and understand profit clearly.",
+            "aboutBody": "VADI is an app for farmers to track accounts and profit. Note crops, expense and income in one place, view reports and understand profit clearly.",
+            "udyamLabel": "Udyam Registration No.",
             "moreInfo": "More info",
-            "aboutAlertBody": "VADI-Hisaab — Smart records for farmers.",
+            "aboutAlertBody": "VADI — Smart records for farmers.",
             "waterRain": "Rain",
             "waterBorewell": "Borewell",
             "waterCanal": "Canal",
@@ -775,7 +777,7 @@
             "shareTractorServices": "Tractor services",
             "shareFarms": "Farms",
             "shareFarm": "Farm",
-            "sharedFromApp": "Shared from VADI-Hisaab app"
+            "sharedFromApp": "Shared from VADI app"
         }
     }
 }

@@ -16,6 +16,7 @@ import {
   type IncomeCategory,
 } from "@/utils/api";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -50,8 +51,6 @@ const C = {
   border: "#C8E6C9",
   borderLight: "#EAF4EA",
 };
-
-const paddingTop = Platform.OS === "ios" ? 52 : 40;
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -154,6 +153,11 @@ export default function TransactionDetailsScreen() {
             if (type === "income") await deleteIncome(id);
             else await deleteExpense(id);
             refreshTransactions();
+            Toast.show({
+              type: "success",
+              text1: "સફળ!",
+              text2: type === "income" ? "આવક કાઢી નાખી." : "ખર્ચ કાઢી નાખ્યો.",
+            });
             router.back();
           } catch (e) {
             Alert.alert("ભૂલ", (e as Error).message ?? "કાઢવામાં ભૂલ.");

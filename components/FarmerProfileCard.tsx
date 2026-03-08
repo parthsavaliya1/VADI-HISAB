@@ -1,9 +1,10 @@
 /**
- * Full farmer profile card — for viewing, downloading and sharing.
- * Shows name, location, land, water, labour, tractor and services (if any), farms.
+ * Landscape farmer profile card — for viewing, downloading and sharing.
+ * Branded with logo, colorful section icons, landscape layout.
  */
 import type { FarmerProfile } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -16,14 +17,26 @@ function toList(map: Record<string, string>, keys: string[]): string {
   return keys.map((k) => map[k] ?? k).join(", ");
 }
 
+// Colorful icon config: [iconName, bgColor, iconColor]
+const SECTION_COLORS: Record<string, [string, string, string]> = {
+  location: ["#3B82F6", "#EFF6FF", "#1D4ED8"],      // blue
+  land:     ["#22C55E", "#ECFDF5", "#15803D"],      // green
+  water:   ["#06B6D4", "#ECFEFF", "#0891B2"],       // cyan
+  labour:  ["#F59E0B", "#FFFBEB", "#B45309"],      // amber
+  tractor: ["#EA580C", "#FFF7ED", "#C2410C"],      // orange
+  farms:   ["#8B5CF6", "#F5F3FF", "#6D28D9"],      // violet
+};
+
 export interface FarmerProfileCardProps {
   profile: FarmerProfile;
-  /** Resolved location labels (Gujarati) */
   districtLabel: string;
   talukaLabel: string;
   villageLabel: string;
-  /** Optional: card width for consistent layout (e.g. for capture) */
   cardWidth?: number;
+  /** Landscape height (default 320 for more content) */
+  cardHeight?: number;
+  /** Optional VADI score 0–100 to show at top right */
+  vadiScore?: number | null;
 }
 
 export function FarmerProfileCard({
@@ -31,7 +44,9 @@ export function FarmerProfileCard({
   districtLabel,
   talukaLabel,
   villageLabel,
-  cardWidth = 340,
+  cardWidth = 440,
+  cardHeight,
+  vadiScore = null,
 }: FarmerProfileCardProps) {
   const p = profile as Record<string, unknown>;
   const waterSources = (Array.isArray(p.waterSources) ? p.waterSources : p.waterSource != null ? [p.waterSource] : []) as string[];
@@ -45,72 +60,91 @@ export function FarmerProfileCard({
   const labourText = toList(LABOUR, labourTypes);
   const tractorServicesText = implementsAvailable.length > 0 ? toList(TRACTOR_SERVICES, implementsAvailable) : null;
 
-  const section = (title: string, icon: keyof typeof Ionicons.glyphMap, content: string | React.ReactNode) => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Ionicons name={icon} size={22} color={C.sectionIcon} />
-        <Text style={styles.sectionTitle}>{title}</Text>
+  const h = cardHeight ?? Math.round(cardWidth * (260 / 440));
+
+  const iconBox = (key: keyof typeof SECTION_COLORS, icon: keyof typeof Ionicons.glyphMap, label: string, value: string | React.ReactNode) => {
+    const [bg, _light, iconColor] = SECTION_COLORS[key] ?? ["#64748B", "#F1F5F9", "#475569"];
+    return (
+      <View style={styles.iconRow}>
+        <View style={[styles.iconCircle, { backgroundColor: bg }]}>
+          <Ionicons name={icon} size={20} color="#FFFFFF" />
+        </View>
+        <View style={styles.iconRowText}>
+          <Text style={styles.iconLabel}>{label}</Text>
+          {typeof value === "string" ? <Text style={styles.iconValue} numberOfLines={1}>{value}</Text> : value}
+        </View>
       </View>
-      <View style={styles.sectionBody}>
-        {typeof content === "string" ? <Text style={styles.sectionText}>{content}</Text> : content}
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
-    <View style={[styles.card, { width: cardWidth }]}>
-      <View style={styles.brand}>
-        <Text style={styles.brandName}>VADI-Hisaab</Text>
-        <Text style={styles.brandSub}>ખેડૂત પ્રોફાઇલ કાર્ડ</Text>
-      </View>
-
-      <View style={styles.hero}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {(profile.name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-          </Text>
+    <View style={[styles.card, { width: cardWidth, height: h }]}>
+      {/* Top brand bar: logo + VADI */}
+      <View style={styles.brandBar}>
+        <View style={styles.logoWrap}>
+          <Image
+            source={require("../assets/vadi-logo.png")}
+            style={styles.logo}
+            contentFit="contain"
+          />
         </View>
-        <Text style={styles.name}>{profile.name || "—"}</Text>
-        <Text style={styles.role}>🌾 ખેડૂત</Text>
+        <View style={styles.brandTextWrap}>
+          <Text style={styles.brandName}>VADI</Text>
+          <Text style={styles.brandSub}>ખેડૂત પ્રોફાઇલ કાર્ડ</Text>
+        </View>
       </View>
 
-      {section("સ્થળ (જિલ્લો · તાલુકો · ગામ)", "location-outline", `${districtLabel} · ${talukaLabel} · ${villageLabel}`)}
-      {section("કુલ જમીન", "leaf-outline", landText)}
-
-      {farms.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="grid-outline" size={22} color={C.sectionIcon} />
-            <Text style={styles.sectionTitle}>ફાર્મ / જમીન વિગત</Text>
+      {/* Landscape body: left = avatar + name, right = info grid */}
+      <View style={styles.body}>
+        <View style={styles.leftBlock}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {(profile.name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+            </Text>
           </View>
-          <View style={styles.sectionBody}>
-            {farms.map((f: { name?: string; area?: number }, i: number) => (
-              <Text key={i} style={styles.sectionText}>
-                {(f as any).name || "ફાર્મ"} — {(f as any).area ?? 0} વીઘા
+          <Text style={styles.name} numberOfLines={2}>{profile.name || "—"}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleEmoji}>🌾</Text>
+            <Text style={styles.roleText}>ખેડૂત</Text>
+          </View>
+        </View>
+
+        <View style={styles.rightBlock}>
+          {iconBox("location", "location", "સ્થળ", `${districtLabel} · ${talukaLabel} · ${villageLabel}`)}
+          {iconBox("land", "leaf", "જમીન", landText)}
+          {iconBox("water", "water", "પાણી", waterText)}
+          {iconBox("labour", "people", "મજૂર", labourText)}
+          <View style={styles.iconRow}>
+            <View style={[styles.iconCircle, { backgroundColor: SECTION_COLORS.tractor[0] }]}>
+              <Ionicons name="car" size={20} color="#FFFFFF" />
+            </View>
+            <View style={styles.iconRowText}>
+              <Text style={styles.iconLabel}>ટ્રેક્ટર</Text>
+              <Text style={styles.iconValue} numberOfLines={1}>
+                {profile.tractorAvailable ? (tractorServicesText ? `હા — ${tractorServicesText}` : "હા — ઉપલબ્ધ") : "ના"}
               </Text>
-            ))}
+            </View>
           </View>
-        </View>
-      )}
-
-      {section("પાણીનો સ્ત્રોત", "water-outline", waterText)}
-      {section("મજૂર પ્રકાર", "people-outline", labourText)}
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="car-outline" size={22} color={C.sectionIcon} />
-          <Text style={styles.sectionTitle}>ટ્રેક્ટર</Text>
-        </View>
-        <View style={styles.sectionBody}>
-          <Text style={styles.sectionText}>{profile.tractorAvailable ? "હા — ટ્રેક્ટર ઉપલબ્ધ" : "ના"}</Text>
-          {profile.tractorAvailable && tractorServicesText && (
-            <Text style={[styles.sectionText, styles.serviceList]}>સેવાઓ: {tractorServicesText}</Text>
+          {farms.length > 0 && (
+            <View style={styles.iconRow}>
+              <View style={[styles.iconCircle, { backgroundColor: SECTION_COLORS.farms[0] }]}>
+                <Ionicons name="grid" size={20} color="#FFFFFF" />
+              </View>
+              <View style={styles.iconRowText}>
+                <Text style={styles.iconLabel}>ફાર્મ</Text>
+                <Text style={styles.iconValue} numberOfLines={2}>
+                  {farms.map((f: { name?: string; area?: number }, i: number) => `${(f as any).name || "ફાર્મ"} ${(f as any).area ?? 0} વીઘા`).join(", ")}
+                </Text>
+              </View>
+            </View>
           )}
         </View>
       </View>
 
+      {/* Footer with small logo + tagline */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>આ કાર્ડ VADI-Hisaab એપથી શેર કર્યું</Text>
+        <Image source={require("../assets/vadi-logo.png")} style={styles.footerLogo} contentFit="contain" />
+        <Text style={styles.footerText}>આ કાર્ડ VADI એપથી શેર કર્યું</Text>
       </View>
     </View>
   );
@@ -118,81 +152,112 @@ export function FarmerProfileCard({
 
 const C = {
   brand: "#0D5C4A",
-  brandBg: "#0D5C4A",
-  accent: "#0D5C4A",
-  accentLight: "#14B8A6",
-  sectionIcon: "#0D5C4A",
+  brandLight: "#CCFBF1",
   text: "#0F172A",
-  textMuted: "#334155",
+  textMuted: "#64748B",
   border: "#0D5C4A",
-  footerBorder: "#94A3B8",
-  footerText: "#64748B",
+  footerBg: "#F8FAFC",
+  footerBorder: "#E2E8F0",
 };
 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    padding: 0,
+    borderRadius: 20,
     borderWidth: 3,
     borderColor: C.border,
     shadowColor: "#0D5C4A",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
     overflow: "hidden",
   },
-  brand: {
+  brandBar: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-    backgroundColor: C.brandBg,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: C.brand,
+    gap: 14,
   },
-  brandName: { fontSize: 26, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.5 },
-  brandSub: { fontSize: 17, fontWeight: "700", color: "#99F6E4", marginTop: 6 },
-  hero: {
-    alignItems: "center",
-    marginBottom: 24,
-    paddingTop: 24,
-    paddingHorizontal: 24,
-  },
-  avatar: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: "#CCFBF1",
-    borderWidth: 3,
-    borderColor: C.accent,
+  logoWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 14,
+    overflow: "hidden",
   },
-  avatarText: { fontSize: 30, fontWeight: "800", color: C.accent },
-  name: { fontSize: 28, fontWeight: "800", color: C.text, textAlign: "center" },
-  role: { fontSize: 18, fontWeight: "700", color: C.textMuted, marginTop: 4 },
-  section: {
-    marginBottom: 20,
-    paddingHorizontal: 24,
+  logo: { width: 36, height: 36 },
+  brandTextWrap: { flex: 1 },
+  brandName: { fontSize: 24, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.5 },
+  brandSub: { fontSize: 13, fontWeight: "700", color: C.brandLight, marginTop: 2 },
+  body: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 20,
   },
-  sectionHeader: {
+  leftBlock: {
+    alignItems: "center",
+    width: 120,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: C.brandLight,
+    borderWidth: 2,
+    borderColor: C.brand,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  avatarText: { fontSize: 26, fontWeight: "800", color: C.brand },
+  name: { fontSize: 18, fontWeight: "800", color: C.text, textAlign: "center" },
+  roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+    backgroundColor: "#F0FDF4",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 4,
+  },
+  roleEmoji: { fontSize: 14 },
+  roleText: { fontSize: 13, fontWeight: "700", color: C.textMuted },
+  rightBlock: { flex: 1, justifyContent: "flex-start", gap: 4 },
+  iconRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 10,
+    marginBottom: 4,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "800", color: C.text },
-  sectionBody: { paddingLeft: 30 },
-  sectionText: { fontSize: 17, fontWeight: "600", color: C.text, lineHeight: 26 },
-  serviceList: { marginTop: 6, fontSize: 16, color: C.textMuted, lineHeight: 24 },
-  footer: {
-    marginTop: 12,
-    paddingTop: 20,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-    borderTopWidth: 2,
-    borderTopColor: C.footerBorder,
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
     alignItems: "center",
   },
-  footerText: { fontSize: 14, fontWeight: "700", color: C.footerText },
+  iconRowText: { flex: 1, minWidth: 0 },
+  iconLabel: { fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 1 },
+  iconValue: { fontSize: 14, fontWeight: "600", color: C.text, lineHeight: 20 },
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: C.footerBg,
+    borderTopWidth: 2,
+    borderTopColor: C.footerBorder,
+  },
+  footerLogo: { width: 24, height: 24 },
+  footerText: { fontSize: 13, fontWeight: "700", color: C.textMuted },
 });

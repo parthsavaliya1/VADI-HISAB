@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "vadi-hisaab",
+    "name": "VADI",
     "slug": "vadi-hisaab",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,9 +28,15 @@
     "plugins": [
       "expo-router",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "VADI ને તમારા સ્થાનનો ઉપયોગ કરવા દો જેથી ડેશબોર્ડ પર સ્થાનિક હવામાન બતાવી શકાય."
+        }
+      ],
+      [
         "expo-contacts",
         {
-          "contactsPermission": "Allow Vadi Hisaab to access contacts to select farmer/customer when adding tractor income."
+          "contactsPermission": "Allow VADI to access contacts to select farmer/customer when adding tractor income."
         }
       ],
       [

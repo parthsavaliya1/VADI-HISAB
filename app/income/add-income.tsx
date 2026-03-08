@@ -8,6 +8,7 @@
  * ✅ All labels, errors, placeholders in Gujarati
  */
 
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
@@ -42,6 +43,7 @@ function getYearOptions(): string[] {
   const prev = `${startY - 1}-${String(startY % 100).padStart(2, "0")}`;
   return [prev, ...getFinancialYearOptions()];
 }
+import Toast from "react-native-toast-message";
 import {
   ActivityIndicator,
   Alert,
@@ -895,9 +897,8 @@ export default function AddIncomeScreen() {
         await createIncome(payload);
       }
       refreshTransactions();
-      Alert.alert("સફળ", isEdit ? "આવક અપડેટ થઈ !" : "આવક સેવ થઈ !", [
-        { text: "ઠીક", onPress: () => router.back() },
-      ]);
+      Toast.show({ type: "success", text1: "સફળ!", text2: isEdit ? "આવક અપડેટ થઈ !" : "આવક સેવ થઈ !" });
+      router.back();
     } catch (e) {
       Alert.alert("ભૂલ", (e as Error).message ?? "કંઈક ખોટું થયું");
     } finally {
@@ -918,7 +919,7 @@ export default function AddIncomeScreen() {
   // ── Active category meta ────────────────────────────────────────────────────
   const activeCat = CATEGORIES.find((c) => c.value === category)!;
 
-  const headerPaddingTop = Platform.OS === "ios" ? 52 : 40;
+  const headerPaddingTop = HEADER_PADDING_TOP;
   const keyboardHeight = useKeyboardHeight();
   const scrollRef = useRef<ScrollView>(null);
   const formSectionYRef = useRef(0);

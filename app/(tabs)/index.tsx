@@ -1,8 +1,10 @@
 
 
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
+import { getGujaratiLabel } from "@/data/gujarati-location";
 import {
   API,
   getCrops,
@@ -19,6 +21,7 @@ import {
 import { getCropColors } from "@/utils/cropColors";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -1022,7 +1025,7 @@ export default function Dashboard() {
     ]).start();
   }, []);
 
-  // Dynamic weather from Open-Meteo (no API key). Uses profile district when available.
+  // Live weather from Open-Meteo: use device location when allowed, else profile district.
   const defaultCoords: Record<string, [number, number]> = {
     Rajkot: [22.3, 70.8],
     Jamnagar: [22.47, 70.07],
@@ -1032,32 +1035,60 @@ export default function Dashboard() {
     Bhavnagar: [21.76, 72.15],
     Surendranagar: [22.7, 71.64],
   };
-  useEffect(() => {
-    const district = profile?.district;
-    const [lat, lon] = district && defaultCoords[district]
-      ? defaultCoords[district]
+  const fallbackCoords: [number, number] =
+    profile?.district && defaultCoords[profile.district]
+      ? defaultCoords[profile.district]
       : [22.3, 70.8];
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`;
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        const c = data?.current;
-        if (!c) return;
-        const temp = Math.round(Number(c.temperature_2m)) ?? 0;
-        const humidity = Math.round(Number(c.relative_humidity_2m)) ?? 0;
-        const windKmh = Math.round(Number(c.wind_speed_10m) ?? 0);
-        const code = Number(c.weather_code) ?? 0;
-        const condition = t("weather", String(code)) || t("weather", "partlyCloudy");
-        setWeather({
-          temp: `${temp}°C`,
-          condition,
-          humidity: `${humidity}%`,
-          wind: `${windKmh} km/h`,
-          weatherCode: code,
-          tempNum: temp,
-        });
-      })
-      .catch(() => {});
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchWeather = (lat: number, lon: number) => {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`;
+      fetch(url)
+        .then((res) => res.json())
+        .then((data) => {
+          if (cancelled) return;
+          const c = data?.current;
+          if (!c) return;
+          const temp = Math.round(Number(c.temperature_2m)) ?? 0;
+          const humidity = Math.round(Number(c.relative_humidity_2m)) ?? 0;
+          const windKmh = Math.round(Number(c.wind_speed_10m) ?? 0);
+          const code = Number(c.weather_code) ?? 0;
+          const condition = t("weather", String(code)) || t("weather", "partlyCloudy");
+          setWeather({
+            temp: `${temp}°C`,
+            condition,
+            humidity: `${humidity}%`,
+            wind: `${windKmh} km/h`,
+            weatherCode: code,
+            tempNum: temp,
+          });
+        })
+        .catch(() => {});
+    };
+
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (cancelled) return;
+        if (status === "granted") {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          if (cancelled) return;
+          const { latitude, longitude } = loc.coords;
+          fetchWeather(latitude, longitude);
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      fetchWeather(fallbackCoords[0], fallbackCoords[1]);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [profile?.district, t]);
 
   const totalIncome = summary.totalIncome;
@@ -1068,7 +1099,11 @@ export default function Dashboard() {
   const expensePerBigha = landBigha > 0 ? totalExpense / landBigha : 0;
 
   const farmerName = profile?.name ?? "";
-  const farmerVillage = profile?.village ?? "";
+  const villageGujarati = getGujaratiLabel(
+    profile?.district ?? "",
+    profile?.taluka ?? "",
+    profile?.village ?? "",
+  ).village;
   const farmerLand = profile?.totalLand
     ? `${profile.totalLand.value} ${profile.totalLand.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`
     : "";
@@ -1091,7 +1126,7 @@ export default function Dashboard() {
     extrapolate: "clamp",
   });
 
-  const paddingTop = Platform.OS === "ios" ? 50 : 36;
+  const paddingTop = HEADER_PADDING_TOP;
 
   // ── Navigation ─────────────────────────────────────────────────────────────────
   const openExpensePicker = () => {
@@ -1177,7 +1212,7 @@ export default function Dashboard() {
                       color={C.green500}
                     />
                     <Text style={styles.locationText}>
-                      {[farmerVillage, farmerLand]
+                      {[villageGujarati, farmerLand]
                         .filter(Boolean)
                         .join(" · ") || "—"}
                     </Text>

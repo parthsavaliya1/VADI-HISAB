@@ -1,3 +1,4 @@
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import translations from "@/translations.json";
 import { saveConsent } from "@/utils/api";
 import { LinearGradient } from "expo-linear-gradient";
@@ -232,7 +233,7 @@ export default function Consent() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    inner: { flex: 1, justifyContent: "center", paddingHorizontal: 22, paddingBottom: 20, paddingTop: Platform.OS === "ios" ? 60 : 40 },
+    inner: { flex: 1, justifyContent: "center", paddingHorizontal: 22, paddingBottom: 20, paddingTop: HEADER_PADDING_TOP },
     circle1: { position: "absolute", width: 280, height: 280, borderRadius: 140, backgroundColor: "rgba(200,230,201,0.5)", top: -80, right: -80 },
     circle2: { position: "absolute", width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(200,230,201,0.35)", bottom: 100, left: -50 },
     circle3: { position: "absolute", width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(200,230,201,0.4)", top: 200, left: 30 },

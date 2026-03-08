@@ -1,3 +1,4 @@
+import { ExpensePieChart } from "@/components/ExpensePieChart";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { VighaChart } from "@/components/VighaChart";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -219,6 +220,9 @@ export default function ReportScreen() {
               </View>
             </View>
           </View>
+
+          {/* Expense category pie chart — Labour 30%, Machinery 39%, etc. */}
+          <ExpensePieChart byCategory={expenseAnalytics?.myByCategory ?? {}} />
 
           {/* 1. Expense analysis — vertical bars, તમારો vs સરેરાશ (per bigha when available) */}
           {(expenseAnalytics || (report && (report as any).summary)) && (
@@ -517,10 +521,10 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
   },
   yearChipActive: { backgroundColor: C.green700, borderColor: C.green700 },
-  yearChipText: { fontSize: 15, fontWeight: "700", color: C.textSecondary },
+  yearChipText: { fontSize: 16, fontWeight: "700", color: C.textSecondary },
   yearChipTextActive: { color: "#fff" },
   loadWrap: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
-  loadText: { fontSize: 16, color: C.textMuted, fontWeight: "600" },
+  loadText: { fontSize: 17, color: C.textMuted, fontWeight: "600" },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 20 },
   summaryCard: {
@@ -544,8 +548,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  summaryValue: { fontSize: 14, fontWeight: "800" },
-  summaryLabel: { fontSize: 11, color: C.textMuted, fontWeight: "700" },
+  summaryValue: { fontSize: 16, fontWeight: "800" },
+  summaryLabel: { fontSize: 13, color: C.textMuted, fontWeight: "700" },
   breakdownCard: {
     backgroundColor: C.surface,
     borderRadius: 16,
@@ -554,10 +558,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  breakdownTitle: { fontSize: 17, fontWeight: "800", color: C.textPrimary, marginBottom: 12 },
+  breakdownTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary, marginBottom: 12 },
   breakdownRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6 },
-  breakdownLabel: { fontSize: 15, color: C.textSecondary, flex: 1 },
-  breakdownValue: { fontSize: 16, fontWeight: "800", marginLeft: 8 },
+  breakdownLabel: { fontSize: 16, color: C.textSecondary, flex: 1 },
+  breakdownValue: { fontSize: 18, fontWeight: "800", marginLeft: 8 },
   chartCard: {
     backgroundColor: C.surface,
     borderRadius: 16,
@@ -566,14 +570,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  chartCardTitle: { fontSize: 18, fontWeight: "800", color: C.textPrimary, marginBottom: 4 },
-  chartCardSub: { fontSize: 13, color: C.textMuted, marginBottom: 14 },
-  perBighaHighlight: { fontSize: 12, color: C.green700, marginBottom: 10, fontWeight: "600" },
-  chartEmpty: { fontSize: 14, color: C.textMuted, textAlign: "center", paddingVertical: 12 },
-  chartHint: { fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 8 },
+  chartCardTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary, marginBottom: 4 },
+  chartCardSub: { fontSize: 15, color: C.textMuted, marginBottom: 14 },
+  perBighaHighlight: { fontSize: 14, color: C.green700, marginBottom: 10, fontWeight: "600" },
+  chartEmpty: { fontSize: 15, color: C.textMuted, textAlign: "center", paddingVertical: 12 },
+  chartHint: { fontSize: 14, color: C.textMuted, textAlign: "center", marginTop: 8 },
   barChartWrap: { gap: 12 },
   barRow: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 8 },
-  barLabel: { fontSize: 14, fontWeight: "700", color: C.textSecondary, width: 72 },
+  barLabel: { fontSize: 15, fontWeight: "700", color: C.textSecondary, width: 72 },
   barGroup: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
   barPair: { flex: 1, flexDirection: "row", alignItems: "center", gap: 6 },
   barTrack: { flex: 1, height: 22, borderRadius: 6, overflow: "hidden", backgroundColor: C.borderLight },
@@ -582,12 +586,12 @@ const styles = StyleSheet.create({
   barFill: { height: "100%", borderRadius: 6 },
   barFillMy: { backgroundColor: C.expense },
   barFillAvg: { backgroundColor: C.textMuted },
-  barValue: { fontSize: 12, fontWeight: "700", color: C.expense, minWidth: 52 },
-  barValueAvg: { fontSize: 12, fontWeight: "700", color: C.textMuted, minWidth: 52 },
+  barValue: { fontSize: 14, fontWeight: "700", color: C.expense, minWidth: 52 },
+  barValueAvg: { fontSize: 14, fontWeight: "700", color: C.textMuted, minWidth: 52 },
   barLegend: { flexDirection: "row", gap: 16, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.borderLight },
   barLegendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   barLegendDot: { width: 10, height: 10, borderRadius: 5 },
-  barLegendText: { fontSize: 12, color: C.textMuted, fontWeight: "600" },
+  barLegendText: { fontSize: 14, color: C.textMuted, fontWeight: "600" },
   improvementNote: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -600,7 +604,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
   },
-  improvementNoteText: { flex: 1, fontSize: 13, color: C.textSecondary, lineHeight: 20 },
+  improvementNoteText: { flex: 1, fontSize: 15, color: C.textSecondary, lineHeight: 22 },
   verticalChartWrap: { marginVertical: 8 },
   verticalChartRow: {
     flexDirection: "row",
@@ -622,7 +626,7 @@ const styles = StyleSheet.create({
   },
   verticalBarIncome: { backgroundColor: C.income },
   verticalBarExpense: { backgroundColor: C.expense },
-  verticalBarYear: { fontSize: 10, fontWeight: "700", color: C.textMuted, marginTop: 6 },
+  verticalBarYear: { fontSize: 12, fontWeight: "700", color: C.textMuted, marginTop: 6 },
   verticalBarValues: { flexDirection: "row", gap: 4, marginTop: 2, flexWrap: "wrap", justifyContent: "center" },
   rankingCard: {
     backgroundColor: C.surfaceGreen,
@@ -632,17 +636,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
   },
-  rankingTitle: { fontSize: 17, fontWeight: "800", color: C.textPrimary, marginBottom: 10 },
+  rankingTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary, marginBottom: 10 },
   rankingRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
-  rankingText: { fontSize: 15, color: C.textSecondary, flex: 1 },
+  rankingText: { fontSize: 16, color: C.textSecondary, flex: 1 },
   rankingHighlight: { fontWeight: "800", color: C.green700 },
-  rankingMeta: { fontSize: 13, color: C.textMuted, marginTop: 4 },
+  rankingMeta: { fontSize: 14, color: C.textMuted, marginTop: 4 },
   rankingCompare: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.borderLight },
-  rankingCompareLabel: { fontSize: 13, color: C.textMuted, marginBottom: 2 },
+  rankingCompareLabel: { fontSize: 14, color: C.textMuted, marginBottom: 2 },
   rankingCompareValue: { fontSize: 16, fontWeight: "800", marginBottom: 8 },
   adviceWrap: { marginTop: 10 },
-  adviceText: { fontSize: 13, color: C.textSecondary, marginBottom: 4 },
-  sectionTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary, marginBottom: 14 },
+  adviceText: { fontSize: 15, color: C.textSecondary, marginBottom: 4 },
+  sectionTitle: { fontSize: 23, fontWeight: "800", color: C.textPrimary, marginBottom: 14 },
   cropRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -655,16 +659,16 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
   },
   cropRowLeft: { flex: 1 },
-  cropRowName: { fontSize: 17, fontWeight: "800", color: C.textPrimary },
+  cropRowName: { fontSize: 18, fontWeight: "800", color: C.textPrimary },
   bhagmaBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
-  bhagmaBadgeText: { fontSize: 12, fontWeight: "700" },
-  cropRowMeta: { fontSize: 14, color: C.textMuted, marginTop: 4, fontWeight: "600" },
-  cropRowProfit: { fontSize: 17, fontWeight: "800", marginLeft: 12 },
+  bhagmaBadgeText: { fontSize: 13, fontWeight: "700" },
+  cropRowMeta: { fontSize: 15, color: C.textMuted, marginTop: 4, fontWeight: "600" },
+  cropRowProfit: { fontSize: 18, fontWeight: "800", marginLeft: 12 },
   emptyWrap: { alignItems: "center", paddingVertical: 40 },
   emptyEmoji: { fontSize: 48, marginBottom: 10 },
-  emptyText: { fontSize: 17, color: C.textMuted, fontWeight: "700" },
+  emptyText: { fontSize: 18, color: C.textMuted, fontWeight: "700" },
 });

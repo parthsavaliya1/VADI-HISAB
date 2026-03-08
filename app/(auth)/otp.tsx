@@ -10,6 +10,7 @@
  * ✅ Light sky-blue + mint palette matching login
  */
 
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import translations from "@/translations.json";
 import { sendOtp, verifyOtp } from "@/utils/api";
 import { LinearGradient } from "expo-linear-gradient";
@@ -803,7 +804,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 22,
     paddingBottom: 20,
-    paddingTop: 50,
+    paddingTop: HEADER_PADDING_TOP,
   },
   pasteOtpBtn: {
     alignSelf: "center",

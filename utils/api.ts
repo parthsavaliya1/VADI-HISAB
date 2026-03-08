@@ -1,5 +1,5 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🌾 VADI-HISAAB — services/api.ts
+// 🌾 VADI — services/api.ts
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import AsyncStorage from "@react-native-async-storage/async-storage";

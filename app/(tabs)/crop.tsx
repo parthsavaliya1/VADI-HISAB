@@ -12,7 +12,9 @@ import {
   type Crop,
   type CropStatus,
 } from "@/utils/api";
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { getCropColors } from "@/utils/cropColors";
+import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -468,7 +470,7 @@ function StatsBar({
     Animated.timing(anim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
   }, []);
 
-  const paddingTop = Platform.OS === "ios" ? 50 : 36;
+  const paddingTop = HEADER_PADDING_TOP;
 
   return (
     <Animated.View style={{ opacity: anim }}>
@@ -673,6 +675,7 @@ export default function CropScreen() {
           try {
             await deleteCrop(id);
             setCrops((prev) => prev.filter((c) => c._id !== id));
+            Toast.show({ type: "success", text1: "સફળ!", text2: "પાક કાઢી નાખ્યો." });
           } catch (err: any) {
             Alert.alert(t("common", "error"), err.message);
           }

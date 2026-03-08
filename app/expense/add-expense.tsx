@@ -1,3 +1,4 @@
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
@@ -19,6 +20,7 @@ import {
   type SharingOption,
 } from "@/utils/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Toast from "react-native-toast-message";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -662,7 +664,8 @@ export default function AddExpense() {
         if (isEdit) await updateExpense(editId!, generalPayload);
         else await createExpense(generalPayload);
         refreshTransactions();
-        Alert.alert("✅ સફળ!", isEdit ? "ફેરફાર સાચવ્યો." : "સામાન્ય ખર્ચ સાચવ્યો.", [{ text: "ઠીક છે", onPress: () => isEdit && router.back() }]);
+        Toast.show({ type: "success", text1: "સફળ!", text2: isEdit ? "ફેરફાર સાચવ્યો." : "સામાન્ય ખર્ચ સાચવ્યો." });
+        if (isEdit) router.back();
         if (!isEdit) {
           setGeneralDescription("");
           setGeneralAmount("");
@@ -672,7 +675,8 @@ export default function AddExpense() {
       if (isEdit) await updateExpense(editId!, cropPayload);
       else await createExpense(cropPayload);
       refreshTransactions();
-      Alert.alert("✅ સફળ!", isEdit ? "ખર્ચમાં ફેરફાર સાચવ્યો!" : "ખર્ચ સફળતાપૂર્વક ઉમેરાયો!", [{ text: "ઠીક છે", onPress: () => isEdit && router.back() }]);
+      Toast.show({ type: "success", text1: "સફળ!", text2: isEdit ? "ખર્ચમાં ફેરફાર સાચવ્યો!" : "ખર્ચ સફળતાપૂર્વક ઉમેરાયો!" });
+      if (isEdit) router.back();
       if (!isEdit) {
         setCategory("");
         setSeedType("");
@@ -708,7 +712,7 @@ export default function AddExpense() {
   };
 
   const activeCat = CATEGORIES.find((c) => c.value === category);
-  const paddingTop = Platform.OS === "ios" ? 52 : 40;
+  const paddingTop = HEADER_PADDING_TOP;
   const keyboardHeight = useKeyboardHeight();
   const scrollRef = useRef<ScrollView>(null);
   const formSectionYRef = useRef(0);

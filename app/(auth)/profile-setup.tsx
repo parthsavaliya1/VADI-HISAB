@@ -18,6 +18,7 @@ import {
     View,
 } from "react-native";
 
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import {
     getDistrictItems,
     getTalukaItems,
@@ -727,7 +728,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: C.bg },
     circle1: { position: "absolute", width: 250, height: 250, borderRadius: 125, backgroundColor: C.green100 + "80", top: -60, right: -60 },
     circle2: { position: "absolute", width: 150, height: 150, borderRadius: 75, backgroundColor: C.green100 + "50", top: 80, left: -60 },
-    stickyHeader: { paddingHorizontal: 22, paddingTop: Platform.OS === "ios" ? 58 : 38, paddingBottom: 14, zIndex: 10 },
+    stickyHeader: { paddingHorizontal: 22, paddingTop: HEADER_PADDING_TOP, paddingBottom: 14, zIndex: 10 },
     headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
     headerTitle: { fontSize: 24, fontWeight: "900", color: C.textPrimary, letterSpacing: 0.3 },
     headerSubtitle: { fontSize: 13, color: C.textSecondary, marginTop: 2 },
