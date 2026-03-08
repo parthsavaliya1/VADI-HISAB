@@ -4,6 +4,7 @@
  * Interactive: Edit → add-income/add-expense with id; Delete → confirm then delete and go back.
  */
 
+import { useRefresh } from "@/contexts/RefreshContext";
 import {
   deleteExpense,
   deleteIncome,
@@ -91,6 +92,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function TransactionDetailsScreen() {
+  const { refreshTransactions } = useRefresh();
   const params = useLocalSearchParams<{ id?: string; type?: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const type = (Array.isArray(params.type) ? params.type[0] : params.type) as "income" | "expense" | undefined;
@@ -121,8 +123,19 @@ export default function TransactionDetailsScreen() {
 
   const onEdit = () => {
     if (!id || !type) return;
-    if (type === "income") router.push(`/income/add-income?id=${id}` as any);
-    else router.push(`/expense/add-expense?id=${id}` as any);
+    if (type === "income") {
+      const cropId = income?.cropId != null
+        ? (typeof income.cropId === "object" ? (income.cropId as any)._id : income.cropId)
+        : "";
+      const q = cropId ? `?id=${id}&cropId=${cropId}` : `?id=${id}&general=1`;
+      router.push(`/income/add-income${q}` as any);
+    } else {
+      const cropId = expense?.cropId != null
+        ? (typeof expense.cropId === "object" ? (expense.cropId as any)._id : expense.cropId)
+        : "";
+      const q = cropId ? `?id=${id}&cropId=${cropId}` : `?id=${id}&general=1`;
+      router.push(`/expense/add-expense${q}` as any);
+    }
   };
 
   const onDelete = () => {
@@ -140,6 +153,7 @@ export default function TransactionDetailsScreen() {
           try {
             if (type === "income") await deleteIncome(id);
             else await deleteExpense(id);
+            refreshTransactions();
             router.back();
           } catch (e) {
             Alert.alert("ભૂલ", (e as Error).message ?? "કાઢવામાં ભૂલ.");

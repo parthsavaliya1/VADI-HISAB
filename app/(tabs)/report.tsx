@@ -1,3 +1,6 @@
+import { VighaChart } from "@/components/VighaChart";
+import { useProfile } from "@/contexts/ProfileContext";
+import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getCompareReport,
   getFinancialYearOptions,
@@ -70,7 +73,15 @@ function formatINR(n: number): string {
   return n.toLocaleString("en-IN");
 }
 
+function totalLandBigha(profile: { totalLand?: { value: number; unit?: string } } | null): number {
+  const tl = profile?.totalLand;
+  if (!tl || !tl.value || tl.value <= 0) return 0;
+  return tl.unit === "acre" ? tl.value * 1.6 : tl.value;
+}
+
 export default function ReportScreen() {
+  const { profile } = useProfile();
+  const { transactionsRefreshKey } = useRefresh();
   const [financialYear, setFinancialYear] = useState(getCurrentFinancialYear());
   const [report, setReport] = useState<Awaited<ReturnType<typeof getYearlyReport>> | null>(null);
   const [analytics, setAnalytics] = useState<Awaited<ReturnType<typeof getIncomeAnalytics>> | null>(null);
@@ -101,7 +112,7 @@ export default function ReportScreen() {
 
   useEffect(() => {
     loadReport();
-  }, [loadReport]);
+  }, [loadReport, transactionsRefreshKey]);
 
   const years = getFinancialYearOptionsExtended();
   const summary = report?.summary ?? { totalIncome: 0, totalExpense: 0, netProfit: 0, totalCrops: 0, totalArea: 0 };
@@ -210,6 +221,9 @@ export default function ReportScreen() {
               <Text style={[styles.breakdownValue, { color: C.expense }]}>{formatINR(extraExpense)}</Text>
             </View>
           </View>
+
+          {/* વીઘા ચાર્ટ — active crops + બાકી વીઘા */}
+          <VighaChart crops={crops} totalLandBigha={totalLandBigha(profile)} />
 
           {/* Farmer ranking */}
           {showRanking && analytics && (

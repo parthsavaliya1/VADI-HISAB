@@ -736,6 +736,12 @@ export const getExpenseById = async (id: string): Promise<Expense> => {
   return res.data.data;
 };
 
+/** PUT /expenses/:id — update expense; server re-computes amount. */
+export const updateExpense = async (id: string, payload: ExpensePayload): Promise<Expense> => {
+  const res = await API.put<{ success: boolean; data: Expense }>(`/expenses/${id}`, payload);
+  return res.data.data;
+};
+
 /** DELETE /expenses/:id */
 export const deleteExpense = async (id: string): Promise<void> => {
   await API.delete(`/expenses/${id}`);

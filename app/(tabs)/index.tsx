@@ -2,6 +2,7 @@
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useRefresh } from "@/contexts/RefreshContext";
 import {
   API,
   getCrops,
@@ -913,6 +914,7 @@ function RecentTransactions({
 export default function Dashboard() {
   const { t } = useLanguage();
   const { profile, setProfile } = useProfile();
+  const { transactionsRefreshKey } = useRefresh();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [summary, setSummary] = useState<{ totalIncome: number; totalExpense: number; netProfit: number }>({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
   const [transactions, setTxns] = useState<Transaction[]>([]);
@@ -945,15 +947,15 @@ export default function Dashboard() {
       const reportCrops = (yearlyReport as any).crops ?? [];
       const extraIncome = (yearlyReport as any).summary?.extraIncome ?? 0;
       const extraExpense = (yearlyReport as any).summary?.extraExpense ?? 0;
-      // Main summary: all income; expense excludes bhagma crops (don't count bhagma expense in dashboard total)
+      // Main summary: total income includes extra; total expense = sum of individual crop expenses only (matches what user sees on each crop card)
       const cropIncome = reportCrops.reduce((s: number, r: any) => s + (r.income ?? 0), 0);
-      const cropExpense = reportCrops
-        .filter((r: any) => r.landType !== "bhagma")
-        .reduce((s: number, r: any) => s + (r.expense ?? 0), 0);
+      const cropExpense = reportCrops.reduce((s: number, r: any) => s + (r.expense ?? 0), 0);
+      const allIncome = cropIncome + extraIncome;
+      const allExpense = cropExpense + extraExpense;
       setSummary({
-        totalIncome: cropIncome + extraIncome,
-        totalExpense: cropExpense + extraExpense,
-        netProfit: cropIncome + extraIncome - (cropExpense + extraExpense),
+        totalIncome: allIncome,
+        totalExpense: cropExpense, // show only sum of crop expenses in main "કુલ ખર્ચ"
+        netProfit: allIncome - allExpense, // profit still uses all expenses (crop + extra)
       });
       setCrops(
         cropRes.data.map((c: Crop) => {
@@ -982,7 +984,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, transactionsRefreshKey]);
 
   useEffect(() => {
     Animated.parallel([
@@ -1529,17 +1531,29 @@ export default function Dashboard() {
                   <View style={styles.detailSummarySingleBox}>
                     <View style={styles.detailSummaryCell}>
                       <Text style={[styles.detailSummaryCellLabel, { color: C.income }]}>આવક</Text>
-                      <Text style={[styles.detailSummaryCellValue, { color: C.income }]}>{inc.toLocaleString("en-IN")}</Text>
+                      <View style={styles.detailSummaryCellValueWrap}>
+                        <Text style={[styles.detailSummaryCellValue, { color: C.income }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+                          {inc.toLocaleString("en-IN")}
+                        </Text>
+                      </View>
                     </View>
                     <Text style={styles.detailSummaryOp}>−</Text>
                     <View style={styles.detailSummaryCell}>
                       <Text style={[styles.detailSummaryCellLabel, { color: C.expense }]}>ખર્ચ</Text>
-                      <Text style={[styles.detailSummaryCellValue, { color: C.expense }]}>{exp.toLocaleString("en-IN")}</Text>
+                      <View style={styles.detailSummaryCellValueWrap}>
+                        <Text style={[styles.detailSummaryCellValue, { color: C.expense }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+                          {exp.toLocaleString("en-IN")}
+                        </Text>
+                      </View>
                     </View>
                     <Text style={styles.detailSummaryOp}>=</Text>
                     <View style={styles.detailSummaryCell}>
                       <Text style={[styles.detailSummaryCellLabel, { color: C.textPrimary }]}>નફો</Text>
-                      <Text style={[styles.detailSummaryCellValue, { color: C.textPrimary }]}>{net >= 0 ? "" : "−"}{Math.abs(net).toLocaleString("en-IN")}</Text>
+                      <View style={styles.detailSummaryCellValueWrap}>
+                        <Text style={[styles.detailSummaryCellValue, { color: C.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+                          {net >= 0 ? "" : "−"}{Math.abs(net).toLocaleString("en-IN")}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                   {c.landType === "bhagma" && (c as any).labourShare != null && (c as any).labourShare > 0 && (
@@ -2102,13 +2116,19 @@ const styles = StyleSheet.create({
   detailSummaryCell: {
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 88,
+    minWidth: 0,
     flex: 1,
   },
   detailSummaryCellLabel: {
     fontSize: 15,
     fontWeight: "700",
     marginBottom: 4,
+  },
+  detailSummaryCellValueWrap: {
+    width: "100%",
+    minWidth: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
   detailSummaryCellValue: {
     fontSize: 20,

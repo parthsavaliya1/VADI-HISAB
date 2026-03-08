@@ -65,6 +65,12 @@ const CROPS: { value: string; label: string; emoji: string; subtypes: string[] }
   { value: "Maize", label: "મકાઈ", emoji: "🌽", subtypes: ["TATA-900M", "DKC-9144", "Pioneer-30V92"] },
 ];
 
+const BHAGMA_SHARE_OPTIONS: { value: string; label: string }[] = [
+  { value: "50", label: "બીજા ભાગે" },
+  { value: "33.33", label: "ત્રિજા ભાગે" },
+  { value: "25", label: "ચોથા ભાગે" },
+];
+
 function SectionLabel({ text }: { text: string }) {
   return <Text style={styles.sectionLabel}>{text}</Text>;
 }
@@ -81,15 +87,15 @@ export default function EditCropScreen() {
   const [year, setYear] = useState(getCurrentFinancialYear());
   const [season, setSeason] = useState<CropSeason | "">("");
   const [cropValue, setCropValue] = useState("");
+  const [customCrop, setCustomCrop] = useState("");
   const [cropEmoji, setCropEmoji] = useState("🌱");
   const [subType, setSubType] = useState("");
   const [selectedFarm, setSelectedFarm] = useState<ProfileFarm | null>(null);
   const [area, setArea] = useState("");
   const [notes, setNotes] = useState("");
 
-  const [landType, setLandType] = useState<"ghare" | "bhagma" | "">("");
-  const [bhagmaPercentage, setBhagmaPercentage] = useState<number | "">("");
-  const [bhagmaExpensePctOfIncome, setBhagmaExpensePctOfIncome] = useState<number | "">("");
+  const [bhagmaOption, setBhagmaOption] = useState<"ha" | "na">("na");
+  const [bhagmaPercentage, setBhagmaPercentage] = useState<string>("");
 
   const [usedAreaByFarm, setUsedAreaByFarm] = useState<Record<string, number>>({});
 
@@ -107,16 +113,26 @@ export default function EditCropScreen() {
     getCropById(id)
       .then((c) => {
         const cr = c as any;
+        const name = cr.cropName ?? "";
+        const matchedCrop = CROPS.find((co) => co.value === name);
         setYear(cr.year ?? getCurrentFinancialYear());
         setSeason((cr.season as CropSeason) || "");
-        setCropValue(cr.cropName ?? "");
-        setCropEmoji(cr.cropEmoji ?? "🌱");
+        setCropValue(matchedCrop ? name : "");
+        setCustomCrop(matchedCrop ? "" : name);
+        setCropEmoji(matchedCrop ? matchedCrop.emoji : (cr.cropEmoji ?? "🌱"));
         setSubType(cr.subType ?? "");
         setArea(String(cr.area ?? ""));
         setNotes(cr.notes ?? "");
-        setLandType(cr.landType ?? "");
-        setBhagmaPercentage(cr.bhagmaPercentage != null ? Number(cr.bhagmaPercentage) : "");
-        setBhagmaExpensePctOfIncome(cr.bhagmaExpensePctOfIncome != null ? Number(cr.bhagmaExpensePctOfIncome) : "");
+        setBhagmaOption(cr.landType === "bhagma" ? "ha" : "na");
+        setBhagmaPercentage((() => {
+          const pct = cr.bhagmaPercentage;
+          if (pct == null) return "";
+          const n = Number(pct);
+          if (Math.abs(n - 25) < 2) return "25";
+          if (Math.abs(n - 33.33) < 2 || Math.abs(n - 33) < 2) return "33.33";
+          if (Math.abs(n - 50) < 2) return "50";
+          return String(pct);
+        })());
         if (cr.farmName) setSelectedFarm({ name: cr.farmName, area: 0, category: "own" });
       })
       .catch((e) => setError((e as Error).message))
@@ -156,14 +172,15 @@ export default function EditCropScreen() {
   const farmArea = farms.find((f) => f.name === selectedFarmName)?.area ?? 0;
   const maxBigha = farmArea > 0 ? Math.max(0, farmArea - usedForSelected) : null;
 
+  const finalCropName = customCrop.trim() || cropValue.trim();
   const validate = (): string | null => {
     if (!season) return "કૃપા કરીને સિઝન પસંદ કરો.";
-    if (!cropValue.trim()) return "કૃપા કરીને પાક પસંદ કરો.";
+    if (!finalCropName) return "કૃપા કરીને પાક પસંદ કરો અથવા ટાઈપ કરો.";
     const areaNum = Number(area);
     if (!area || isNaN(areaNum) || areaNum <= 0) return "માન્ય વિસ્તાર (વીઘા) દાખલ કરો.";
     if (farms.length > 0 && !selectedFarm) return "કૃપા કરીને વાડી પસંદ કરો.";
     if (maxBigha != null && areaNum > maxBigha) return `આ વાડી પર મહત્તમ ${maxBigha} વીઘા દાખલ કરી શકો.`;
-    if (landType === "bhagma" && bhagmaPercentage === "") return "ભાગમા માટે ટકાવારી પસંદ કરો.";
+    if (bhagmaOption === "ha" && !["25", "33.33", "50"].includes(bhagmaPercentage.trim())) return "કૃપા કરીને ભાગમા (બીજા / ત્રિજા / ચોથા ભાગે) પસંદ કરો.";
     return null;
   };
 
@@ -176,7 +193,7 @@ export default function EditCropScreen() {
     if (!id) return;
     const payload: CropPayload = {
       season: season as CropSeason,
-      cropName: cropValue.trim(),
+      cropName: finalCropName,
       cropEmoji: cropEmoji,
       area: Number(area),
       areaUnit: "Bigha",
@@ -185,9 +202,8 @@ export default function EditCropScreen() {
       subType: subType.trim() || undefined,
       year,
       farmName: selectedFarm?.name,
-      ...(landType ? { landType: landType as "ghare" | "bhagma" } : {}),
-      ...(landType === "bhagma" && bhagmaPercentage !== "" ? { bhagmaPercentage: Number(bhagmaPercentage) } : {}),
-      ...(landType === "bhagma" ? { bhagmaExpensePctOfIncome: bhagmaExpensePctOfIncome !== "" ? Number(bhagmaExpensePctOfIncome) : null } : {}),
+      landType: bhagmaOption === "ha" ? "bhagma" : "ghare",
+      bhagmaPercentage: bhagmaOption === "ha" && bhagmaPercentage.trim() ? Number(bhagmaPercentage) : undefined,
     };
     try {
       setSaving(true);
@@ -284,22 +300,34 @@ export default function EditCropScreen() {
             {CROPS.map((c) => (
               <TouchableOpacity
                 key={c.value}
-                style={[styles.cropPill, cropValue === c.value && styles.cropPillActive]}
+                style={[styles.cropPill, cropValue === c.value && !customCrop && styles.cropPillActive]}
                 onPress={() => {
                   setCropValue(c.value);
                   setCropEmoji(c.emoji);
+                  setCustomCrop("");
                 }}
               >
                 <Text style={styles.cropPillEmoji}>{c.emoji}</Text>
-                <Text style={[styles.cropPillText, cropValue === c.value && styles.cropPillTextActive]} numberOfLines={1}>{c.label}</Text>
+                <Text style={[styles.cropPillText, cropValue === c.value && !customCrop && styles.cropPillTextActive]} numberOfLines={1}>{c.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
+          <Text style={styles.orDivider}>— અથવા, બીજો પાક ટાઈપ કરો —</Text>
+          <TextInput
+            style={[styles.input, customCrop.length > 0 && styles.inputActive]}
+            value={customCrop}
+            onChangeText={(v) => {
+              setCustomCrop(v);
+              if (v.trim()) setCropValue("");
+            }}
+            placeholder="પાકનું નામ ટાઈપ કરો..."
+            placeholderTextColor={C.textMuted}
+          />
         </View>
 
         <View style={styles.card}>
           <SectionLabel text="🏷️ પ્રકાર/જાત (વૈકલ્પિક)" />
-          {cropValue ? (() => {
+          {(cropValue || customCrop.trim()) ? (() => {
             const selectedCrop = CROPS.find((c) => c.value === cropValue);
             const subtypes = selectedCrop?.subtypes ?? [];
             return (
@@ -393,46 +421,30 @@ export default function EditCropScreen() {
           <SectionLabel text="🤝 ભાગમા આપ્યું છે?" />
           <View style={styles.chipRow}>
             <TouchableOpacity
-              style={[styles.presetChip, landType === "ghare" && styles.presetChipActive]}
-              onPress={() => { setLandType("ghare"); setBhagmaPercentage(""); setBhagmaExpensePctOfIncome(""); }}
+              style={[styles.presetChip, bhagmaOption === "na" && styles.presetChipActive]}
+              onPress={() => { setBhagmaOption("na"); setBhagmaPercentage(""); }}
             >
-              <Text style={[styles.presetChipText, landType === "ghare" && styles.presetChipTextActive]}>ના</Text>
+              <Text style={[styles.presetChipText, bhagmaOption === "na" && styles.presetChipTextActive]}>ના</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.presetChip, landType === "bhagma" && styles.presetChipActive]}
-              onPress={() => setLandType("bhagma")}
+              style={[styles.presetChip, bhagmaOption === "ha" && styles.presetChipActive]}
+              onPress={() => setBhagmaOption("ha")}
             >
-              <Text style={[styles.presetChipText, landType === "bhagma" && styles.presetChipTextActive]}>હા</Text>
+              <Text style={[styles.presetChipText, bhagmaOption === "ha" && styles.presetChipTextActive]}>હા</Text>
             </TouchableOpacity>
           </View>
-          {landType === "bhagma" && (
-            <>
-              <Text style={[styles.sectionLabel, { marginTop: 14, marginBottom: 8 }]}>ટકાવારી પસંદ કરો</Text>
-              <View style={styles.chipRow}>
-                {[25, 30, 33, 50].map((pct) => (
-                  <TouchableOpacity
-                    key={pct}
-                    style={[styles.presetChip, bhagmaPercentage === pct && styles.presetChipActive]}
-                    onPress={() => setBhagmaPercentage(pct)}
-                  >
-                    <Text style={[styles.presetChipText, bhagmaPercentage === pct && styles.presetChipTextActive]}>{pct}%</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <Text style={[styles.sectionLabel, { marginTop: 14, marginBottom: 8 }]}>આવકનો વધારાનો ખર્ચ (ટકા)</Text>
-              <Text style={[styles.hint, { marginBottom: 8 }]}>ભાગમા માટે આવકના ટકા પ્રમાણે વધારાનો ખર્ચ ઉમેરો (ભાગ પ્રમાણે વહેંચાશે)</Text>
-              <View style={styles.chipRow}>
-                {[0, 5, 10, 15].map((pct) => (
-                  <TouchableOpacity
-                    key={pct}
-                    style={[styles.presetChip, bhagmaExpensePctOfIncome === pct && styles.presetChipActive]}
-                    onPress={() => setBhagmaExpensePctOfIncome(pct)}
-                  >
-                    <Text style={[styles.presetChipText, bhagmaExpensePctOfIncome === pct && styles.presetChipTextActive]}>{pct}%</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>
+          {bhagmaOption === "ha" && (
+            <View style={[styles.chipRow, { marginTop: 14 }]}>
+              {BHAGMA_SHARE_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.presetChip, bhagmaPercentage === opt.value && styles.presetChipActive]}
+                  onPress={() => setBhagmaPercentage(opt.value)}
+                >
+                  <Text style={[styles.presetChipText, bhagmaPercentage === opt.value && styles.presetChipTextActive]}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </View>
 
@@ -616,6 +628,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: C.borderLight,
   },
+  inputActive: { borderColor: C.green700, backgroundColor: C.green50 },
   notesInput: { minHeight: 80, paddingTop: 12 },
   areaRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   areaInput: {

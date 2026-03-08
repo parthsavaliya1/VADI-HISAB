@@ -1,9 +1,12 @@
 import { useProfile } from "@/contexts/ProfileContext";
+import { useRefresh } from "@/contexts/RefreshContext";
 import {
   createExpense,
+  getExpenseById,
   getCrops,
   getCurrentFinancialYear,
   getFinancialYearOptions,
+  updateExpense,
   type AdvanceReason,
   type Crop,
   type ExpenseCategory,
@@ -20,6 +23,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   KeyboardAvoidingView,
@@ -296,12 +300,15 @@ function NumericInput({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AddExpense() {
-  const params = useLocalSearchParams<{ cropId?: string; general?: string; year?: string; bhagyaUpad?: string }>();
+  const params = useLocalSearchParams<{ id?: string; cropId?: string; general?: string; year?: string; bhagyaUpad?: string }>();
+  const editId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const isEdit = !!editId;
   const paramCropId = Array.isArray(params.cropId) ? params.cropId[0] : params.cropId;
   const paramYear = Array.isArray(params.year) ? params.year[0] : params.year;
   const isGeneralExpense = (Array.isArray(params.general) ? params.general[0] : params.general) === "1";
   const isBhagyaUpad = (Array.isArray(params.bhagyaUpad) ? params.bhagyaUpad[0] : params.bhagyaUpad) === "1";
   const { profile } = useProfile();
+  const { refreshTransactions } = useRefresh();
 
   const yearOptions = getYearOptions();
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
@@ -346,6 +353,69 @@ export default function AddExpense() {
   useEffect(() => {
     if (paramCropId && !isGeneralExpense) setSelectedCropId(paramCropId);
   }, [paramCropId, isGeneralExpense]);
+
+  const [fetchingEdit, setFetchingEdit] = useState(isEdit);
+
+  // When editing: fetch expense and pre-fill form so user lands on the right screen without crop selection
+  useEffect(() => {
+    if (!isEdit || !editId) return;
+    (async () => {
+      try {
+        const doc = await getExpenseById(editId);
+        setCategory(doc.category as ExpenseCategory);
+        setNotes(doc.notes ?? "");
+        if (!doc.cropId) {
+          setGeneralDescription(doc.notes ?? "");
+          setGeneralAmount(String(doc.labourContract?.amountGiven ?? doc.amount ?? ""));
+        } else {
+          if (doc.seed) {
+            setSeedType((doc.seed.seedType as SeedType) ?? "");
+            setSeedQty(String(doc.seed.quantityKg ?? ""));
+            setSeedUnitRate(doc.seed.quantityKg && doc.seed.totalCost ? String((doc.seed.totalCost / doc.seed.quantityKg).toFixed(2)) : "");
+          }
+          if (doc.fertilizer) {
+            setFertProduct((doc.fertilizer.productName as FertilizerProduct) ?? "");
+            setFertBags(String(doc.fertilizer.numberOfBags ?? ""));
+            setFertUnitCost(doc.fertilizer.numberOfBags && doc.fertilizer.totalCost ? String((doc.fertilizer.totalCost / doc.fertilizer.numberOfBags).toFixed(0)) : "");
+          }
+          if (doc.pesticide) {
+            setPestCategory((doc.pesticide.category as PesticideCategory) ?? "");
+            setPestDosage(String(doc.pesticide.dosageML ?? ""));
+            setPestCost(String(doc.pesticide.cost ?? ""));
+          }
+          if (doc.labourDaily) {
+            setLabourMode("Daily");
+            setLabourTask((doc.labourDaily.task as LabourTask) ?? "");
+            setLabourPeople(String(doc.labourDaily.numberOfPeople ?? ""));
+            setLabourDays(String(doc.labourDaily.days ?? ""));
+            setLabourRate(String(doc.labourDaily.dailyRate ?? ""));
+          }
+          if (doc.labourContract) {
+            setLabourMode("Contract");
+            setAdvanceReason((doc.labourContract.advanceReason as AdvanceReason) ?? "");
+            setAdvanceAmount(String(doc.labourContract.amountGiven ?? ""));
+            if (doc.labourContract.sharingType) setSharingType(doc.labourContract.sharingType as SharingOption);
+            if (doc.labourContract.sharingCustom != null) setSharingCustom(String(doc.labourContract.sharingCustom));
+          }
+          if (doc.machinery) {
+            setMachineImpl((doc.machinery.implement as MachineryImplement) ?? "");
+            setMachineQty(String(doc.machinery.hoursOrAcres ?? ""));
+            setMachineRate(String(doc.machinery.rate ?? ""));
+          }
+          if (doc.irrigation?.amount != null) setIrrigationAmount(String(doc.irrigation.amount));
+          if (doc.other) {
+            setOtherAmount(String(doc.other.totalAmount ?? ""));
+            setOtherDescription(doc.other.description ?? "");
+          }
+        }
+      } catch (e) {
+        Alert.alert("ભૂલ", (e as Error).message ?? "ડેટા લોડ ન થઈ શક્યો");
+        router.back();
+      } finally {
+        setFetchingEdit(false);
+      }
+    })();
+  }, [isEdit, editId]);
 
   const [category, setCategory] = useState<ExpenseCategory | "">("");
   const [saving, setSaving] = useState(false);
@@ -513,23 +583,17 @@ export default function AddExpense() {
       setSaving(true);
       if (category === "Labour" && labourMode === "Contract" && sharingType)
         persistSharing(sharingType, sharingCustom);
-      if (isGeneralExpense) {
-        await createExpense({
-          cropId: null,
-          category: "Labour",
-          date: effectiveExpenseDate.toISOString(),
-          notes: generalDescription.trim(),
-          labourContract: {
-            advanceReason: "Other",
-            amountGiven: Number(generalAmount),
-          },
-        });
-        Alert.alert("✅ સફળ!", "સામાન્ય ખર્ચ સાચવ્યો.", [{ text: "ઠીક છે" }]);
-        setGeneralDescription("");
-        setGeneralAmount("");
-        return;
-      }
-      await createExpense({
+      const generalPayload = {
+        cropId: null,
+        category: "Labour" as const,
+        date: effectiveExpenseDate.toISOString(),
+        notes: generalDescription.trim(),
+        labourContract: {
+          advanceReason: "Other" as const,
+          amountGiven: Number(generalAmount),
+        },
+      };
+      const cropPayload = {
         cropId: cropId as string,
         category: category as ExpenseCategory,
         date: effectiveExpenseDate.toISOString(),
@@ -591,33 +655,50 @@ export default function AddExpense() {
         ...(category === "Other" && {
           other: { totalAmount: Number(otherAmount), description: otherDescription.trim() || undefined },
         }),
-      });
-      Alert.alert("✅ સફળ!", "ખર્ચ સફળતાપૂર્વક ઉમેરાયો!", [{ text: "ઠીક છે" }]);
-      setCategory("");
-      setSeedType("");
-      setSeedQty("");
-      setSeedUnitRate("");
-      setFertProduct("");
-      setFertBags("");
-      setFertUnitCost("");
-      setPestCategory("");
-      setPestDosage("");
-      setPestCost("");
-      setLabourTask("");
-      setLabourPeople("");
-      setLabourDays("");
-      setLabourRate("");
-      setAdvanceReason("");
-      setAdvanceAmount("");
-      setSharingType("");
-      setSharingCustom("");
-      setMachineImpl("");
-      setMachineQty("");
-      setMachineRate("");
-      setNotes("");
-      setIrrigationAmount("");
-      setOtherAmount("");
-      setOtherDescription("");
+      };
+
+      if (isGeneralExpense) {
+        if (isEdit) await updateExpense(editId!, generalPayload);
+        else await createExpense(generalPayload);
+        refreshTransactions();
+        Alert.alert("✅ સફળ!", isEdit ? "ફેરફાર સાચવ્યો." : "સામાન્ય ખર્ચ સાચવ્યો.", [{ text: "ઠીક છે", onPress: () => isEdit && router.back() }]);
+        if (!isEdit) {
+          setGeneralDescription("");
+          setGeneralAmount("");
+        }
+        return;
+      }
+      if (isEdit) await updateExpense(editId!, cropPayload);
+      else await createExpense(cropPayload);
+      refreshTransactions();
+      Alert.alert("✅ સફળ!", isEdit ? "ખર્ચમાં ફેરફાર સાચવ્યો!" : "ખર્ચ સફળતાપૂર્વક ઉમેરાયો!", [{ text: "ઠીક છે", onPress: () => isEdit && router.back() }]);
+      if (!isEdit) {
+        setCategory("");
+        setSeedType("");
+        setSeedQty("");
+        setSeedUnitRate("");
+        setFertProduct("");
+        setFertBags("");
+        setFertUnitCost("");
+        setPestCategory("");
+        setPestDosage("");
+        setPestCost("");
+        setLabourTask("");
+        setLabourPeople("");
+        setLabourDays("");
+        setLabourRate("");
+        setAdvanceReason("");
+        setAdvanceAmount("");
+        setSharingType("");
+        setSharingCustom("");
+        setMachineImpl("");
+        setMachineQty("");
+        setMachineRate("");
+        setNotes("");
+        setIrrigationAmount("");
+        setOtherAmount("");
+        setOtherDescription("");
+      }
     } catch (error: any) {
       Alert.alert("❌ ભૂલ", error?.message ?? "કંઈક ખોટું થયું.");
     } finally {
@@ -637,6 +718,15 @@ export default function AddExpense() {
       });
     }, 300);
   }, []);
+
+  if (fetchingEdit) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: C.bg }}>
+        <ActivityIndicator size="large" color={C.green700} />
+        <Text style={{ marginTop: 12, fontSize: 16, color: C.textMuted }}>લોડ થઈ રહ્યું છે...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -779,25 +869,27 @@ export default function AddExpense() {
           </View>
         ) : (
           <>
-        {/* ── Crop dropdown: pre-selected from dashboard (cropId in URL) or user choice ── */}
-        <View style={styles.cropSelectCard}>
-          <SectionLabel text={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો *" : "પાક પસંદ કરો *"} />
-          {(isBhagyaUpad ? crops.filter((c) => c.landType === "bhagma") : crops).length > 0 ? (
-            <SelectPicker
-              options={(isBhagyaUpad ? crops.filter((c) => c.landType === "bhagma") : crops).map((c) => ({ value: c._id, label: getCropDropdownLabel(c) }))}
-              selected={cropId ?? ""}
-              onSelect={(id) => setSelectedCropId(id)}
-              placeholder={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો..." : "આ ખર્ચ કયા પાક માટે?"}
-            />
-          ) : (
-            <Text style={styles.generalExpenseNote}>
-              {isBhagyaUpad ? "કોઈ ભાગમા પાક નથી — પહેલા ડેશબોર્ડથી ભાગમા પાક ઉમેરો." : "કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો."}
-            </Text>
-          )}
-        </View>
+        {/* ── Crop dropdown: hidden in edit mode (only change data entry: bags, amount, etc.) ── */}
+        {!isEdit && (
+          <View style={styles.cropSelectCard}>
+            <SectionLabel text={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો *" : "પાક પસંદ કરો *"} />
+            {(isBhagyaUpad ? crops.filter((c) => c.landType === "bhagma") : crops).length > 0 ? (
+              <SelectPicker
+                options={(isBhagyaUpad ? crops.filter((c) => c.landType === "bhagma") : crops).map((c) => ({ value: c._id, label: getCropDropdownLabel(c) }))}
+                selected={cropId ?? ""}
+                onSelect={(id) => setSelectedCropId(id)}
+                placeholder={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો..." : "આ ખર્ચ કયા પાક માટે?"}
+              />
+            ) : (
+              <Text style={styles.generalExpenseNote}>
+                {isBhagyaUpad ? "કોઈ ભાગમા પાક નથી — પહેલા ડેશબોર્ડથી ભાગમા પાક ઉમેરો." : "કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો."}
+              </Text>
+            )}
+          </View>
+        )}
 
-        {/* ── Category: big grid when none selected, compact strip when one selected ── */}
-        {category === "" ? (
+        {/* ── Category: hidden in edit mode; when edit only show data form (bags, amount, etc.) ── */}
+        {!isEdit && category === "" ? (
           <>
             {visibleCategories.length > 0 && <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર પસંદ કરો</Text>}
             {isBhagyaUpad && !isBhagmaCrop && (
@@ -830,25 +922,27 @@ export default function AddExpense() {
             </View>}
           </>
         ) : (
-          <View style={styles.catStrip}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catStripContent}>
-              {visibleCategories.map((cat) => {
-                const active = category === cat.value;
-                return (
-                  <TouchableOpacity
-                    key={cat.value}
-                    onPress={() => setCategory(cat.value)}
-                    activeOpacity={0.8}
-                    style={[styles.catStripChip, active && { backgroundColor: cat.pale, borderColor: cat.color }]}
-                  >
-                    <Text style={[styles.catStripLabel, active && { color: cat.color, fontWeight: "800" }]} numberOfLines={1}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+          !isEdit && (
+            <View style={styles.catStrip}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catStripContent}>
+                {visibleCategories.map((cat) => {
+                  const active = category === cat.value;
+                  return (
+                    <TouchableOpacity
+                      key={cat.value}
+                      onPress={() => setCategory(cat.value)}
+                      activeOpacity={0.8}
+                      style={[styles.catStripChip, active && { backgroundColor: cat.pale, borderColor: cat.color }]}
+                    >
+                      <Text style={[styles.catStripLabel, active && { color: cat.color, fontWeight: "800" }]} numberOfLines={1}>
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )
         )}
 
         {/* ── SEED ── */}

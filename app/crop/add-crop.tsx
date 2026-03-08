@@ -154,13 +154,19 @@ const CROPS: {
 
 const STEPS = [
   { label: "સિઝન", icon: "☔" },
-  { label: "પાક", icon: "🌱" },
-  { label: "પ્રકાર", icon: "🏷️" },
-  { label: "વિસ્તાર", icon: "📐" },
+  { label: "પાક", icon: "🌱" }, // crop + subtype same step
+  { label: "વિસ્તાર", icon: "📐" }, // farm + bigha + bhagma
   { label: "પુષ્ટિ", icon: "✅" },
 ];
 
 const YEAR_OPTIONS = getFinancialYearOptions();
+
+// Bhagma share options when user selects હા — label shown in UI, value stored as percentage
+const BHAGMA_SHARE_OPTIONS: { value: string; label: string; pct: number }[] = [
+  { value: "50", label: "બીજા ભાગે", pct: 50 },
+  { value: "33.33", label: "ત્રિજા ભાગે", pct: 33.33 },
+  { value: "25", label: "ચોથા ભાગે", pct: 25 },
+];
 
 // ─── Form state ───────────────────────────────────────────────────────────────
 interface FormState {
@@ -173,6 +179,8 @@ interface FormState {
   customSubType: string;
   year: string;
   area: string;
+  bhagmaOption: "" | "ha" | "na";
+  bhagmaPercentage: string;
   notes: string;
 }
 
@@ -186,6 +194,8 @@ const EMPTY: FormState = {
   customSubType: "",
   year: getCurrentFinancialYear(),
   area: "",
+  bhagmaOption: "na",
+  bhagmaPercentage: "",
   notes: "",
 };
 
@@ -387,16 +397,28 @@ export default function AddCrop() {
     getCropById(editId)
       .then((c) => {
         const cr = c as any;
+        const name = cr.cropName ?? "";
+        const matchedCrop = CROPS.find((co) => co.value === name);
         setForm({
           season: (cr.season as CropSeason) || "",
-          cropValue: cr.cropName ?? "",
-          cropLabel: cr.cropName ?? "",
-          cropEmoji: cr.cropEmoji ?? "🌱",
-          customCrop: "",
+          cropValue: matchedCrop ? name : "",
+          cropLabel: matchedCrop ? matchedCrop.label : "",
+          cropEmoji: matchedCrop ? matchedCrop.emoji : (cr.cropEmoji ?? "🌱"),
+          customCrop: matchedCrop ? "" : name,
           subType: cr.subType ?? "",
           customSubType: "",
           year: cr.year ?? getCurrentFinancialYear(),
           area: String(cr.area ?? ""),
+          bhagmaOption: cr.landType === "bhagma" ? "ha" : "na",
+          bhagmaPercentage: (() => {
+            const pct = cr.bhagmaPercentage;
+            if (pct == null) return "";
+            const n = Number(pct);
+            if (Math.abs(n - 25) < 2) return "25";
+            if (Math.abs(n - 33.33) < 2 || Math.abs(n - 33) < 2) return "33.33";
+            if (Math.abs(n - 50) < 2) return "50";
+            return String(pct);
+          })(),
           notes: cr.notes ?? "",
         });
         if (cr.farmName) setEditCropFarmName(cr.farmName);
@@ -407,7 +429,7 @@ export default function AddCrop() {
 
   // Load profile when reaching area step or when editing (to match farm)
   useEffect(() => {
-    if ((step === 3 || isEdit) && !profile) {
+    if ((step === 2 || isEdit) && !profile) {
       getMyProfile().then(setProfile).catch(() => {});
     }
   }, [step, isEdit, profile, setProfile]);
@@ -439,7 +461,7 @@ export default function AddCrop() {
   }, [form.year, isEdit, editId]);
 
   useEffect(() => {
-    if (step === 3 && form.year) fetchUsedAreaByFarm();
+    if (step === 2 && form.year) fetchUsedAreaByFarm();
   }, [step, form.year, fetchUsedAreaByFarm]);
 
   const set = (key: keyof FormState, val: any) =>
@@ -480,25 +502,34 @@ export default function AddCrop() {
     if (step === 0 && !form.season) return "કૃપા કરીને સિઝન પસંદ કરો.";
     if (step === 1 && !form.cropValue && !form.customCrop.trim())
       return "કૃપા કરીને પાક પસંદ કરો.";
+    const hasSubtypes = (CROPS.find((c) => c.value === form.cropValue)?.subtypes ?? []).length > 0;
+    if (step === 1 && hasSubtypes && !form.subType && !form.customSubType.trim())
+      return "કૃપા કરીને પાકનો પ્રકાર પસંદ કરો અથવા ટાઈપ કરો.";
     if (
-      step === 3 &&
+      step === 2 &&
       (!form.area.trim() || isNaN(Number(form.area)) || Number(form.area) <= 0)
     )
       return "કૃપા કરીને માન્ય વીઘા સંખ્યા દાખલ કરો.";
-    if (step === 3 && profile?.farms?.length && !selectedFarm)
+    if (step === 2 && profile?.farms?.length && !selectedFarm)
       return "કૃપા કરીને વાડી પસંદ કરો.";
     if (
-      step === 3 &&
+      step === 2 &&
       selectedFarm &&
       maxBighaForSelectedFarm !== null &&
       Number(form.area) > maxBighaForSelectedFarm
     )
-      return `આ વાડી પર ઉપલબ્ધ વિસ્તાર ${maxBighaForSelectedFarm} વીઘા છે. ${Number(form.area)} વીઘા દાખલ કર્યા છે.`;
+      return `આ વાડી પર ઉપલબ્ધ વિસ્તાર ${Math.round(maxBighaForSelectedFarm)} વીઘા છે. ${Math.round(Number(form.area))} વીઘા દાખલ કર્યા છે.`;
+    if (step === 2 && !form.bhagmaOption) return "કૃપા કરીને ભાગમા અપ્યું તે પસંદ કરો.";
+    if (step === 2 && form.bhagmaOption === "ha") {
+      const valid = ["25", "33.33", "50"].includes(form.bhagmaPercentage.trim());
+      if (!valid)
+        return "કૃપા કરીને ભાગમા (બીજા / ત્રિજા / ચોથા ભાગે) પસંદ કરો.";
+    }
     return null;
   };
 
   const handleNext = () => {
-    if (step === 3) {
+    if (step === 2) {
       const areaNum = Number(form.area);
       if (
         selectedFarm &&
@@ -591,6 +622,11 @@ export default function AddCrop() {
       subType: finalSubType || undefined,
       year: form.year,
       farmName: selectedFarm?.name,
+      landType: form.bhagmaOption === "ha" ? "bhagma" : "ghare",
+      bhagmaPercentage:
+        form.bhagmaOption === "ha" && form.bhagmaPercentage.trim()
+          ? Number(form.bhagmaPercentage) // 25, 33.33, or 50
+          : undefined,
     };
 
     try {
@@ -599,14 +635,14 @@ export default function AddCrop() {
         const crop = await updateCrop(editId, payload);
         Alert.alert(
           "✅ સફળ!",
-          `${(crop as any).cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} સાચવાયો!\n${form.area} વીઘા · ${form.year}`,
+          `${(crop as any).cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} સાચવાયો!\n${Math.round(Number(form.area))} વીઘા · ${form.year}`,
           [{ text: "ઠીક છે", onPress: () => router.replace("/(tabs)") }],
         );
       } else {
         const crop = await createCrop(payload);
         Alert.alert(
           "✅ સફળ!",
-          `${(crop as any).cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} ઉમેરાયો!\n${form.area} વીઘા · ${form.year} (જૂન–જૂન)`,
+          `${(crop as any).cropEmoji} ${finalCropLabel}${finalSubType ? ` (${finalSubType})` : ""} ઉમેરાયો!\n${Math.round(Number(form.area))} વીઘા · ${form.year} (જૂન–જૂન)`,
           [{ text: "ઠીક છે", onPress: () => router.replace("/(tabs)") }],
         );
       }
@@ -792,7 +828,7 @@ export default function AddCrop() {
             </LinearGradient>
           )}
 
-          {/* ══ STEP 1 — Crop (3 per row, large icons, highlight only) ══ */}
+          {/* ══ STEP 1 — Crop + Sub Type (same tab) ══ */}
           {step === 1 && (
             <View>
               <Text style={styles.stepTitle}>પાક પસંદ કરો</Text>
@@ -850,71 +886,71 @@ export default function AddCrop() {
                   </TouchableOpacity>
                 )}
               </View>
-            </View>
-          )}
 
-          {/* ══ STEP 2 — Sub Type (large cards, highlight only) ══ */}
-          {step === 2 && (
-            <View>
-              <Text style={styles.stepTitle}>બીજ / જાત પસંદ કરો</Text>
-              <Text style={styles.stepDesc}>
-                {finalCropEmoji} {finalCropLabel} નો ચોક્કસ પ્રકાર — એક પસંદ કરો અથવા ટાઈપ કરો
-              </Text>
-
-              <View style={styles.fieldCard}>
-                {currentCropSubtypes.length > 0 && (
-                  <View style={styles.subTypeGrid}>
-                    {currentCropSubtypes.map((st) => (
-                      <SubTypeCard
-                        key={st}
-                        label={st}
-                        cropEmoji={finalCropEmoji}
-                        selected={form.subType === st && !form.customSubType}
-                        onPress={() =>
+              {/* Sub type on same step when crop selected */}
+              {(form.cropValue || form.customCrop.trim()) && (
+                <>
+                  <Text style={[styles.orDivider, { marginTop: 20 }]}>
+                    — બીજ / જાત —
+                  </Text>
+                  <Text style={styles.stepDesc}>
+                    {finalCropEmoji} {finalCropLabel} નો પ્રકાર પસંદ કરો અથવા ટાઈપ કરો
+                  </Text>
+                  <View style={styles.fieldCard}>
+                    {currentCropSubtypes.length > 0 && (
+                      <View style={styles.subTypeGrid}>
+                        {currentCropSubtypes.map((st) => (
+                          <SubTypeCard
+                            key={st}
+                            label={st}
+                            cropEmoji={finalCropEmoji}
+                            selected={form.subType === st && !form.customSubType}
+                            onPress={() =>
+                              setForm((p) => ({
+                                ...p,
+                                subType: st,
+                                customSubType: "",
+                              }))
+                            }
+                          />
+                        ))}
+                      </View>
+                    )}
+                    <Text style={styles.orDivider}>— કસ્ટમ પ્રકાર —</Text>
+                    <View
+                      style={[
+                        styles.textBox,
+                        form.customSubType.length > 0 && styles.textBoxActive,
+                      ]}
+                    >
+                      <Text>✏️</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={form.customSubType}
+                        onChangeText={(v) =>
                           setForm((p) => ({
                             ...p,
-                            subType: st,
-                            customSubType: "",
+                            customSubType: v,
+                            ...(v ? { subType: "" } : {}),
                           }))
                         }
+                        placeholder={`${finalCropLabel} નો પ્રકાર... (દા.ત. Desi, GG-4)`}
+                        placeholderTextColor="#9CA3AF"
                       />
-                    ))}
+                      {form.customSubType.length > 0 && (
+                        <TouchableOpacity onPress={() => set("customSubType", "")}>
+                          <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-                )}
-
-                <Text style={styles.orDivider}>— કસ્ટમ પ્રકાર —</Text>
-                <View
-                  style={[
-                    styles.textBox,
-                    form.customSubType.length > 0 && styles.textBoxActive,
-                  ]}
-                >
-                  <Text>✏️</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={form.customSubType}
-                    onChangeText={(v) =>
-                      setForm((p) => ({
-                        ...p,
-                        customSubType: v,
-                        ...(v ? { subType: "" } : {}),
-                      }))
-                    }
-                    placeholder={`${finalCropLabel} નો પ્રકાર... (દા.ત. Desi, GG-4)`}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  {form.customSubType.length > 0 && (
-                    <TouchableOpacity onPress={() => set("customSubType", "")}>
-                      <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
+                </>
+              )}
             </View>
           )}
 
-          {/* ══ STEP 3 — Farm + Area (large vadi/vigha cards + crop summary) ══ */}
-          {step === 3 && (
+          {/* ══ STEP 2 — Farm + Area (large vadi/vigha cards + crop summary) ══ */}
+          {step === 2 && (
             <View>
               <Text style={styles.stepTitle}>વાડી અને વિસ્તાર</Text>
               <Text style={styles.stepDesc}>વાડી પસંદ કરો અને વીઘામાં વિસ્તાર દાખલ કરો</Text>
@@ -988,7 +1024,7 @@ export default function AddCrop() {
                   !isNaN(Number(form.area)) &&
                   Number(form.area) > 0 && (
                     <Text style={styles.areaHint}>
-                      {form.area} વીઘા જમીન પર {finalCropLabel} ઉગાડવામાં આવશે
+                      {Math.round(Number(form.area))} વીઘા જમીન પર {finalCropLabel} ઉગાડવામાં આવશે
                       {selectedFarm ? ` (${selectedFarm.name})` : ""}
                     </Text>
                   )}
@@ -1022,11 +1058,86 @@ export default function AddCrop() {
                   );
                 })}
               </View>
+
+              {/* Bhagma Aapyu Chhe? — ha/na, default na; when ha show 2/3/4 bhage options */}
+              <Text style={[styles.fieldLabel, styles.bhagmaSectionLabel]}>
+                ભાગમા આપ્યું છે?
+              </Text>
+              <View style={styles.bhagmaCard}>
+                <View style={styles.bhagmaChipsRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.bhagmaChip,
+                      form.bhagmaOption === "ha" && styles.bhagmaChipActive,
+                    ]}
+                    onPress={() =>
+                      setForm((p) => ({ ...p, bhagmaOption: "ha" as const }))
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.bhagmaChipText,
+                        form.bhagmaOption === "ha" && styles.bhagmaChipTextActive,
+                      ]}
+                    >
+                      હા
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.bhagmaChip,
+                      form.bhagmaOption === "na" && styles.bhagmaChipActive,
+                    ]}
+                    onPress={() =>
+                      setForm((p) => ({
+                        ...p,
+                        bhagmaOption: "na" as const,
+                        bhagmaPercentage: "",
+                      }))
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.bhagmaChipText,
+                        form.bhagmaOption === "na" && styles.bhagmaChipTextActive,
+                      ]}
+                    >
+                      ના
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {form.bhagmaOption === "ha" && (
+                <View style={styles.bhagmaShareRow}>
+                  {BHAGMA_SHARE_OPTIONS.map((opt) => (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[
+                        styles.bhagmaShareChip,
+                        form.bhagmaPercentage === opt.value && styles.bhagmaShareChipActive,
+                      ]}
+                      onPress={() => set("bhagmaPercentage", opt.value)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.bhagmaShareChipText,
+                          form.bhagmaPercentage === opt.value && styles.bhagmaShareChipTextActive,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
-          {/* ══ STEP 4 — Confirm ══ */}
-          {step === 4 && (
+          {/* ══ STEP 3 — Confirm ══ */}
+          {step === 3 && (
             <View>
               <Text style={styles.stepTitle}>નોંધ અને પુષ્ટિ</Text>
               <Text style={styles.stepDesc}>બધી વિગત ચકાસો અને સાચવો</Text>
@@ -1056,7 +1167,16 @@ export default function AddCrop() {
                 <SummaryRow
                   icon="📐"
                   title="વિઘા"
-                  value={`${form.area} વીઘા`}
+                  value={`${Math.round(Number(form.area)) || form.area} વીઘા`}
+                />
+                <SummaryRow
+                  icon="🤝"
+                  title="ભાગમા"
+                  value={
+                    form.bhagmaOption === "ha"
+                      ? `હા · ${BHAGMA_SHARE_OPTIONS.find((o) => o.value === form.bhagmaPercentage)?.label ?? "—"}`
+                      : "ના (ઘરે)"
+                  }
                 />
                 <SummaryRow icon="✅" title="સ્ટેટ" value="સક્રિય (Active)" />
               </View>
@@ -1675,6 +1795,62 @@ const styles = StyleSheet.create({
   farmChipNameActive: { color: C.green900 },
   farmChipArea: { fontSize: 13, color: C.textMuted, marginTop: 4 },
   farmChipAreaActive: { color: C.green700 },
+  bhagmaSectionLabel: {
+    marginTop: 28,
+    marginBottom: 10,
+    fontSize: 24,
+    fontWeight: "800",
+  },
+  bhagmaShareRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 14,
+  },
+  bhagmaShareChip: {
+    flex: 1,
+    minWidth: 100,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 2.5,
+    borderColor: C.borderLight,
+    backgroundColor: C.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bhagmaShareChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
+  bhagmaShareChipText: { fontSize: 15, fontWeight: "700", color: C.textPrimary },
+  bhagmaShareChipTextActive: { color: C.green900 },
+  bhagmaCard: {
+    marginTop: 0,
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: C.borderLight,
+    backgroundColor: C.surface,
+  },
+  bhagmaLabel: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: C.textPrimary,
+    textAlign: "left",
+    marginBottom: 6,
+  },
+  bhagmaChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginBottom: 0 },
+  bhagmaChip: {
+    flex: 1,
+    minWidth: 120,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    borderWidth: 2.5,
+    borderColor: C.borderLight,
+    backgroundColor: C.surface,
+  },
+  bhagmaChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
+  bhagmaChipText: { fontSize: 16, fontWeight: "700", color: C.textPrimary },
+  bhagmaChipTextActive: { color: C.green900 },
   presetRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 8 },
   presetChip: {
     paddingHorizontal: 18,

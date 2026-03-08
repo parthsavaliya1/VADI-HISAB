@@ -4,6 +4,7 @@
  * farmerPhone and paymentStatus (stored in existing incomes table).
  */
 
+import { useRefresh } from "@/contexts/RefreshContext";
 import { createIncome, type RentalAssetType } from "@/utils/api";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -56,6 +57,7 @@ const PAYMENT_STATUS_OPTIONS: { value: "Pending" | "Completed"; label: string }[
 ];
 
 export default function AddTractorIncomeScreen() {
+  const { refreshTransactions } = useRefresh();
   const [date, setDate] = useState(() => new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [assetType, setAssetType] = useState<RentalAssetType | "">("");
@@ -123,6 +125,7 @@ export default function AddTractorIncomeScreen() {
           ratePerUnit: parseFloat(ratePerUnit),
         },
       });
+      refreshTransactions();
       Alert.alert("સફળ", "ટ્રેક્ટર આવક સાચવાઈ!", [
         { text: "ઠીક", onPress: () => router.back() },
       ]);

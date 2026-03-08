@@ -8,6 +8,7 @@
  * ✅ All labels, errors, placeholders in Gujarati
  */
 
+import { useRefresh } from "@/contexts/RefreshContext";
 import {
   createIncome,
   getCrops,
@@ -231,7 +232,7 @@ function getCropDropdownLabel(c: Crop): string {
   const emoji = c.cropEmoji ?? "🌱";
   const name = CROP_NAME_GUJ[c.cropName ?? ""] ?? (c.cropName ?? "—");
   const season = SEASON_DISPLAY[c.season ?? ""] ?? (c.season ?? "—");
-  const area = c.area != null ? String(c.area) : "—";
+  const area = c.area != null ? String(Math.round(Number(c.area))) : "—";
   const unit = AREA_UNIT_GUJ[(c.areaUnit ?? "Bigha") as string] ?? "વીઘા";
   const yearPart = c.year ? ` · ${c.year}` : "";
   const bhagma = c.landType === "bhagma" && c.bhagmaPercentage != null ? ` · ભાગમા ${c.bhagmaPercentage}%` : "";
@@ -629,6 +630,7 @@ export default function AddIncomeScreen() {
   const isGeneralIncome = (Array.isArray(params.general) ? params.general[0] : params.general) === "1";
   const paramYear = Array.isArray(params.year) ? params.year[0] : params.year;
   const isEdit = !!editId;
+  const { refreshTransactions } = useRefresh();
 
   const yearOptions = getYearOptions();
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
@@ -666,9 +668,9 @@ export default function AddIncomeScreen() {
     ? new Date()
     : (date ?? financialYearToStartDate(getCurrentFinancialYear()));
 
-  // Fetch crops when adding income linked to a crop (not general, not edit)
+  // Fetch crops when adding income linked to a crop, or when editing with a crop (so dropdown can show selected crop)
   useEffect(() => {
-    if (isGeneralIncome || isEdit) return;
+    if (isGeneralIncome && !isEdit) return;
     getCrops()
       .then((r) => setCrops(r.data ?? []))
       .catch(() => setCrops([]));
@@ -728,6 +730,10 @@ export default function AddIncomeScreen() {
         }
 
         setSubData(stringified);
+        if (doc.cropId) {
+          const cid = typeof doc.cropId === "object" ? (doc.cropId as any)._id : doc.cropId;
+          if (cid) setSelectedCropId(cid);
+        }
         if (isGeneralIncome && doc.category === "Other" && doc.otherIncome?.source) {
           const src = String(doc.otherIncome.source);
           if (src === "પશુપાલન") setGeneralIncomeType("pasupan");
@@ -865,6 +871,7 @@ export default function AddIncomeScreen() {
       } else {
         await createIncome(payload);
       }
+      refreshTransactions();
       Alert.alert("સફળ", isEdit ? "આવક અપડેટ થઈ !" : "આવક સેવ થઈ !", [
         { text: "ઠીક", onPress: () => router.back() },
       ]);

@@ -1,3 +1,4 @@
+import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getCrops,
   getFinancialYearOptionsExtended,
@@ -165,6 +166,7 @@ function IncomeRow({ item, crops }: { item: Income; crops: Crop[] }) {
 }
 
 export default function AllIncomeScreen() {
+  const { transactionsRefreshKey } = useRefresh();
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -188,7 +190,7 @@ export default function AllIncomeScreen() {
     }
   }, [selectedFinancialYear]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll, transactionsRefreshKey]);
 
   const total = incomes.reduce((s, i) => s + getIncomeAmount(i), 0);
 

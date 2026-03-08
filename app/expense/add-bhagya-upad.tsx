@@ -2,6 +2,7 @@
 // ભાગ્યા નો ઉપાડ — simple: type (કરિયાણું, ઉધાર, medical, other), amount, note
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+import { useRefresh } from "@/contexts/RefreshContext";
 import { createExpense, type AdvanceReason } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -109,6 +110,7 @@ function SelectPicker({
 }
 
 export default function AddBhagyaUpad() {
+  const { refreshTransactions } = useRefresh();
   const [type, setType] = useState<AdvanceReason | "">("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -136,6 +138,7 @@ export default function AddBhagyaUpad() {
           amountGiven: num,
         },
       });
+      refreshTransactions();
       Alert.alert("✅ સફળ!", "ભાગ્યા નો ઉપાડ સાચવ્યો.", [
         { text: "ઠીક છે", onPress: () => router.back() },
       ]);

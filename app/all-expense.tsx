@@ -1,3 +1,4 @@
+import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getExpenses,
   getFinancialYearOptionsExtended,
@@ -108,6 +109,7 @@ const ALL_CATEGORIES: (ExpenseCategory | "all")[] = [
 ];
 
 export default function AllExpenseScreen() {
+  const { transactionsRefreshKey } = useRefresh();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -134,7 +136,7 @@ export default function AllExpenseScreen() {
     }
   }, [selectedFinancialYear, selectedCategory]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll, transactionsRefreshKey]);
 
   const total = expenses.reduce((s, e) => s + getExpenseAmount(e), 0);
 

@@ -1,3 +1,4 @@
+import { useRefresh } from "@/contexts/RefreshContext";
 import {
   deleteExpense,
   getExpenses,
@@ -245,6 +246,8 @@ export default function ExpenseList() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<ExpenseCategory | "All">("All");
 
+  const { transactionsRefreshKey, refreshTransactions } = useRefresh();
+
   const fetchExpenses = useCallback(async () => {
     try {
       const res = await getExpenses(cropId);
@@ -259,12 +262,13 @@ export default function ExpenseList() {
 
   useEffect(() => {
     fetchExpenses();
-  }, [fetchExpenses]);
+  }, [fetchExpenses, transactionsRefreshKey]);
 
   const handleDelete = async (id: string) => {
     try {
       await deleteExpense(id);
       setExpenses((prev) => prev.filter((e) => e._id !== id));
+      refreshTransactions();
     } catch (err: any) {
       Alert.alert("❌ ભૂલ", err?.message ?? "કાઢી નહીં શક્યા.");
     }

@@ -1,4 +1,5 @@
 import { useProfile } from "@/contexts/ProfileContext";
+import { useRefresh } from "@/contexts/RefreshContext";
 import {
   deleteCrop,
   getCrops,
@@ -10,7 +11,7 @@ import {
   type Crop,
   type CropStatus,
 } from "@/utils/api";
-import { getCropColorForChart, getCropColors } from "@/utils/cropColors";
+import { getCropColors } from "@/utils/cropColors";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -31,8 +32,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Svg, { Path } from "react-native-svg";
-
 const { width: SCREEN_W } = Dimensions.get("window");
 const SWIPE_THRESHOLD = -80;
 
@@ -68,8 +67,11 @@ const SEASON_META: Record<string, { label: string; icon: string; color: string; 
   Summer: { label: "ઉનાળો", icon: "☀️", color: "#F59E0B", pale: "#FEF3C7" },
 };
 
+// સક્રિય (Active) — teal so it stands out from other greens
+const ACTIVE_COLOR = "#0D9488";
+const ACTIVE_PALE = "#CCFBF1";
 const STATUS_META: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  Active: { label: "સક્રિય", bg: C.incomePale, text: C.green700, dot: C.green500 },
+  Active: { label: "સક્રિય", bg: ACTIVE_PALE, text: ACTIVE_COLOR, dot: ACTIVE_COLOR },
   Harvested: { label: "લણણી", bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
   Closed: { label: "બંધ", bg: C.expensePale, text: C.expense, dot: "#EF4444" },
 };
@@ -424,13 +426,15 @@ function YearFilter({
   );
 }
 
-// ─── Stats header ─────────────────────────────────────────────────────────────
+// ─── Stats header (સક્રિય, લણણી, બંધ are clickable filters) ───────────────────
 function StatsBar({
   crops,
   filteredCrops,
   selectedYear,
   onSelectYear,
   totalLandBigha,
+  activeFilter,
+  onFilterChange,
 }: {
   crops: Crop[];
   /** Crops after status filter — કુલ વીઘા is sum of these only (not all) */
@@ -439,6 +443,8 @@ function StatsBar({
   onSelectYear: (y: string) => void;
   /** User's total land in bigha (from profile) — for fill % */
   totalLandBigha: number;
+  activeFilter: string;
+  onFilterChange: (k: string) => void;
 }) {
   const active = crops.filter((c) => c.status === "Active").length;
   const harvested = crops.filter((c) => c.status === "Harvested").length;
@@ -493,18 +499,30 @@ function StatsBar({
 
         <View style={styles.statsGrid}>
           {[
-            { label: "સક્રિય", value: active, color: C.income, bg: C.incomePale, icon: "leaf-outline" },
-            { label: "લણણી", value: harvested, color: "#B45309", bg: "#FEF3C7", icon: "checkmark-circle-outline" },
-            { label: "બંધ", value: closed, color: C.expense, bg: C.expensePale, icon: "close-circle-outline" },
-          ].map((s) => (
-            <View key={s.label} style={[styles.statBox, { backgroundColor: s.bg }]}>
-              <Ionicons name={s.icon as any} size={16} color={s.color} style={{ marginBottom: 4 }} />
-              <Text style={[styles.statValue, { color: s.color }]}>
-                {typeof s.value === "number" && s.value % 1 !== 0 ? s.value.toFixed(1) : s.value}
-              </Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
-          ))}
+            { key: "Active", label: "સક્રિય", value: active, color: ACTIVE_COLOR, bg: ACTIVE_PALE, icon: "leaf-outline" as const },
+            { key: "Harvested", label: "લણણી", value: harvested, color: "#B45309", bg: "#FEF3C7", icon: "checkmark-circle-outline" as const },
+            { key: "Closed", label: "બંધ", value: closed, color: C.expense, bg: C.expensePale, icon: "close-circle-outline" as const },
+          ].map((s) => {
+            const isActive = activeFilter === s.key;
+            return (
+              <TouchableOpacity
+                key={s.key}
+                style={[
+                  styles.statBox,
+                  { backgroundColor: s.bg },
+                  isActive && styles.statBoxFilterActive,
+                ]}
+                onPress={() => onFilterChange(s.key)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name={s.icon} size={16} color={s.color} style={{ marginBottom: 4 }} />
+                <Text style={[styles.statValue, { color: s.color }]}>
+                  {typeof s.value === "number" && s.value % 1 !== 0 ? s.value.toFixed(1) : s.value}
+                </Text>
+                <Text style={styles.statLabel}>{s.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
 
           {/* કુલ વીઘા — card fill is vertical (bottom to top) */}
           <View style={[styles.statBox, styles.statBoxBigha, styles.statBoxBighaOuter]}>
@@ -565,152 +583,6 @@ function FilterTabs({
   );
 }
 
-// ─── Summary vs Chart tabs ─────────────────────────────────────────────────────
-const VIEW_TABS = [
-  { key: "summary" as const, label: "સારાંશ", icon: "list" },
-  { key: "chart" as const, label: "ચાર્ટ", icon: "bar-chart" },
-];
-
-function areaForCropChart(c: Crop): number {
-  const a = (c as any).area;
-  if (a != null && a !== "") return Number(a) || 0;
-  return 0;
-}
-
-/** Donut pie: only active crops + remaining bigha; totalLandBigha optional for "બાકી" slice */
-function ChartView({ crops, totalLandBigha = 0 }: { crops: Crop[]; totalLandBigha?: number }) {
-  const activeCrops = crops.filter((c) => c.status === "Active");
-  const byCrop: Record<string, number> = {};
-  const byCropEnglish: Record<string, string> = {};
-  activeCrops.forEach((c) => {
-    const name = cropDisplayName(c.cropName);
-    byCrop[name] = (byCrop[name] || 0) + areaForCropChart(c);
-    byCropEnglish[name] = c.cropName;
-  });
-  const usedBigha = Object.values(byCrop).reduce((s, v) => s + v, 0);
-  const remainingBigha = totalLandBigha > 0 ? Math.max(0, totalLandBigha - usedBigha) : 0;
-  const totalForPie = totalLandBigha > 0 ? totalLandBigha : usedBigha;
-
-  const cropEntries = Object.entries(byCrop)
-    .filter(([, v]) => v > 0)
-    .sort((a, b) => b[1] - a[1]);
-  const sliceData: { label: string; value: number; isRemaining?: boolean; cropName?: string }[] = [
-    ...cropEntries.map(([label, value]) => ({ label, value, cropName: byCropEnglish[label] })),
-    ...(remainingBigha > 0 ? [{ label: "બાકી વીઘા", value: remainingBigha, isRemaining: true }] : []),
-  ];
-  const total = sliceData.reduce((s, d) => s + d.value, 0);
-  const hasData = total > 0;
-  const hasCrops = activeCrops.length > 0;
-  /** Show pie only when there is at least one crop; otherwise show empty state (no single gray donut) */
-  const showPie = hasData && hasCrops;
-
-  const size = Math.max(220, Math.min(SCREEN_W - 48, 300));
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = (size / 2) * 0.88;
-  const r0 = r * 0.52;
-  const startAngle = -Math.PI / 2;
-  const REMAINING_COLOR = "#E8E8E8";
-
-  const slices = sliceData.map(({ label, value, isRemaining, cropName }, i) => {
-    const ratio = total > 0 ? value / total : 0;
-    const prevSum = sliceData.slice(0, i).reduce((s, d) => s + d.value, 0);
-    const angleStart = startAngle + (total > 0 ? prevSum / total : 0) * 2 * Math.PI;
-    const angleEnd = angleStart + ratio * 2 * Math.PI;
-    const xo1 = cx + r * Math.cos(angleStart);
-    const yo1 = cy + r * Math.sin(angleStart);
-    const xo2 = cx + r * Math.cos(angleEnd);
-    const yo2 = cy + r * Math.sin(angleEnd);
-    const xi1 = cx + r0 * Math.cos(angleStart);
-    const yi1 = cy + r0 * Math.sin(angleStart);
-    const xi2 = cx + r0 * Math.cos(angleEnd);
-    const yi2 = cy + r0 * Math.sin(angleEnd);
-    const largeArc = ratio > 0.5 ? 1 : 0;
-    const d = `M ${xo1} ${yo1} A ${r} ${r} 0 ${largeArc} 1 ${xo2} ${yo2} L ${xi2} ${yi2} A ${r0} ${r0} 0 ${largeArc} 0 ${xi1} ${yi1} Z`;
-    return {
-      label,
-      value,
-      ratio,
-      d,
-      color: isRemaining ? REMAINING_COLOR : getCropColorForChart(cropName ?? ""),
-      isRemaining,
-    };
-  });
-
-  return (
-    <ScrollView
-      style={styles.chartScroll}
-      contentContainerStyle={styles.chartScrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.chartCard}>
-        <Text style={styles.chartTitle}>વીઘા ચાર્ટ</Text>
-        <Text style={styles.chartSubtitle}>સક્રિય પાક અને બાકી વીઘા</Text>
-        {!showPie ? (
-          <View style={styles.chartEmptyWrap}>
-            <View style={styles.chartEmptyIconWrap}>
-              <Text style={styles.chartEmptyEmoji}>📊</Text>
-            </View>
-            <Text style={styles.chartEmptyTitle}>કોઈ સક્રિય પાક નથી</Text>
-            <Text style={styles.chartEmptyDesc}>
-              ચાર્ટ દેખાવા માટે ઓછામાં ઓછો એક પાક સક્રિય કરો અથવા નવો પાક ઉમેરો.
-            </Text>
-            <TouchableOpacity
-              style={styles.chartEmptyBtn}
-              onPress={() => router.push("/crop/add-crop")}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add-circle-outline" size={16} color="#5D4037" />
-              <Text style={styles.chartEmptyBtnText}>નવો પાક ઉમેરો</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            <View style={[styles.pieWrap, { width: size, height: size }]}>
-              <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                {slices.map((slice, i) => (
-                  <Path
-                    key={i}
-                    d={slice.d}
-                    fill={slice.color}
-                    stroke={C.surface}
-                    strokeWidth={2.5}
-                  />
-                ))}
-              </Svg>
-              <View style={styles.pieCenter}>
-                <Text style={styles.pieCenterLabel}>કુલ</Text>
-                <Text style={styles.pieCenterValue}>
-                  {Math.round(total)}
-                </Text>
-                <Text style={styles.pieCenterUnit}>વીઘા</Text>
-              </View>
-            </View>
-            <View style={styles.pieLegend}>
-              {slices.map((slice, i) => (
-                <View key={i} style={styles.pieLegendRow}>
-                  <View style={[styles.pieLegendDot, { backgroundColor: slice.color }]} />
-                  <Text style={styles.pieLegendLabel} numberOfLines={1}>
-                    {slice.label}
-                  </Text>
-                  <Text style={styles.pieLegendValue}>
-                    {Math.round(slice.value)}
-                  </Text>
-                  <Text style={styles.pieLegendUnit}>વીઘા</Text>
-                  <Text style={styles.pieLegendPct}>
-                    {total > 0 ? Math.round(slice.ratio * 100) : 0}%
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-      </View>
-      <View style={{ height: 100 }} />
-    </ScrollView>
-  );
-}
-
 // ─── Empty state ──────────────────────────────────────────────────────────────
 function EmptyState({ filter }: { filter: string }) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -723,16 +595,16 @@ function EmptyState({ filter }: { filter: string }) {
         <Text style={styles.emptyEmoji}>🌱</Text>
       </View>
       <Text style={styles.emptyTitle}>
-        {filter === "all"
-          ? "કોઈ પાક નથી"
+        {filter === "Active"
+          ? "કોઈ સક્રિય પાક નથી"
           : `${FILTER_TABS.find((f) => f.key === filter)?.label} પાક નથી`}
       </Text>
       <Text style={styles.emptyDesc}>
-        {filter === "all"
+        {filter === "Active"
           ? "નવો પાક ઉમેરવા + બટન દબાવો"
           : "ફિલ્ટર બદલો અથવા નવો પાક ઉમેરો"}
       </Text>
-      {filter === "all" && (
+      {filter === "Active" && (
         <TouchableOpacity
           style={styles.emptyBtn}
           onPress={() => router.push("/crop/add-crop")}
@@ -748,12 +620,12 @@ function EmptyState({ filter }: { filter: string }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function CropScreen() {
   const { profile, setProfile } = useProfile();
+  const { transactionsRefreshKey } = useRefresh();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState("Active");
   const [selectedYear, setSelectedYear] = useState(getCurrentFinancialYear());
-  const [viewMode, setViewMode] = useState<"summary" | "chart">("summary");
 
   const totalLandBigha =
     profile?.totalLand?.unit === "bigha" ? Number(profile.totalLand?.value) || 0 : 0;
@@ -777,7 +649,7 @@ export default function CropScreen() {
   useEffect(() => {
     setLoading(true);
     fetchCrops();
-  }, [fetchCrops]);
+  }, [fetchCrops, transactionsRefreshKey]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -829,11 +701,9 @@ export default function CropScreen() {
     }
   };
 
-  const filtered =
-    filter === "all" ? crops : crops.filter((c) => c.status === filter);
+  const filtered = crops.filter((c) => c.status === filter);
 
   const counts: Record<string, number> = {
-    all: crops.length,
     Active: crops.filter((c) => c.status === "Active").length,
     Harvested: crops.filter((c) => c.status === "Harvested").length,
     Closed: crops.filter((c) => c.status === "Closed").length,
@@ -859,34 +729,11 @@ export default function CropScreen() {
           selectedYear={selectedYear}
           onSelectYear={setSelectedYear}
           totalLandBigha={totalLandBigha}
+          activeFilter={filter}
+          onFilterChange={setFilter}
         />
 
-        <View style={styles.viewTabRow}>
-          {VIEW_TABS.map((t) => (
-            <TouchableOpacity
-              key={t.key}
-              style={[styles.viewTab, viewMode === t.key && styles.viewTabActive]}
-              onPress={() => setViewMode(t.key)}
-              activeOpacity={0.85}
-            >
-              <Ionicons
-                name={t.key === "chart" ? "bar-chart" : "list"}
-                size={18}
-                color={viewMode === t.key ? C.green700 : C.textMuted}
-              />
-              <Text style={[styles.viewTabText, viewMode === t.key && styles.viewTabTextActive]}>
-                {t.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-      {viewMode === "chart" ? (
-        <ChartView crops={crops} totalLandBigha={totalLandBigha} />
-      ) : (
-        <>
-          <FilterTabs active={filter} onChange={setFilter} counts={counts} />
-          {filtered.length === 0 ? (
+      {filtered.length === 0 ? (
             <EmptyState filter={filter} />
           ) : (
             <FlatList
@@ -913,8 +760,6 @@ export default function CropScreen() {
               }
             />
           )}
-        </>
-      )}
 
       {/* FAB */}
       <TouchableOpacity
@@ -1004,6 +849,10 @@ const styles = StyleSheet.create({
     flex: 1, borderRadius: 14, padding: 12, alignItems: "center",
     borderWidth: 1, borderColor: "#00000006",
   },
+  statBoxFilterActive: {
+    borderWidth: 2,
+    borderColor: C.green700,
+  },
   statValue: { fontSize: 20, fontWeight: "900", marginBottom: 2 },
   statLabel: { fontSize: 12, color: C.textMuted, fontWeight: "700", textAlign: "center" },
   statBoxBigha: { alignItems: "flex-start" },
@@ -1049,180 +898,6 @@ const styles = StyleSheet.create({
   },
   filterBadgeActive: { backgroundColor: C.green700 },
   filterBadgeText: { fontSize: 11, fontWeight: "700", color: C.textMuted },
-
-  viewTabRow: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 10,
-    backgroundColor: C.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: C.borderLight,
-  },
-  viewTab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    backgroundColor: C.bg,
-  },
-  viewTabActive: { borderColor: C.green700, backgroundColor: C.green50 },
-  viewTabText: { fontSize: 15, fontWeight: "700", color: C.textMuted },
-  viewTabTextActive: { color: C.green700 },
-
-  chartScroll: { flex: 1, backgroundColor: C.bg },
-  chartScrollContent: { padding: 16, paddingBottom: 24, flexGrow: 1 },
-  chartCard: {
-    backgroundColor: C.surface,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: C.borderLight,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  chartTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: C.textPrimary,
-    marginBottom: 4,
-  },
-  chartSubtitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: C.textMuted,
-    marginBottom: 18,
-  },
-  pieWrap: {
-    alignSelf: "center",
-    marginBottom: 24,
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pieCenter: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pieCenterLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: C.textMuted,
-    marginBottom: 2,
-  },
-  pieCenterValue: {
-    fontSize: 26,
-    fontWeight: "900",
-    color: C.green700,
-  },
-  pieCenterUnit: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: C.textMuted,
-  },
-  pieLegend: { gap: 4 },
-  pieLegendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 4,
-    backgroundColor: C.green50,
-    borderWidth: 1,
-    borderColor: C.borderLight,
-  },
-  pieLegendDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  pieLegendLabel: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "800",
-    color: C.textPrimary,
-  },
-  pieLegendValue: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: C.green700,
-    minWidth: 28,
-    textAlign: "right",
-  },
-  pieLegendUnit: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: C.textMuted,
-  },
-  pieLegendPct: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: C.textSecondary,
-    minWidth: 36,
-    textAlign: "right",
-  },
-  chartEmpty: { fontSize: 15, color: C.textMuted, fontWeight: "700", marginVertical: 16 },
-  chartEmptyWrap: {
-    alignItems: "center",
-    paddingVertical: 28,
-    paddingHorizontal: 16,
-  },
-  chartEmptyIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: C.green50,
-    borderWidth: 2,
-    borderColor: C.borderLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  chartEmptyEmoji: { fontSize: 36 },
-  chartEmptyTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: C.textPrimary,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  chartEmptyDesc: {
-    fontSize: 15,
-    color: C.textMuted,
-    fontWeight: "600",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  chartEmptyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: "#FFF8E1",
-    borderWidth: 2,
-    borderColor: "#FFE082",
-  },
-  chartEmptyBtnText: { fontSize: 17, fontWeight: "800", color: "#5D4037" },
 
   listContent: { padding: 14, paddingBottom: 110 },
 
