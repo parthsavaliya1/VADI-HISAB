@@ -1135,7 +1135,14 @@ export default function Dashboard() {
                 ]}
               />
               <View style={{ flex: 1 }}>
-                <Text style={styles.profitLabel}>⚖️ {t("dashboard", "netProfit")}</Text>
+                <View style={styles.profitTopRow}>
+                  <Text style={styles.profitLabel}>⚖️ {t("dashboard", "netProfit")}</Text>
+                  <View style={styles.profitPakBadge}>
+                    <Ionicons name="leaf-outline" size={18} color={C.textSecondary} />
+                    <Text style={styles.profitPakValue}>{crops.length}</Text>
+                    <Text style={styles.profitPakLabel}>{t("dashboard", "crops")}</Text>
+                  </View>
+                </View>
                 <View style={styles.profitAmountRow}>
                   <Text
                     style={[
@@ -1155,21 +1162,12 @@ export default function Dashboard() {
                         label: t("dashboard", "income"),
                         value: totalIncome,
                         color: C.income,
-                        isCount: false,
                       },
                       {
                         icon: "arrow-down-circle-outline",
                         label: t("dashboard", "expense"),
                         value: totalExpense,
                         color: C.expense,
-                        isCount: false,
-                      },
-                      {
-                        icon: "leaf-outline",
-                        label: t("dashboard", "crops"),
-                        value: crops.length,
-                        color: C.textSecondary,
-                        isCount: true,
                       },
                     ] as const
                   ).map((item, i) => (
@@ -1182,9 +1180,7 @@ export default function Dashboard() {
                         <Text
                           style={[styles.profitSubValue, { color: item.color }]}
                         >
-                          {item.isCount
-                            ? String(item.value)
-                            : `${item.value.toLocaleString("en-IN")}`}
+                          {`${item.value.toLocaleString("en-IN")}`}
                         </Text>
                         <Text style={styles.profitSubCaption}>
                           {item.label}
@@ -1642,12 +1638,30 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   profitStrip: { width: 4, borderRadius: 2, marginRight: 14 },
+  profitTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
   profitLabel: {
     fontSize: 18,
     color: C.textMuted,
     fontWeight: "800",
-    marginBottom: 8,
   },
+  profitPakBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F8FAF8",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  profitPakValue: { fontSize: 17, fontWeight: "800", color: C.textSecondary },
+  profitPakLabel: { fontSize: 13, color: C.textMuted, fontWeight: "700" },
   profitAmountRow: {
     flexDirection: "row",
     alignItems: "flex-end",
