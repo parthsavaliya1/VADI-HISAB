@@ -897,7 +897,8 @@ export default function Profile() {
                                         talukaLabel={talukaDisplay}
                                         villageLabel={villageDisplay}
                                         cardWidth={Math.min(SCREEN_W - 48, 440)}
-                                        cardHeight={260}
+                                        cardHeight={320}
+                                        vadiScore={85}
                                     />
                                 </ViewShotComponent>
                             ) : (
@@ -907,7 +908,8 @@ export default function Profile() {
                                     talukaLabel={talukaDisplay}
                                     villageLabel={villageDisplay}
                                     cardWidth={Math.min(SCREEN_W - 48, 440)}
-                                    cardHeight={260}
+                                    cardHeight={320}
+                                    vadiScore={85}
                                 />
                             )}
                         </ScrollView>

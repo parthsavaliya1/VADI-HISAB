@@ -77,20 +77,20 @@ export function ExpensePieChart({ byCategory }: ExpensePieChartProps) {
   }
 
   const size = Math.max(200, Math.min(SCREEN_W - 48, 260));
-  const chartPadding = 16;
-  const gapFromPie = 28; // clear space between graph and labels (separate from graph)
-  const chartSize = size + 180; // room for labels spread apart
+  const chartPadding = 20;
+  const gapFromPie = 52; // keep labels well away from circle — no overlap
+  const chartSize = size + 260; // extra room so label zones sit fully outside the pie
   const cx = chartSize / 2;
   const cy = chartSize / 2;
   const r = (size / 2) * 0.88;
   const r0 = r * 0.52;
   const startAngle = -Math.PI / 2;
-  const labelRadius = r + gapFromPie * 0.5; // leader ends away from pie
+  const labelRadius = r + gapFromPie; // leader ends at gap boundary — labels stay away from circle
 
   const labelW = 98;
   const labelH = 40;
-  const stackGap = 20; // space between each box (keep boxes separate from each other)
-  const minBoxGap = 8; // min horizontal gap between boxes
+  const stackGap = 22; // space between each box (separate from each other)
+  const minBoxGap = 10; // min horizontal gap between boxes
 
   const slices = sliceData.map(({ key, value, color }, i) => {
     const ratio = total > 0 ? value / total : 0;

@@ -60,7 +60,7 @@ export function FarmerProfileCard({
   const labourText = toList(LABOUR, labourTypes);
   const tractorServicesText = implementsAvailable.length > 0 ? toList(TRACTOR_SERVICES, implementsAvailable) : null;
 
-  const h = cardHeight ?? Math.round(cardWidth * (260 / 440));
+  const h = cardHeight ?? 320;
 
   const iconBox = (key: keyof typeof SECTION_COLORS, icon: keyof typeof Ionicons.glyphMap, label: string, value: string | React.ReactNode) => {
     const [bg, _light, iconColor] = SECTION_COLORS[key] ?? ["#64748B", "#F1F5F9", "#475569"];
@@ -79,7 +79,7 @@ export function FarmerProfileCard({
 
   return (
     <View style={[styles.card, { width: cardWidth, height: h }]}>
-      {/* Top brand bar: logo + VADI */}
+      {/* Top brand bar: logo + VADI + VADI Score (top right) */}
       <View style={styles.brandBar}>
         <View style={styles.logoWrap}>
           <Image
@@ -92,6 +92,12 @@ export function FarmerProfileCard({
           <Text style={styles.brandName}>VADI</Text>
           <Text style={styles.brandSub}>ખેડૂત પ્રોફાઇલ કાર્ડ</Text>
         </View>
+        {vadiScore != null && (
+          <View style={styles.vadiScoreBadge}>
+            <Text style={styles.vadiScoreLabel}>VADI Score</Text>
+            <Text style={styles.vadiScoreValue}>{Math.min(100, Math.max(0, vadiScore))}</Text>
+          </View>
+        )}
       </View>
 
       {/* Landscape body: left = avatar + name, right = info grid */}
@@ -121,10 +127,21 @@ export function FarmerProfileCard({
             <View style={styles.iconRowText}>
               <Text style={styles.iconLabel}>ટ્રેક્ટર</Text>
               <Text style={styles.iconValue} numberOfLines={1}>
-                {profile.tractorAvailable ? (tractorServicesText ? `હા — ${tractorServicesText}` : "હા — ઉપલબ્ધ") : "ના"}
+                {profile.tractorAvailable ? "હા — ઉપલબ્ધ" : "ના"}
               </Text>
             </View>
           </View>
+          {profile.tractorAvailable && tractorServicesText && (
+            <View style={styles.iconRow}>
+              <View style={[styles.iconCircle, { backgroundColor: "#B45309" }]}>
+                <Ionicons name="construct" size={20} color="#FFFFFF" />
+              </View>
+              <View style={styles.iconRowText}>
+                <Text style={styles.iconLabel}>ટ્રેક્ટર સેવાઓ</Text>
+                <Text style={styles.iconValue} numberOfLines={2}>{tractorServicesText}</Text>
+              </View>
+            </View>
+          )}
           {farms.length > 0 && (
             <View style={styles.iconRow}>
               <View style={[styles.iconCircle, { backgroundColor: SECTION_COLORS.farms[0] }]}>
@@ -194,6 +211,16 @@ const styles = StyleSheet.create({
   brandTextWrap: { flex: 1 },
   brandName: { fontSize: 24, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.5 },
   brandSub: { fontSize: 13, fontWeight: "700", color: C.brandLight, marginTop: 2 },
+  vadiScoreBadge: {
+    backgroundColor: "rgba(255,255,255,0.25)",
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    minWidth: 72,
+  },
+  vadiScoreLabel: { fontSize: 11, fontWeight: "700", color: C.brandLight },
+  vadiScoreValue: { fontSize: 22, fontWeight: "900", color: "#FFFFFF" },
   body: {
     flexDirection: "row",
     paddingHorizontal: 16,
