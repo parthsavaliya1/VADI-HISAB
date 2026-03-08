@@ -10,7 +10,7 @@ import axios from "axios";
 //           Phone & computer must be on SAME WiFi
 // 🚀 PROD:  Uncomment the render/production line
 
-const BASE_URL = "http://192.168.1.6:8000/api"; // 🔧 Change IP here
+const BASE_URL = "http://192.168.1.5:8000/api"; // 🔧 Change IP here
 // const BASE_URL = "https://vadi-backend.onrender.com/api"; // 🚀 Production
 
 // ─── Axios Instance ───────────────────────────
@@ -293,6 +293,11 @@ export interface CropPayload {
   farmName?: string;
   area: number;
   areaUnit?: AreaUnit;
+  /** "ghare" = own, "bhagma" = sharecropping; when bhagma, bhagmaPercentage is set (25, 30, 33, 50) */
+  landType?: "ghare" | "bhagma" | null;
+  bhagmaPercentage?: number | null;
+  /** When bhagma: extra expense as % of crop income (e.g. 10 = 10%), shared by bhagma share */
+  bhagmaExpensePctOfIncome?: number | null;
   sowingDate?: string | null;
   harvestDate?: string | null;
   status?: CropStatus;

@@ -234,7 +234,8 @@ function getCropDropdownLabel(c: Crop): string {
   const area = c.area != null ? String(c.area) : "—";
   const unit = AREA_UNIT_GUJ[(c.areaUnit ?? "Bigha") as string] ?? "વીઘા";
   const yearPart = c.year ? ` · ${c.year}` : "";
-  return `${emoji} ${name} · ${season} · ${area} ${unit}${yearPart}`;
+  const bhagma = c.landType === "bhagma" && c.bhagmaPercentage != null ? ` · ભાગમા ${c.bhagmaPercentage}%` : "";
+  return `${emoji} ${name} · ${season} · ${area} ${unit}${yearPart}${bhagma}`;
 }
 
 function SelectPicker({
@@ -930,6 +931,13 @@ export default function AddIncomeScreen() {
           <View style={{ alignItems: "center", flex: 1 }}>
             <Text style={styles.headerTitle}>{headerTitle}</Text>
             {headerSub ? <Text style={styles.headerSub}>{headerSub}</Text> : null}
+            {selectedCrop?.landType === "bhagma" && selectedCrop?.bhagmaPercentage != null && (
+              <View style={[styles.bhagmaBadge, { backgroundColor: C.green50 }]}>
+                <Text style={[styles.bhagmaBadgeText, { color: C.green700 }]}>
+                  ભાગમા {selectedCrop.bhagmaPercentage}%
+                </Text>
+              </View>
+            )}
           </View>
           <View style={{ width: 36 }} />
         </View>
@@ -1210,6 +1218,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
   headerSub: { fontSize: 16, color: C.textSecondary, marginTop: 2 },
+  bhagmaBadge: {
+    marginTop: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    alignSelf: "center",
+  },
+  bhagmaBadgeText: { fontSize: 13, fontWeight: "700" },
 
   // Loading
   loadingWrap: {

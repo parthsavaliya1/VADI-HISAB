@@ -252,6 +252,13 @@ function CropCard({
                   </View>
                 ) : null}
 
+                {item.landType === "bhagma" && item.bhagmaPercentage != null && (
+                  <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
+                    <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
+                      ભાગમા {item.bhagmaPercentage}%
+                    </Text>
+                  </View>
+                )}
                 <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
                   <View style={[styles.statusDot, { backgroundColor: status.dot }]} />
                   <Text style={[styles.statusText, { color: status.text }]}>
@@ -1243,6 +1250,11 @@ const styles = StyleSheet.create({
   tagsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   tagText: { fontSize: 13, fontWeight: "700" },
+  bhagmaBadge: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+  },
+  bhagmaBadgeText: { fontSize: 12, fontWeight: "700" },
   statusBadge: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,

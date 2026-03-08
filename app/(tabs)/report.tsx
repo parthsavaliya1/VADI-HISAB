@@ -253,7 +253,16 @@ export default function ReportScreen() {
             crops.map((row) => (
               <View key={row._id} style={styles.cropRow}>
                 <View style={styles.cropRowLeft}>
-                  <Text style={styles.cropRowName}>{cropDisplayName(row.cropName)}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                    <Text style={styles.cropRowName}>{cropDisplayName(row.cropName)}</Text>
+                    {row.landType === "bhagma" && row.bhagmaPercentage != null && (
+                      <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
+                        <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
+                          ભાગમા {row.bhagmaPercentage}%
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.cropRowMeta}>
                     આવક {formatINR(row.income ?? 0)} · ખર્ચ {formatINR(row.expense ?? 0)}
                   </Text>
@@ -378,6 +387,12 @@ const styles = StyleSheet.create({
   },
   cropRowLeft: { flex: 1 },
   cropRowName: { fontSize: 17, fontWeight: "800", color: C.textPrimary },
+  bhagmaBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  bhagmaBadgeText: { fontSize: 12, fontWeight: "700" },
   cropRowMeta: { fontSize: 14, color: C.textMuted, marginTop: 4, fontWeight: "600" },
   cropRowProfit: { fontSize: 17, fontWeight: "800", marginLeft: 12 },
   emptyWrap: { alignItems: "center", paddingVertical: 40 },

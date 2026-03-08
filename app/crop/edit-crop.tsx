@@ -87,6 +87,10 @@ export default function EditCropScreen() {
   const [area, setArea] = useState("");
   const [notes, setNotes] = useState("");
 
+  const [landType, setLandType] = useState<"ghare" | "bhagma" | "">("");
+  const [bhagmaPercentage, setBhagmaPercentage] = useState<number | "">("");
+  const [bhagmaExpensePctOfIncome, setBhagmaExpensePctOfIncome] = useState<number | "">("");
+
   const [usedAreaByFarm, setUsedAreaByFarm] = useState<Record<string, number>>({});
 
   const baseYears = getFinancialYearOptions();
@@ -110,6 +114,9 @@ export default function EditCropScreen() {
         setSubType(cr.subType ?? "");
         setArea(String(cr.area ?? ""));
         setNotes(cr.notes ?? "");
+        setLandType(cr.landType ?? "");
+        setBhagmaPercentage(cr.bhagmaPercentage != null ? Number(cr.bhagmaPercentage) : "");
+        setBhagmaExpensePctOfIncome(cr.bhagmaExpensePctOfIncome != null ? Number(cr.bhagmaExpensePctOfIncome) : "");
         if (cr.farmName) setSelectedFarm({ name: cr.farmName, area: 0, category: "own" });
       })
       .catch((e) => setError((e as Error).message))
@@ -156,6 +163,7 @@ export default function EditCropScreen() {
     if (!area || isNaN(areaNum) || areaNum <= 0) return "માન્ય વિસ્તાર (વીઘા) દાખલ કરો.";
     if (farms.length > 0 && !selectedFarm) return "કૃપા કરીને વાડી પસંદ કરો.";
     if (maxBigha != null && areaNum > maxBigha) return `આ વાડી પર મહત્તમ ${maxBigha} વીઘા દાખલ કરી શકો.`;
+    if (landType === "bhagma" && bhagmaPercentage === "") return "ભાગમા માટે ટકાવારી પસંદ કરો.";
     return null;
   };
 
@@ -177,6 +185,9 @@ export default function EditCropScreen() {
       subType: subType.trim() || undefined,
       year,
       farmName: selectedFarm?.name,
+      ...(landType ? { landType: landType as "ghare" | "bhagma" } : {}),
+      ...(landType === "bhagma" && bhagmaPercentage !== "" ? { bhagmaPercentage: Number(bhagmaPercentage) } : {}),
+      ...(landType === "bhagma" ? { bhagmaExpensePctOfIncome: bhagmaExpensePctOfIncome !== "" ? Number(bhagmaExpensePctOfIncome) : null } : {}),
     };
     try {
       setSaving(true);
@@ -376,6 +387,53 @@ export default function EditCropScreen() {
               );
             })}
           </View>
+        </View>
+
+        <View style={styles.card}>
+          <SectionLabel text="🤝 ભાગમા આપ્યું છે?" />
+          <View style={styles.chipRow}>
+            <TouchableOpacity
+              style={[styles.presetChip, landType === "ghare" && styles.presetChipActive]}
+              onPress={() => { setLandType("ghare"); setBhagmaPercentage(""); setBhagmaExpensePctOfIncome(""); }}
+            >
+              <Text style={[styles.presetChipText, landType === "ghare" && styles.presetChipTextActive]}>ના</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.presetChip, landType === "bhagma" && styles.presetChipActive]}
+              onPress={() => setLandType("bhagma")}
+            >
+              <Text style={[styles.presetChipText, landType === "bhagma" && styles.presetChipTextActive]}>હા</Text>
+            </TouchableOpacity>
+          </View>
+          {landType === "bhagma" && (
+            <>
+              <Text style={[styles.sectionLabel, { marginTop: 14, marginBottom: 8 }]}>ટકાવારી પસંદ કરો</Text>
+              <View style={styles.chipRow}>
+                {[25, 30, 33, 50].map((pct) => (
+                  <TouchableOpacity
+                    key={pct}
+                    style={[styles.presetChip, bhagmaPercentage === pct && styles.presetChipActive]}
+                    onPress={() => setBhagmaPercentage(pct)}
+                  >
+                    <Text style={[styles.presetChipText, bhagmaPercentage === pct && styles.presetChipTextActive]}>{pct}%</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={[styles.sectionLabel, { marginTop: 14, marginBottom: 8 }]}>આવકનો વધારાનો ખર્ચ (ટકા)</Text>
+              <Text style={[styles.hint, { marginBottom: 8 }]}>ભાગમા માટે આવકના ટકા પ્રમાણે વધારાનો ખર્ચ ઉમેરો (ભાગ પ્રમાણે વહેંચાશે)</Text>
+              <View style={styles.chipRow}>
+                {[0, 5, 10, 15].map((pct) => (
+                  <TouchableOpacity
+                    key={pct}
+                    style={[styles.presetChip, bhagmaExpensePctOfIncome === pct && styles.presetChipActive]}
+                    onPress={() => setBhagmaExpensePctOfIncome(pct)}
+                  >
+                    <Text style={[styles.presetChipText, bhagmaExpensePctOfIncome === pct && styles.presetChipTextActive]}>{pct}%</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
         </View>
 
         <View style={styles.card}>

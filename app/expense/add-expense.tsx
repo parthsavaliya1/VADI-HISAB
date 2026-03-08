@@ -183,7 +183,8 @@ function getCropDropdownLabel(c: Crop): string {
   const season = SEASON_DISPLAY[c.season ?? ""] ?? (c.season ?? "—");
   const area = c.area != null ? String(c.area) : "—";
   const unit = AREA_UNIT_GUJ[(c.areaUnit ?? "Bigha") as string] ?? "વીઘા";
-  return `${emoji} ${name} · ${season} · ${area} ${unit}`;
+  const bhagma = c.landType === "bhagma" && c.bhagmaPercentage != null ? ` · ભાગમા ${c.bhagmaPercentage}%` : "";
+  return `${emoji} ${name} · ${season} · ${area} ${unit}${bhagma}`;
 }
 
 // ─── Reusable components ──────────────────────────────────────────────────────
@@ -295,10 +296,11 @@ function NumericInput({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AddExpense() {
-  const params = useLocalSearchParams<{ cropId?: string; general?: string; year?: string }>();
+  const params = useLocalSearchParams<{ cropId?: string; general?: string; year?: string; bhagyaUpad?: string }>();
   const paramCropId = Array.isArray(params.cropId) ? params.cropId[0] : params.cropId;
   const paramYear = Array.isArray(params.year) ? params.year[0] : params.year;
   const isGeneralExpense = (Array.isArray(params.general) ? params.general[0] : params.general) === "1";
+  const isBhagyaUpad = (Array.isArray(params.bhagyaUpad) ? params.bhagyaUpad[0] : params.bhagyaUpad) === "1";
   const { profile } = useProfile();
 
   const yearOptions = getYearOptions();
@@ -313,6 +315,15 @@ export default function AddExpense() {
 
   const selectedCrop = crops.find((c) => c._id === cropId);
   const isCropExpense = !isGeneralExpense && !!cropId;
+  const isBhagmaCrop = selectedCrop?.landType === "bhagma";
+
+  // ભાગ્યા નો ઉપાડ with bhagma crop: same options as bhagma screen in majuri — બિયારણ, ખાતર, જંતુનાશક, મજૂરી (exclude only Machinery). Normal bhagma add expense: Seed/Fertilizer/Pesticide only.
+  const visibleCategories = (() => {
+    if (isGeneralExpense) return CATEGORIES;
+    if (isBhagyaUpad) return isBhagmaCrop ? CATEGORIES.filter((c) => c.value !== "Machinery") : [];
+    if (isBhagmaCrop) return CATEGORIES.filter((c) => c.value !== "Labour" && c.value !== "Machinery");
+    return CATEGORIES;
+  })();
 
   // Default date of entry (today). No date picker shown.
   const effectiveExpenseDate = new Date();
@@ -359,6 +370,14 @@ export default function AddExpense() {
   const [pestDosage, setPestDosage] = useState("");
   const [pestCost, setPestCost] = useState("");
   const [labourMode, setLabourMode] = useState<"Daily" | "Contract">("Daily");
+
+  // Labour form follows crop: bhagma → ભાગમા (advance/medical); non-bhagma → દૈનિક મજૂર (daily labour cost)
+  useEffect(() => {
+    if (category === "Labour") {
+      setLabourMode(isBhagmaCrop ? "Contract" : "Daily");
+    }
+  }, [category, isBhagmaCrop]);
+
   const [labourTask, setLabourTask] = useState<LabourTask | "">("");
   const [labourPeople, setLabourPeople] = useState("");
   const [labourDays, setLabourDays] = useState("");
@@ -647,6 +666,8 @@ export default function AddExpense() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               {isGeneralExpense ? (
                 <Text style={styles.headerTitle}>સામાન્ય ખર્ચ</Text>
+              ) : isBhagyaUpad ? (
+                <Text style={styles.headerTitle}>ભાગ્યા નો ઉપાડ</Text>
               ) : activeCat ? (
                 <>
                   <View style={[styles.headerIconWrap, { backgroundColor: activeCat.pale }]}>
@@ -662,6 +683,13 @@ export default function AddExpense() {
                 <Text style={styles.headerTitle}>ખર્ચ ઉમેરો</Text>
               )}
             </View>
+            {selectedCrop?.landType === "bhagma" && selectedCrop?.bhagmaPercentage != null && (
+              <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
+                <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
+                  ભાગમા {selectedCrop.bhagmaPercentage}%
+                </Text>
+              </View>
+            )}
           </View>
           <View style={{ width: 36 }} />
         </View>
@@ -753,25 +781,34 @@ export default function AddExpense() {
           <>
         {/* ── Crop dropdown: pre-selected from dashboard (cropId in URL) or user choice ── */}
         <View style={styles.cropSelectCard}>
-          <SectionLabel text="પાક પસંદ કરો *" />
-          {crops.length > 0 ? (
+          <SectionLabel text={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો *" : "પાક પસંદ કરો *"} />
+          {(isBhagyaUpad ? crops.filter((c) => c.landType === "bhagma") : crops).length > 0 ? (
             <SelectPicker
-              options={crops.map((c) => ({ value: c._id, label: getCropDropdownLabel(c) }))}
+              options={(isBhagyaUpad ? crops.filter((c) => c.landType === "bhagma") : crops).map((c) => ({ value: c._id, label: getCropDropdownLabel(c) }))}
               selected={cropId ?? ""}
               onSelect={(id) => setSelectedCropId(id)}
-              placeholder="આ ખર્ચ કયા પાક માટે?"
+              placeholder={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો..." : "આ ખર્ચ કયા પાક માટે?"}
             />
           ) : (
-            <Text style={styles.generalExpenseNote}>કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો.</Text>
+            <Text style={styles.generalExpenseNote}>
+              {isBhagyaUpad ? "કોઈ ભાગમા પાક નથી — પહેલા ડેશબોર્ડથી ભાગમા પાક ઉમેરો." : "કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો."}
+            </Text>
           )}
         </View>
 
         {/* ── Category: big grid when none selected, compact strip when one selected ── */}
         {category === "" ? (
           <>
-            <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર પસંદ કરો</Text>
-            <View style={styles.catGrid}>
-              {CATEGORIES.map((cat) => (
+            {visibleCategories.length > 0 && <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર પસંદ કરો</Text>}
+            {isBhagyaUpad && !isBhagmaCrop && (
+              <View style={[styles.card, { marginBottom: 16, backgroundColor: "#FFF8E1", borderColor: "#F9A825" }]}>
+                <Text style={[styles.generalExpenseInfoText, { color: "#92400E" }]}>
+                  ભાગ્યા નો ઉપાડ ફક્ત ભાગમા પાક માટે છે. ઉપરથી ભાગમા પાક પસંદ કરો.
+                </Text>
+              </View>
+            )}
+            {visibleCategories.length > 0 && <View style={styles.catGrid}>
+              {visibleCategories.map((cat) => (
                 <TouchableOpacity
                   key={cat.value}
                   onPress={() => setCategory(cat.value)}
@@ -790,12 +827,12 @@ export default function AddExpense() {
                   </View>
                 </TouchableOpacity>
               ))}
-            </View>
+            </View>}
           </>
         ) : (
           <View style={styles.catStrip}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catStripContent}>
-              {CATEGORIES.map((cat) => {
+              {visibleCategories.map((cat) => {
                 const active = category === cat.value;
                 return (
                   <TouchableOpacity
@@ -952,49 +989,59 @@ export default function AddExpense() {
           </View>
         )}
 
-        {/* ── LABOUR ── */}
+        {/* ── LABOUR (મજૂરી): bhagma crop → ભાગમા (advance/medical). Non-bhagma → દૈનિક મજૂર (daily labour cost). ── */}
         {category === "Labour" && (
           <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
             <View style={[styles.cardTitleRow, { borderLeftColor: "#D97706" }]}>
-              <Text style={styles.cardTitle}>👷 મજૂરી ખર્ચ</Text>
+              <Text style={styles.cardTitle}>
+                👷 મજૂરી ખર્ચ {isBhagmaCrop ? "(ભાગમા / અગ્રિમ)" : "(દૈનિક મજૂર)"}
+              </Text>
             </View>
-            <View style={styles.toggleRow}>
-              <TouchableOpacity
-                style={[
-                  styles.toggleBtn,
-                  labourMode === "Daily" && styles.toggleBtnActive,
-                ]}
-                onPress={() => setLabourMode("Daily")}
-              >
-                <Text
-                  style={
-                    labourMode === "Daily"
-                      ? styles.toggleTextActive
-                      : styles.toggleText
-                  }
-                >
-                  દૈનિક મજૂર
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.toggleBtn,
-                  labourMode === "Contract" && styles.toggleBtnActive,
-                ]}
-                onPress={() => setLabourMode("Contract")}
-              >
-                <Text
-                  style={
-                    labourMode === "Contract"
-                      ? styles.toggleTextActive
-                      : styles.toggleText
-                  }
-                >
-                  ભાગમા
-                </Text>
-              </TouchableOpacity>
-            </View>
-            {labourMode === "Daily" ? (
+            {isBhagmaCrop ? (
+              <>
+                <SectionLabel text="શેરિંગ (ભાગમા વિભાજન)" />
+                <SelectPicker
+                  options={SHARING_OPTIONS}
+                  selected={sharingType}
+                  onSelect={(v) => handleSharingSelect(v as SharingOption | "")}
+                  placeholder="શેરિંગ પસંદ કરો..."
+                  onOpen={scrollToForm}
+                />
+                {sharingType === "custom" && (
+                  <>
+                    <SectionLabel text="ટકા દાખલ કરો (0–100)" />
+                    <NumericInput
+                      value={sharingCustom}
+                      onChange={handleSharingCustomChange}
+                      placeholder="ઉદા. 40"
+                      onFocus={scrollToForm}
+                    />
+                  </>
+                )}
+                <View style={styles.warnNote}>
+                  <Ionicons name="warning" size={14} color="#D97706" />
+                  <Text style={styles.warnNoteText}>
+                    આ રકમ ખેત ખર્ચ નથી — ભવિષ્યની જવાબદારી સામે ડેબિટ છે.
+                  </Text>
+                </View>
+                <SectionLabel text="ઍડ્વાન્સ કારણ *" />
+                <SelectPicker
+                  options={ADVANCE_REASONS}
+                  selected={advanceReason}
+                  onSelect={setAdvanceReason}
+                  placeholder="કારણ પસંદ કરો..."
+                  onOpen={scrollToForm}
+                />
+                <SectionLabel text="આપેલ રકમ *" />
+                <NumericInput
+                  value={advanceAmount}
+                  onChange={setAdvanceAmount}
+                  placeholder="0"
+                  prefix=""
+                  onFocus={scrollToForm}
+                />
+              </>
+            ) : (
               <>
                 <SectionLabel text="કામ પ્રકાર *" />
                 <SelectPicker
@@ -1040,50 +1087,6 @@ export default function AddExpense() {
                     </Text>
                   </View>
                 )}
-              </>
-            ) : (
-              <>
-                <SectionLabel text="શેરિંગ (ભાગમા વિભાજન)" />
-                <SelectPicker
-                  options={SHARING_OPTIONS}
-                  selected={sharingType}
-                  onSelect={(v) => handleSharingSelect(v as SharingOption | "")}
-                  placeholder="શેરિંગ પસંદ કરો..."
-                  onOpen={scrollToForm}
-                />
-                {sharingType === "custom" && (
-                  <>
-                    <SectionLabel text="ટકા દાખલ કરો (0–100)" />
-                    <NumericInput
-                      value={sharingCustom}
-                      onChange={handleSharingCustomChange}
-                      placeholder="ઉદા. 40"
-                      onFocus={scrollToForm}
-                    />
-                  </>
-                )}
-                <View style={styles.warnNote}>
-                  <Ionicons name="warning" size={14} color="#D97706" />
-                  <Text style={styles.warnNoteText}>
-                    આ રકમ ખેત ખર્ચ નથી — ભવિષ્યની જવાબદારી સામે ડેબિટ છે.
-                  </Text>
-                </View>
-                <SectionLabel text="ઍડ્વાન્સ કારણ *" />
-                <SelectPicker
-                  options={ADVANCE_REASONS}
-                  selected={advanceReason}
-                  onSelect={setAdvanceReason}
-                  placeholder="કારણ પસંદ કરો..."
-                  onOpen={scrollToForm}
-                />
-                <SectionLabel text="આપેલ રકમ *" />
-                <NumericInput
-                  value={advanceAmount}
-                  onChange={setAdvanceAmount}
-                  placeholder="0"
-                  prefix=""
-                  onFocus={scrollToForm}
-                />
               </>
             )}
           </View>
@@ -1321,6 +1324,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
   headerSub: { fontSize: 16, color: C.textSecondary, marginTop: 2 },
+  bhagmaBadge: {
+    marginTop: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    alignSelf: "center",
+  },
+  bhagmaBadgeText: { fontSize: 13, fontWeight: "700" },
 
   scroll: { padding: CAT_GRID_PAD },
   yearCard: {

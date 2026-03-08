@@ -463,6 +463,7 @@ function CropPickerModal({
   onClose,
   type,
   onSelectGeneralExpense,
+  onSelectBhagyaUpad,
   onSelectGeneralIncome,
 }: {
   t: (s: string, k: string) => string;
@@ -472,6 +473,7 @@ function CropPickerModal({
   onClose: () => void;
   type: "expense" | "income";
   onSelectGeneralExpense?: () => void;
+  onSelectBhagyaUpad?: () => void;
   onSelectGeneralIncome?: () => void;
 }) {
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
@@ -516,7 +518,7 @@ function CropPickerModal({
           </TouchableOpacity>
         </View>
 
-        {crops.length === 0 && !onSelectGeneralExpense ? (
+        {crops.length === 0 && !onSelectGeneralExpense && !onSelectBhagyaUpad ? (
           <View style={styles.sheetEmpty}>
             <Text style={{ fontSize: 58, marginBottom: 14 }}>🌱</Text>
             <Text style={styles.sheetEmptyText}>{t("dashboard", "noCrops")}</Text>
@@ -555,16 +557,25 @@ function CropPickerModal({
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.sheetCropName}>{cropDisplayName(crop.cropName)}</Text>
-                    <Text style={styles.sheetCropMeta}>
-                      {crop.season === "Kharif"
-                        ? "☔ ખરીફ"
-                        : crop.season === "Rabi"
-                          ? "❄️ રવી"
-                          : "☀️ ઉનાળો"}
-                      {" · "}
-                      <Text style={styles.bighaFont}>{crop.area} </Text>
-                      {areaUnitLabel(crop.areaUnit, t)}
-                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                      <Text style={styles.sheetCropMeta}>
+                        {crop.season === "Kharif"
+                          ? "☔ ખરીફ"
+                          : crop.season === "Rabi"
+                            ? "❄️ રવી"
+                            : "☀️ ઉનાળો"}
+                        {" · "}
+                        <Text style={styles.bighaFont}>{crop.area} </Text>
+                        {areaUnitLabel(crop.areaUnit, t)}
+                      </Text>
+                      {crop.landType === "bhagma" && crop.bhagmaPercentage != null && (
+                        <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
+                          <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
+                            ભાગમા {crop.bhagmaPercentage}%
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                   <View
                     style={[
@@ -606,6 +617,25 @@ function CropPickerModal({
                 </TouchableOpacity>
               );
             })}
+            {/* ભાગ્યા નો ઉપાડ — just above સામાન્ય ખર્ચ when Add Expense */}
+            {isExpense && onSelectBhagyaUpad && (
+              <TouchableOpacity
+                style={[styles.sheetCropRow, styles.sheetGeneralRow]}
+                onPress={() => {
+                  onSelectBhagyaUpad();
+                  onClose();
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.sheetCropEmojiBg, { backgroundColor: "#FFF8E1" }]}>
+                  <Ionicons name="wallet-outline" size={30} color="#D97706" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sheetCropName}>ભાગ્યા નો ઉપાડ</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            )}
             {/* સામાન્ય ખર્ચ only when Add Expense; સામાન્ય આવક only when Add Income */}
             {isExpense && onSelectGeneralExpense && (
               <TouchableOpacity
@@ -905,18 +935,32 @@ export default function Dashboard() {
         getIncomes(1, 30, undefined, undefined, undefined, financialYear),
       ]);
       setProfile(prof);
+      const reportCrops = (yearlyReport as any).crops ?? [];
+      const extraIncome = (yearlyReport as any).summary?.extraIncome ?? 0;
+      const extraExpense = (yearlyReport as any).summary?.extraExpense ?? 0;
+      // Main summary: all income; expense excludes bhagma crops (don't count bhagma expense in dashboard total)
+      const cropIncome = reportCrops.reduce((s: number, r: any) => s + (r.income ?? 0), 0);
+      const cropExpense = reportCrops
+        .filter((r: any) => r.landType !== "bhagma")
+        .reduce((s: number, r: any) => s + (r.expense ?? 0), 0);
+      setSummary({
+        totalIncome: cropIncome + extraIncome,
+        totalExpense: cropExpense + extraExpense,
+        netProfit: cropIncome + extraIncome - (cropExpense + extraExpense),
+      });
       setCrops(
         cropRes.data.map((c: Crop) => {
-          const report = (yearlyReport as any).crops?.find((r: any) => r._id === c._id);
+          const report = reportCrops.find((r: any) => r._id === c._id);
           return {
             ...c,
             income: report?.income ?? 0,
             expense: report?.expense ?? 0,
             profit: report?.profit ?? (report ? (report.income ?? 0) - (report.expense ?? 0) : 0),
+            ...(report?.labourShare != null && { labourShare: report.labourShare as number }),
+            ...(report?.farmerDirectExpense != null && { farmerDirectExpense: report.farmerDirectExpense as number }),
           };
         }),
       );
-      setSummary(yearlyReport.summary);
       const expenses = Array.isArray(expRes?.data) ? expRes.data : [];
       const incomes = Array.isArray(incRes?.data) ? incRes.data : [];
       setTxns(buildTransactions(expenses, incomes as Income[], t, cropRes.data ?? []));
@@ -1442,7 +1486,16 @@ export default function Dashboard() {
                       </Text>
                     </View>
                     <View style={styles.detailHeaderText}>
-                      <Text style={styles.detailName}>{cropDisplayName(c.cropName)}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <Text style={styles.detailName}>{cropDisplayName(c.cropName)}</Text>
+                        {c.landType === "bhagma" && c.bhagmaPercentage != null && (
+                          <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
+                            <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
+                              ભાગમા {c.bhagmaPercentage}%
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={styles.detailMeta}>
                         {c.season === "Kharif" ? "ખરીફ" : c.season === "Rabi" ? "રવી" : "ઉનાળો"}
                         {" · "}
@@ -1476,6 +1529,14 @@ export default function Dashboard() {
                       <Text style={[styles.detailSummaryCellValue, { color: C.textPrimary }]}>{net >= 0 ? "" : "−"}{Math.abs(net).toLocaleString("en-IN")}</Text>
                     </View>
                   </View>
+                  {c.landType === "bhagma" && (c as any).labourShare != null && (c as any).labourShare > 0 && (
+                    <View style={styles.detailBhagmaRow}>
+                      <Text style={styles.detailBhagmaLabel}>મજૂર/યંત્ર ભાગ ({c.bhagmaPercentage}%)</Text>
+                      <Text style={[styles.detailBhagmaValue, { color: C.expense }]}>
+                        ₹{(c as any).labourShare.toLocaleString("en-IN")}
+                      </Text>
+                    </View>
+                  )}
                   {areaBigha > 0 && (
                     <View style={styles.detailUnitRow}>
                       <Text style={styles.detailUnitText}>
@@ -1535,6 +1596,10 @@ export default function Dashboard() {
         onSelectGeneralExpense={() => {
           setPickerVisible(false);
           router.push("/expense/add-expense?general=1" as any);
+        }}
+        onSelectBhagyaUpad={() => {
+          setPickerVisible(false);
+          router.push("/expense/add-bhagya-upad" as any);
         }}
         onSelectGeneralIncome={() => {
           setPickerVisible(false);
@@ -1998,6 +2063,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  bhagmaBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  bhagmaBadgeText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
   detailSummarySingleBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -2030,6 +2104,25 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
     color: C.textMuted,
+  },
+  detailBhagmaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#FFEBEE",
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  detailBhagmaLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: C.textSecondary,
+  },
+  detailBhagmaValue: {
+    fontSize: 16,
+    fontWeight: "800",
   },
   detailUnitRow: {
     paddingVertical: 10,
