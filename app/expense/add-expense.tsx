@@ -14,6 +14,7 @@ import {
   type SeedType,
   type SharingOption,
 } from "@/utils/api";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -305,9 +306,8 @@ export default function AddExpense() {
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
     () => paramYear && yearOptions.includes(paramYear) ? paramYear : getCurrentFinancialYear(),
   );
-  const [expenseDate, setExpenseDate] = useState<Date>(() =>
-    financialYearToStartDate(paramYear && yearOptions.includes(paramYear) ? paramYear : getCurrentFinancialYear()),
-  );
+  const [expenseDate, setExpenseDate] = useState<Date>(() => new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [crops, setCrops] = useState<Crop[]>([]);
   const [selectedCropId, setSelectedCropId] = useState<string | "">("");
@@ -315,9 +315,14 @@ export default function AddExpense() {
   const [generalAmount, setGeneralAmount] = useState("");
   const cropId = selectedCropId || paramCropId || undefined;
 
+  const selectedCrop = crops.find((c) => c._id === cropId);
+  const isCropExpense = !isGeneralExpense && !!cropId;
+
   useEffect(() => {
-    setExpenseDate(financialYearToStartDate(selectedFinancialYear));
-  }, [selectedFinancialYear]);
+    if (isGeneralExpense) {
+      setExpenseDate(financialYearToStartDate(selectedFinancialYear));
+    }
+  }, [selectedFinancialYear, isGeneralExpense]);
 
   // Order: Active (live) first, then Harvested, then Closed
   const cropStatusOrder = (s: string | undefined) =>
@@ -680,25 +685,63 @@ export default function AddExpense() {
         showsVerticalScrollIndicator={false}
         keyboardDismissMode="on-drag"
       >
-        {/* ── Financial year selector (before add) ── */}
-        <View style={styles.yearCard}>
-          <Text style={styles.yearLabel}>📅 વર્ષ પસંદ કરો (જૂન–મે)</Text>
-          <View style={styles.yearRow}>
-            {yearOptions.map((fy) => {
-              const active = selectedFinancialYear === fy;
-              return (
-                <TouchableOpacity
-                  key={fy}
-                  onPress={() => setSelectedFinancialYear(fy)}
-                  style={[styles.yearPill, active && styles.yearPillActive]}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.yearPillText, active && styles.yearPillTextActive]}>{fy}</Text>
-                </TouchableOpacity>
-              );
-            })}
+        {/* ── Financial year selector only for general expense; for crop expense year comes from crop ── */}
+        {isGeneralExpense ? (
+          <View style={styles.yearCard}>
+            <Text style={styles.yearLabel}>📅 વર્ષ પસંદ કરો (જૂન–મે)</Text>
+            <View style={styles.yearRow}>
+              {yearOptions.map((fy) => {
+                const active = selectedFinancialYear === fy;
+                return (
+                  <TouchableOpacity
+                    key={fy}
+                    onPress={() => setSelectedFinancialYear(fy)}
+                    style={[styles.yearPill, active && styles.yearPillActive]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.yearPillText, active && styles.yearPillTextActive]}>{fy}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        ) : isCropExpense && selectedCrop?.year ? (
+          <View style={styles.yearCard}>
+            <Text style={styles.yearLabel}>📅 પાકનું વર્ષ (જૂન–મે)</Text>
+            <Text style={styles.cropYearText}>{selectedCrop.year}</Text>
+          </View>
+        ) : null}
+
+        {/* ── Expense date: default today, calendar icon to change (for crop expense) ── */}
+        {!isGeneralExpense && (
+          <View style={styles.dateCard}>
+            <Text style={styles.dateLabel}>📅 ખર્ચની તારીખ</Text>
+            <View style={styles.dateRow}>
+              <Text style={styles.dateValue}>
+                {expenseDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+              </Text>
+              <TouchableOpacity
+                style={styles.calendarIconBtn}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="calendar-outline" size={24} color={C.green700} />
+              </TouchableOpacity>
+            </View>
+            {showDatePicker && (
+              <DateTimePicker
+                value={expenseDate}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                maximumDate={new Date()}
+                onChange={(e: DateTimePickerEvent, d?: Date) => {
+                  setShowDatePicker(false);
+                  if (d) setExpenseDate(d);
+                }}
+              />
+            )}
+          </View>
+        )}
 
         {/* ── General expense: description + amount — not linked to any crop; no crop required ── */}
         {isGeneralExpense ? (
@@ -1317,8 +1360,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
-  headerSub: { fontSize: 15, color: C.textSecondary, marginTop: 2 },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
+  headerSub: { fontSize: 16, color: C.textSecondary, marginTop: 2 },
 
   scroll: { padding: CAT_GRID_PAD },
   yearCard: {
@@ -1359,6 +1402,42 @@ const styles = StyleSheet.create({
   },
   yearPillTextActive: {
     color: C.green700,
+  },
+  cropYearText: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: C.green700,
+  },
+  dateCard: {
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 18,
+    borderWidth: 1.5,
+    borderColor: C.borderLight,
+  },
+  dateLabel: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: C.textPrimary,
+    marginBottom: 10,
+  },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dateValue: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: C.textPrimary,
+  },
+  calendarIconBtn: {
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: C.green50,
+    borderWidth: 1,
+    borderColor: C.green100,
   },
   cropSelectCard: {
     backgroundColor: C.surfaceGreen,
@@ -1406,7 +1485,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   sectionTitle: {
-    fontSize: 21,
+    fontSize: 22,
     fontWeight: "800",
     color: C.textPrimary,
     marginBottom: 14,
@@ -1451,7 +1530,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   catCardLabel: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "700",
     color: C.textPrimary,
     textAlign: "center",
@@ -1536,10 +1615,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cardTitleRow: { borderLeftWidth: 3, paddingLeft: 10, marginBottom: 16 },
-  cardTitle: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
+  cardTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary },
 
   label: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
     color: C.textPrimary,
     marginBottom: 8,
@@ -1559,7 +1638,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.surfaceGreen,
   },
   selectBtnOpen: { borderColor: C.green700, backgroundColor: C.surface },
-  selectText: { fontSize: 19, color: C.textPrimary, fontWeight: "600" },
+  selectText: { fontSize: 20, color: C.textPrimary, fontWeight: "600" },
   dropList: {
     borderWidth: 1.5,
     borderColor: C.green100,
@@ -1583,7 +1662,7 @@ const styles = StyleSheet.create({
     borderBottomColor: C.borderLight,
   },
   dropItemActive: { backgroundColor: C.green50 },
-  dropItemText: { fontSize: 18, color: C.textPrimary, fontWeight: "600" },
+  dropItemText: { fontSize: 19, color: C.textPrimary, fontWeight: "600" },
   dropItemTextActive: { fontWeight: "800", color: C.green700 },
 
   // Numeric input — larger font, dark, easy to read
@@ -1598,12 +1677,12 @@ const styles = StyleSheet.create({
     backgroundColor: C.surfaceGreen,
     marginBottom: 6,
   },
-  numAffix: { fontSize: 18, color: C.textSecondary, marginHorizontal: 6, fontWeight: "700" },
+  numAffix: { fontSize: 20, color: C.textSecondary, marginHorizontal: 6, fontWeight: "700" },
   numInput: {
     flex: 1,
-    fontSize: 20,
+    fontSize: 22,
     color: C.textPrimary,
-    paddingVertical: 14,
+    paddingVertical: 16,
     fontWeight: "600",
   },
 
@@ -1698,7 +1777,7 @@ const styles = StyleSheet.create({
   },
 
   notesInput: {
-    fontSize: 17,
+    fontSize: 19,
     color: C.textPrimary,
     borderWidth: 1.5,
     borderColor: C.border,

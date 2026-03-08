@@ -79,6 +79,7 @@ const C = {
 
 interface CropSaleData {
   quantityKg: string;
+  quantityUnit: "kg" | "mal";
   pricePerKg: string;
   buyerName: string;
   marketName: string;
@@ -171,9 +172,21 @@ const OTHER_SOURCES = [
   "અન્ય",
 ];
 
+const BAJAR_OPTIONS = [
+  "રાજકોટ યાર્ડ",
+  "જામનગર યાર્ડ",
+  "જુનાગઢ યાર્ડ",
+  "અમરેલી યાર્ડ",
+  "મોરબી યાર્ડ",
+  "ભાવનગર યાર્ડ",
+  "સુરેન્દ્રનગર યાર્ડ",
+  "અન્ય યાર્ડ",
+];
+
 const DEFAULT_DATA: Record<IncomeCategory, SubFormData> = {
   "Crop Sale": {
     quantityKg: "",
+    quantityUnit: "mal",
     pricePerKg: "",
     buyerName: "",
     marketName: "",
@@ -212,7 +225,8 @@ function getCropDropdownLabel(c: Crop): string {
   const season = SEASON_DISPLAY[c.season ?? ""] ?? (c.season ?? "—");
   const area = c.area != null ? String(c.area) : "—";
   const unit = AREA_UNIT_GUJ[(c.areaUnit ?? "Bigha") as string] ?? "વીઘા";
-  return `${emoji} ${name} · ${season} · ${area} ${unit}`;
+  const yearPart = c.year ? ` · ${c.year}` : "";
+  return `${emoji} ${name} · ${season} · ${area} ${unit}${yearPart}`;
 }
 
 function SelectPicker({
@@ -220,11 +234,13 @@ function SelectPicker({
   selected,
   onSelect,
   placeholder,
+  compact,
 }: {
   options: { value: string; label: string }[];
   selected: string;
   onSelect: (v: string) => void;
   placeholder: string;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const selectedLabel = options.find((o) => o.value === selected)?.label;
@@ -235,23 +251,44 @@ function SelectPicker({
         onPress={() => setOpen((p) => !p)}
         activeOpacity={0.8}
       >
-        <Text style={[styles.selectBtnText, !selectedLabel && { color: C.textMuted }]}>
+        <Text
+          style={[
+            compact ? styles.selectBtnTextCompact : styles.selectBtnText,
+            !selectedLabel && { color: C.textMuted },
+          ]}
+          numberOfLines={1}
+        >
           {selectedLabel ?? placeholder}
         </Text>
         <Ionicons name={open ? "chevron-up" : "chevron-down"} size={20} color={C.textSecondary} />
       </TouchableOpacity>
       {open && (
-        <View style={styles.dropList}>
-          {options.map((o) => (
-            <TouchableOpacity
-              key={o.value}
-              style={[styles.dropItem, selected === o.value && styles.dropItemActive]}
-              onPress={() => { onSelect(o.value); setOpen(false); }}
-            >
-              <Text style={[styles.dropItemText, selected === o.value && styles.dropItemTextActive]}>{o.label}</Text>
-              {selected === o.value && <Ionicons name="checkmark" size={20} color={C.green700} />}
-            </TouchableOpacity>
-          ))}
+        <View style={[styles.dropList, styles.dropListScrollWrap]}>
+          <ScrollView
+            style={styles.dropListScroll}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+          >
+            {options.map((o) => (
+              <TouchableOpacity
+                key={o.value}
+                style={[styles.dropItem, selected === o.value && styles.dropItemActive, compact && styles.dropItemCompact]}
+                onPress={() => { onSelect(o.value); setOpen(false); }}
+              >
+                <Text
+                  style={[
+                    compact ? styles.dropItemTextCompact : styles.dropItemText,
+                    selected === o.value && styles.dropItemTextActive,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {o.label}
+                </Text>
+                {selected === o.value && <Ionicons name="checkmark" size={18} color={C.green700} />}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       )}
     </View>
@@ -384,50 +421,86 @@ function CropSaleForm({
 }) {
   const set = (k: keyof CropSaleData, v: string) =>
     onChange({ ...data, [k]: v });
-  const qty = parseFloat(data.quantityKg) || 0;
+  const qtyUnitMal = data.quantityUnit === "mal";
+  const qtyRaw = parseFloat(data.quantityKg) || 0;
   const price = parseFloat(data.pricePerKg) || 0;
-  const total = qty * price;
+  const total = qtyRaw * price;
 
   return (
     <>
-      <View style={styles.row2}>
-        <View style={{ flex: 1 }}>
-          <NumField
-            label="જથ્થો (kg) *"
-            value={data.quantityKg}
-            onChange={(v) => set("quantityKg", v)}
-            suffix="kg"
-          />
+      <View style={styles.fieldWrap}>
+        <FieldLabel text="જથ્થો *" />
+        <View style={styles.qtyUnitRow}>
+          <View style={{ flex: 1 }}>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={[styles.input, styles.inputBig]}
+                keyboardType="decimal-pad"
+                value={data.quantityKg}
+                onChangeText={(v) => set("quantityKg", v)}
+                placeholder="0"
+                placeholderTextColor={C.textMuted}
+              />
+              <Text style={styles.inputSuffix}>
+                {qtyUnitMal ? "મણ" : "કિ.ગ્રા."}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.unitToggle}>
+            <TouchableOpacity
+              style={[styles.unitToggleBtn, !qtyUnitMal && styles.unitToggleBtnActive]}
+              onPress={() => set("quantityUnit", "kg")}
+            >
+              <Text style={[styles.unitToggleText, !qtyUnitMal && styles.unitToggleTextActive]}>કિ.ગ્રા.</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.unitToggleBtn, qtyUnitMal && styles.unitToggleBtnActive]}
+              onPress={() => set("quantityUnit", "mal")}
+            >
+              <Text style={[styles.unitToggleText, qtyUnitMal && styles.unitToggleTextActive]}>મણ</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={{ flex: 1 }}>
-          <NumField
-            label="ભાવ / kg *"
+      </View>
+
+      <View style={styles.fieldWrap}>
+        <FieldLabel text={qtyUnitMal ? "ભાવ (પ્રતિ મણ) *" : "ભાવ (પ્રતિ કિ.ગ્રા.) *"} />
+        <View style={styles.inputRow}>
+          <TextInput
+            style={[styles.input, styles.inputBig]}
+            keyboardType="decimal-pad"
             value={data.pricePerKg}
-            onChange={(v) => set("pricePerKg", v)}
-            suffix=""
+            onChangeText={(v) => set("pricePerKg", v)}
+            placeholder="0"
+            placeholderTextColor={C.textMuted}
           />
         </View>
       </View>
 
-      {qty > 0 && price > 0 && (
+      {qtyRaw > 0 && price > 0 && (
         <DerivedCard
           label="કુલ રકમ"
           value={total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         />
       )}
 
-      <TxtField
-        label="ખરીદનારનું નામ"
-        value={data.buyerName}
-        onChange={(v) => set("buyerName", v)}
-        placeholder="વૈકલ્પિક"
-      />
-      <TxtField
-        label="બજાર / મંડી"
-        value={data.marketName}
-        onChange={(v) => set("marketName", v)}
-        placeholder="વૈકલ્પિક"
-      />
+      <View style={styles.fieldWrap}>
+        <FieldLabel text="બજાર / યાર્ડ *" />
+        <View style={styles.chipRow}>
+          {BAJAR_OPTIONS.map((opt) => (
+            <TouchableOpacity
+              key={opt}
+              style={[styles.chip, data.marketName === opt && styles.chipActive]}
+              onPress={() => set("marketName", opt)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.chipText, data.marketName === opt && styles.chipTextActive]}>
+                {opt}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
     </>
   );
 }
@@ -578,9 +651,9 @@ export default function AddIncomeScreen() {
   const [crops, setCrops] = useState<Crop[]>([]);
   const [selectedCropId, setSelectedCropId] = useState<string>("");
 
-  // Visible categories: general = only Subsidy, Other; crop from dashboard = hide Rental Income; else all
+  // General income = only "Other" (no category picker). Crop from dashboard = hide Rental Income; else all.
   const visibleCategories = useMemo(() => {
-    if (isGeneralIncome) return CATEGORIES.filter((c) => c.value === "Subsidy" || c.value === "Other");
+    if (isGeneralIncome) return [CATEGORIES.find((c) => c.value === "Other")!].filter(Boolean);
     if (cropIdParam) return CATEGORIES.filter((c) => c.value !== "Rental Income");
     return CATEGORIES;
   }, [isGeneralIncome, cropIdParam]);
@@ -589,12 +662,16 @@ export default function AddIncomeScreen() {
   const [subData, setSubData] = useState<SubFormData>(
     DEFAULT_DATA["Crop Sale"],
   );
-  const [date, setDate] = useState<Date>(() =>
-    financialYearToStartDate(paramYear && yearOptions.includes(paramYear) ? paramYear : getCurrentFinancialYear()),
-  );
+  const [date, setDate] = useState<Date>(() => new Date());
+  const effectiveCropId = selectedCropId || cropIdParam || null;
+  const selectedCrop = crops.find((c) => c._id === effectiveCropId);
+  const hasCropSelected = !!effectiveCropId && !isGeneralIncome;
+
   useEffect(() => {
-    if (!isEdit) setDate(financialYearToStartDate(selectedFinancialYear));
-  }, [selectedFinancialYear, isEdit]);
+    if (!isEdit && isGeneralIncome) {
+      setDate(financialYearToStartDate(selectedFinancialYear));
+    }
+  }, [selectedFinancialYear, isEdit, isGeneralIncome]);
 
   // Fetch crops when adding income linked to a crop (not general, not edit)
   useEffect(() => {
@@ -608,12 +685,12 @@ export default function AddIncomeScreen() {
     if (cropIdParam) setSelectedCropId(cropIdParam);
   }, [cropIdParam]);
 
-  // Default category: general → Subsidy only; when crop selected hide Rental so switch if needed
+  // Default category: general = always Other; only reset when current category not in visible list
   useEffect(() => {
     if (isGeneralIncome) {
-      if (category !== "Subsidy") {
-        setCategory("Subsidy");
-        setSubData(DEFAULT_DATA["Subsidy"]);
+      if (category !== "Other") {
+        setCategory("Other");
+        setSubData(DEFAULT_DATA["Other"]);
       }
       return;
     }
@@ -649,9 +726,12 @@ export default function AddIncomeScreen() {
         const raw = (doc[fieldKey] ?? {}) as Record<string, unknown>;
 
         // Convert numbers → strings for TextInput
-        const stringified = Object.fromEntries(
+        let stringified = Object.fromEntries(
           Object.entries(raw).map(([k, v]) => [k, v != null ? String(v) : ""]),
         ) as unknown as SubFormData;
+        if (doc.category === "Crop Sale") {
+          stringified = { ...stringified, quantityUnit: "kg" } as SubFormData;
+        }
 
         setSubData(stringified);
       } catch (err) {
@@ -685,6 +765,7 @@ export default function AddIncomeScreen() {
         return "માન્ય જથ્થો દાખલ કરો";
       if (!d.pricePerKg || parseFloat(d.pricePerKg) <= 0)
         return "માન્ય ભાવ દાખલ કરો";
+      if (!d.marketName?.trim()) return "બજાર / યાર્ડ પસંદ કરો.";
     }
     if (category === "Subsidy") {
       const d = subData as SubsidyData;
@@ -723,6 +804,19 @@ export default function AddIncomeScreen() {
     (numericKeys[fieldKey] ?? []).forEach((f) => {
       if (parsed[f] !== undefined) parsed[f] = parseFloat(raw[f]) || 0;
     });
+
+    if (fieldKey === "cropSale") {
+      const d = subData as CropSaleData;
+      const qtyRaw = parseFloat(d.quantityKg) || 0;
+      const priceRaw = parseFloat(d.pricePerKg) || 0;
+      if (d.quantityUnit === "mal") {
+        parsed.quantityKg = qtyRaw * 20;
+        parsed.pricePerKg = priceRaw / 20; // ભાવ was per મણ
+      } else {
+        parsed.quantityKg = qtyRaw;
+        parsed.pricePerKg = priceRaw; // ભાવ is per kg
+      }
+    }
 
     const effectiveCropId = isGeneralIncome ? undefined : (selectedCropId || cropIdParam || undefined);
     return {
@@ -810,8 +904,8 @@ export default function AddIncomeScreen() {
         </View>
       </LinearGradient>
 
-      {/* ── Financial year selector (before add) ── */}
-      {!isEdit && (
+      {/* ── Year: only for general income; for crop income year comes from crop ── */}
+      {!isEdit && isGeneralIncome && (
         <View style={styles.yearCard}>
           <Text style={styles.yearLabel}>📅 વર્ષ પસંદ કરો (જૂન–મે)</Text>
           <View style={styles.yearRow}>
@@ -831,6 +925,12 @@ export default function AddIncomeScreen() {
           </View>
         </View>
       )}
+      {!isEdit && hasCropSelected && selectedCrop?.year && (
+        <View style={styles.yearCard}>
+          <Text style={styles.yearLabel}>📅 પાકનું વર્ષ (જૂન–મે)</Text>
+          <Text style={styles.cropYearText}>{selectedCrop.year}</Text>
+        </View>
+      )}
 
       {/* ── Crop select (same as expense): when adding income linked to a crop ── */}
       {!isGeneralIncome && !isEdit && (
@@ -842,6 +942,7 @@ export default function AddIncomeScreen() {
               selected={selectedCropId || cropIdParam || ""}
               onSelect={setSelectedCropId}
               placeholder="આ આવક કયા પાક માટે?"
+              compact
             />
           ) : (
             <Text style={styles.generalExpenseNote}>કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો.</Text>
@@ -849,59 +950,53 @@ export default function AddIncomeScreen() {
         </View>
       )}
 
-      {/* ── Category (filtered: general = Subsidy+Other; crop from dashboard = hide ભાડાની આવક) ── */}
-      <View style={styles.card}>
-        <SectionLabel text="📂 આવકનો પ્રકાર" />
-        <View style={styles.catGrid}>
-          {visibleCategories.map((cat) => {
-            const active = category === cat.value;
-            return (
-              <TouchableOpacity
-                key={cat.value}
-                style={[styles.catCard, active && styles.catCardActive]}
-                onPress={() => handleCategoryChange(cat.value)}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.catEmoji}>{cat.emoji}</Text>
-                <Text
-                  style={[styles.catLabel, active && styles.catLabelActive]}
+      {/* ── Category: hide when general income (direct Other form only) ── */}
+      {!isGeneralIncome && (
+        <View style={styles.card}>
+          <SectionLabel text="📂 આવકનો પ્રકાર" />
+          <View style={styles.catGrid}>
+            {visibleCategories.map((cat) => {
+              const active = category === cat.value;
+              return (
+                <TouchableOpacity
+                  key={cat.value}
+                  style={[styles.catCard, active && styles.catCardActive]}
+                  onPress={() => handleCategoryChange(cat.value)}
+                  activeOpacity={0.75}
                 >
-                  {cat.label}
-                </Text>
-                {active && <View style={styles.catDot} />}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* ── Date ── */}
-      <View style={styles.card}>
-        <SectionLabel text="📅 તારીખ" />
-        <TouchableOpacity
-          style={styles.dateTile}
-          onPress={() => setShowPicker(true)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.dateTileLeft}>
-            <View style={styles.dateIconWrap}>
-              <Text style={{ fontSize: 20 }}>📅</Text>
-            </View>
-            <View>
-              <Text style={styles.dateDay}>
-                {date.toLocaleDateString("en-IN", { weekday: "long" })}
-              </Text>
-              <Text style={styles.dateValue}>
-                {date.toLocaleDateString("en-IN", {
-                  day: "2-digit",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </Text>
-            </View>
+                  <Text style={styles.catEmoji}>{cat.emoji}</Text>
+                  <Text
+                    style={[styles.catLabel, active && styles.catLabelActive]}
+                  >
+                    {cat.label}
+                  </Text>
+                  {active && <View style={styles.catDot} />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          <Text style={styles.dateEdit}>બદલો</Text>
-        </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ── Date: default today, calendar icon in corner to change ── */}
+      <View style={styles.card}>
+        <SectionLabel text="📅 વેચાણની તારીખ (ડિફોલ્ટ: આજે)" />
+        <View style={styles.dateRowWithIcon}>
+          <Text style={styles.dateValueBig}>
+            {date.toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+          </Text>
+          <TouchableOpacity
+            style={styles.calendarIconBtn}
+            onPress={() => setShowPicker(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="calendar-outline" size={26} color={C.green700} />
+          </TouchableOpacity>
+        </View>
         {showPicker && (
           <DateTimePicker
             value={date}
@@ -915,7 +1010,7 @@ export default function AddIncomeScreen() {
 
       {/* ── Dynamic sub-form ── */}
       <View style={styles.card}>
-        <SectionLabel text={`${activeCat.emoji} ${activeCat.label} વિગત`} />
+        <SectionLabel text={isGeneralIncome ? "💼 અન્ય આવક વિગત" : `${activeCat.emoji} ${activeCat.label} વિગત`} />
         {category === "Crop Sale" && (
           <CropSaleForm
             data={subData as CropSaleData}
@@ -1027,8 +1122,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
-  headerSub: { fontSize: 15, color: C.textSecondary, marginTop: 2 },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
+  headerSub: { fontSize: 16, color: C.textSecondary, marginTop: 2 },
 
   // Loading
   loadingWrap: {
@@ -1115,6 +1210,61 @@ const styles = StyleSheet.create({
   yearPillTextActive: {
     color: C.green700,
   },
+  cropYearText: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: C.green700,
+  },
+  dateRowWithIcon: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dateValueBig: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: C.textPrimary,
+  },
+  calendarIconBtn: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: C.green50,
+    borderWidth: 1,
+    borderColor: C.green100,
+  },
+  qtyUnitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
+  },
+  inputBig: {
+    fontSize: 22,
+    paddingVertical: 16,
+  },
+  unitToggle: {
+    flexDirection: "row",
+    borderWidth: 1.5,
+    borderColor: C.border,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  unitToggleBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    backgroundColor: C.bg,
+  },
+  unitToggleBtnActive: {
+    backgroundColor: C.green700,
+  },
+  unitToggleText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: C.textSecondary,
+  },
+  unitToggleTextActive: {
+    color: "#fff",
+  },
 
   // Crop select (same as expense)
   cropSelectCard: {
@@ -1140,7 +1290,7 @@ const styles = StyleSheet.create({
     borderColor: C.green500,
   },
   selectBtnText: {
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: "600",
     color: C.textPrimary,
     flex: 1,
@@ -1153,29 +1303,58 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
     maxHeight: 220,
   },
+  dropListScrollWrap: {
+    maxHeight: 220,
+    zIndex: 9999,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  dropListScroll: {
+    maxHeight: 216,
+  },
+  selectBtnTextCompact: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: C.textPrimary,
+    flex: 1,
+  },
   dropItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
     borderBottomWidth: 1,
     borderBottomColor: C.borderLight,
+  },
+  dropItemCompact: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
   dropItemActive: {
     backgroundColor: C.green50,
   },
   dropItemText: {
-    fontSize: 15,
+    fontSize: 19,
     fontWeight: "600",
-    color: C.textSecondary,
+    color: C.textPrimary,
+    flex: 1,
+  },
+  dropItemTextCompact: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: C.textPrimary,
     flex: 1,
   },
   dropItemTextActive: {
     color: C.green700,
+    fontWeight: "800",
   },
   generalExpenseNote: {
-    fontSize: 15,
+    fontSize: 17,
     color: C.textMuted,
     lineHeight: 22,
   },
@@ -1195,13 +1374,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  // Section label
+  // Section label (match expense label)
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 20,
     fontWeight: "700",
-    color: C.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+    color: C.textPrimary,
     marginBottom: 14,
   },
 
@@ -1225,8 +1402,8 @@ const styles = StyleSheet.create({
   },
   catEmoji: { fontSize: 26 },
   catLabel: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
     color: C.textSecondary,
     textAlign: "center",
   },
@@ -1270,40 +1447,50 @@ const styles = StyleSheet.create({
   },
   dateEdit: { fontSize: 13, color: C.green700, fontWeight: "700" },
 
-  // Fields
-  fieldWrap: { marginBottom: 14 },
+  // Fields (match expense: label 20, input 22, padding 16)
+  fieldWrap: { marginBottom: 16 },
   fieldLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: C.textSecondary,
-    marginBottom: 7,
+    fontSize: 20,
+    fontWeight: "700",
+    color: C.textPrimary,
+    marginBottom: 8,
   },
-  inputRow: { flexDirection: "row", alignItems: "center", gap: 0 },
-  input: {
-    backgroundColor: C.bg,
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1.5,
     borderColor: C.border,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 14,
+    paddingVertical: 4,
+    backgroundColor: C.green50,
+  },
+  input: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderRadius: 14,
+    paddingHorizontal: 10,
     paddingVertical: 12,
-    fontSize: 15,
+    fontSize: 22,
     color: C.textPrimary,
-    fontWeight: "500",
+    fontWeight: "600",
+    flex: 1,
   },
   inputMulti: {
     height: 90,
     paddingTop: 12,
+    fontSize: 19,
   },
   inputSuffix: {
     backgroundColor: C.green50,
     borderWidth: 1.5,
     borderColor: C.border,
     borderLeftWidth: 0,
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 14,
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 20,
     fontWeight: "700",
     color: C.green700,
   },
@@ -1322,7 +1509,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.bg,
   },
   chipActive: { backgroundColor: C.green50, borderColor: C.greenMid },
-  chipText: { fontSize: 13, color: C.textSecondary, fontWeight: "500" },
+  chipText: { fontSize: 15, color: C.textSecondary, fontWeight: "600" },
   chipTextActive: { color: C.green700, fontWeight: "700" },
 
   // Derived total
@@ -1343,7 +1530,7 @@ const styles = StyleSheet.create({
   derivedLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   derivedEmoji: { fontSize: 18 },
   derivedLabel: { fontSize: 13, color: C.green700, fontWeight: "600" },
-  derivedValue: { fontSize: 20, fontWeight: "900", color: C.green700 },
+  derivedValue: { fontSize: 24, fontWeight: "900", color: C.green700 },
 
   // Submit
   submitBtn: {
@@ -1361,7 +1548,7 @@ const styles = StyleSheet.create({
   submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: {
     color: "#fff",
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
     letterSpacing: 0.5,
   },

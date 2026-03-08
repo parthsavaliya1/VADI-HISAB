@@ -755,6 +755,9 @@ export type SubsidySchemeType =
 export type RentalAssetType =
   | "Tractor"
   | "Rotavator"
+  | "RAP"
+  | "Bagi"
+  | "Savda"
   | "Thresher"
   | "Land"
   | "Water Pump"
@@ -787,6 +790,10 @@ export interface SubsidyPayload {
 export interface RentalIncomePayload {
   assetType: RentalAssetType;
   rentedToName?: string;
+  /** Farmer/customer phone from contact picker */
+  farmerPhone?: string;
+  /** Payment status for tractor rental */
+  paymentStatus?: "Pending" | "Completed";
   hoursOrDays: number;
   ratePerUnit: number;
 }

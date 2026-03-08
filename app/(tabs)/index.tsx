@@ -660,10 +660,12 @@ function QuickActions({
   t,
   onAddExpense,
   onAddIncome,
+  profile,
 }: {
   t: (s: string, k: string) => string;
   onAddExpense: () => void;
   onAddIncome: () => void;
+  profile: { tractorAvailable?: boolean } | null;
 }) {
   return (
     <View style={styles.section}>
@@ -713,6 +715,31 @@ function QuickActions({
           </View>
         </PressableCard>
       </View>
+
+      {/* ટ્રેક્ટર આવક — only when farmer has tractor in profile */}
+      {profile?.tractorAvailable && (
+        <PressableCard
+          onPress={() => router.push("/income/add-tractor-income" as any)}
+          style={{ marginTop: 10 }}
+        >
+          <View
+            style={[
+              styles.qaCardFull,
+              { backgroundColor: "#E8F5E9", borderColor: "#A5D6A7" },
+            ]}
+          >
+            <View style={[styles.qaIcon, { backgroundColor: "#C8E6C9" }]}>
+              <Ionicons name="construct-outline" size={26} color="#2E7D32" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.qaLabel, { color: "#2E7D32", fontWeight: "700" }]}>
+                ટ્રેક્ટર આવક ઉમેરો
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+          </View>
+        </PressableCard>
+      )}
 
       <PressableCard
         onPress={() => router.push("/crop/add-crop")}
@@ -1266,6 +1293,7 @@ export default function Dashboard() {
           t={t}
           onAddExpense={openExpensePicker}
           onAddIncome={openIncomePicker}
+          profile={profile}
         />
 
         {/* ── 2. 🌱 મારા પાક (only active crops in carousel) ── */}
