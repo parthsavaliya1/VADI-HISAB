@@ -99,7 +99,7 @@ const CROPS: {
   {
     value: "Cotton",
     label: "કપાસ",
-    emoji: "☁️",
+    emoji: "💮",
     subtypes: ["Bt-Cotton", "Shankar-6", "RCH-2", "MRC-7017"],
   },
   {
@@ -129,7 +129,7 @@ const CROPS: {
   {
     value: "Chana",
     label: "ચણા",
-    emoji: "🌰",
+    emoji: "🫘",
     subtypes: ["GG-1", "GG-2", "Desi", "Kabuli"],
   },
   {

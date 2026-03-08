@@ -60,9 +60,17 @@ const CROP_SUBTYPES: Record<string, string[]> = {
   Bajra: ["GHB-558", "GHB-719", "GHB-744"],
   Maize: ["TATA-900M", "DKC-9144", "Pioneer-30V92"],
 };
+// Emojis chosen to best match each crop (research-based; no dedicated cotton/chickpea in Unicode)
 const CROP_EMOJIS: Record<string, string> = {
-  Cotton: "☁️", Groundnut: "🥜", Jeera: "🌿", Garlic: "🧄", Onion: "🧅",
-  Chana: "🌰", Wheat: "🌾", Bajra: "🌾", Maize: "🌽",
+  Cotton: "💮",   // white flower ≈ cotton boll (kapas); alt ☁️ cloud
+  Groundnut: "🥜", // peanuts
+  Jeera: "🌿",    // herb/spice (cumin)
+  Garlic: "🧄",
+  Onion: "🧅",
+  Chana: "🫘",     // beans/legume (chickpea)
+  Wheat: "🌾",    // sheaf of grain
+  Bajra: "🌾",    // pearl millet (grain)
+  Maize: "🌽",    // corn
 };
 const CROP_VALUES = ["Cotton", "Groundnut", "Jeera", "Garlic", "Onion", "Chana", "Wheat", "Bajra", "Maize"];
 

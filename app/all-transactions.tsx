@@ -18,6 +18,7 @@ import {
 } from "@/utils/api";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -150,8 +151,9 @@ function formatDate(iso: string): string {
   });
 }
 
-function formatINR(n: number): string {
-  return Math.abs(n).toLocaleString("en-IN");
+function formatINR(n: number | undefined | null): string {
+  const x = Number(n);
+  return (Number.isFinite(x) ? Math.abs(x) : 0).toLocaleString("en-IN");
 }
 
 // ─── Build merged list per year (latest year first, within year latest first) ─
@@ -338,8 +340,8 @@ export default function AllTransactionsScreen() {
             </View>
           ) : (
             yearWise.map(({ year, txns }) => {
-              const incomeTotal = txns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-              const expenseTotal = txns.filter((t) => t.type === "expense").reduce((s, t) => s + Math.abs(t.amount), 0);
+              const incomeTotal = txns.filter((t) => t.type === "income").reduce((s, t) => s + (Number(t.amount) || 0), 0);
+              const expenseTotal = txns.filter((t) => t.type === "expense").reduce((s, t) => s + Math.abs(Number(t.amount) || 0), 0);
               return (
                 <View key={year} style={styles.section}>
                   <YearHeader year={year} incomeTotal={incomeTotal} expenseTotal={expenseTotal} />

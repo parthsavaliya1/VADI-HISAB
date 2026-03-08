@@ -815,10 +815,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  statsGreeting: { fontSize: 21, fontWeight: "800", color: C.textPrimary },
-  statsSubtitle: { fontSize: 15, color: C.textMuted, marginTop: 3, fontWeight: "700" },
+  statsGreeting: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
+  statsSubtitle: { fontSize: 16, color: C.textMuted, marginTop: 3, fontWeight: "700" },
   yearFilterWrap: { marginBottom: 16 },
-  yearFilterLabel: { fontSize: 18, fontWeight: "700", color: C.textSecondary, marginBottom: 8 },
+  yearFilterLabel: { fontSize: 19, fontWeight: "700", color: C.textSecondary, marginBottom: 8 },
   yearRow: { flexDirection: "row", gap: 10 },
   yearChip: {
     flex: 1,
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
   },
   yearChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
-  yearChipText: { fontSize: 19, fontWeight: "700", color: C.textMuted },
+  yearChipText: { fontSize: 20, fontWeight: "700", color: C.textMuted },
   yearChipTextActive: { color: C.green700 },
   statsGrid: { flexDirection: "row", gap: 8 },
   statBox: {
@@ -843,8 +843,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: C.green700,
   },
-  statValue: { fontSize: 24, fontWeight: "900", marginBottom: 2 },
-  statLabel: { fontSize: 15, color: C.textMuted, fontWeight: "700", textAlign: "center" },
+  statValue: { fontSize: 25, fontWeight: "900", marginBottom: 2 },
+  statLabel: { fontSize: 16, color: C.textMuted, fontWeight: "700", textAlign: "center" },
   statBoxBigha: { alignItems: "flex-start" },
   statBoxBighaOuter: {
     position: "relative",
@@ -865,8 +865,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
     alignItems: "center",
   },
-  statValueBigha: { fontSize: 24, fontWeight: "900", marginBottom: 2 },
-  statLabelBigha: { fontSize: 15, color: C.textMuted, fontWeight: "700", textAlign: "center" },
+  statValueBigha: { fontSize: 25, fontWeight: "900", marginBottom: 2 },
+  statLabelBigha: { fontSize: 16, color: C.textMuted, fontWeight: "700", textAlign: "center" },
 
   filterRow: {
     flexDirection: "row", paddingHorizontal: 16, paddingVertical: 12,
@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg,
   },
   filterTabActive: { borderColor: C.green700, backgroundColor: C.green50 },
-  filterTabText: { fontSize: 14, fontWeight: "700", color: C.textMuted },
+  filterTabText: { fontSize: 16, fontWeight: "700", color: C.textMuted },
   filterTabTextActive: { color: C.green700 },
   filterBadge: {
     minWidth: 18, height: 18, borderRadius: 9,
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
     alignItems: "center", paddingHorizontal: 4,
   },
   filterBadgeActive: { backgroundColor: C.green700 },
-  filterBadgeText: { fontSize: 11, fontWeight: "700", color: C.textMuted },
+  filterBadgeText: { fontSize: 13, fontWeight: "700", color: C.textMuted },
 
   listContent: { padding: 14, paddingBottom: 24 },
 
@@ -910,22 +910,22 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: "row", alignItems: "flex-start", marginBottom: 10 },
   cropEmojiWrap: { width: 50, height: 50, borderRadius: 15, justifyContent: "center", alignItems: "center" },
   cropEmoji: { fontSize: 26 },
-  cropName: { fontSize: 19, fontWeight: "800", color: C.textPrimary, marginBottom: 3 },
-  cropSubInfo: { fontSize: 15, color: C.textSecondary, fontWeight: "700", marginBottom: 5 },
+  cropName: { fontSize: 20, fontWeight: "800", color: C.textPrimary, marginBottom: 3 },
+  cropSubInfo: { fontSize: 16, color: C.textSecondary, fontWeight: "700", marginBottom: 5 },
   tagsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  tagText: { fontSize: 16, fontWeight: "700" },
+  tagText: { fontSize: 17, fontWeight: "700" },
   bhagmaBadge: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
-  bhagmaBadgeText: { fontSize: 12, fontWeight: "700" },
+  bhagmaBadgeText: { fontSize: 14, fontWeight: "700" },
   statusBadge: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 13, fontWeight: "700" },
+  statusText: { fontSize: 15, fontWeight: "700" },
 
   menuTrigger: { padding: 4, marginLeft: 4 },
   dropMenu: {
@@ -940,7 +940,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 11,
   },
   dropMenuItemActive: { backgroundColor: C.green50 },
-  dropMenuText: { fontSize: 15, color: C.textSecondary, fontWeight: "700" },
+  dropMenuText: { fontSize: 16, color: C.textSecondary, fontWeight: "700" },
   dropDivider: { height: 1, backgroundColor: C.borderLight, marginHorizontal: 10 },
 
   cardFooter: {
@@ -949,17 +949,17 @@ const styles = StyleSheet.create({
     marginTop: 4, alignItems: "center",
   },
   footerItem: { flexDirection: "row", alignItems: "center", gap: 4, flex: 1 },
-  footerText: { fontSize: 14, color: C.textMuted, fontWeight: "700" },
+  footerText: { fontSize: 15, color: C.textMuted, fontWeight: "700" },
 
   // Yield efficiency badge — shown on harvested crops
   yieldBadge: {
     flexDirection: "row", alignItems: "center", gap: 3,
     paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8,
   },
-  yieldBadgeText: { fontSize: 11, fontWeight: "700" },
+  yieldBadgeText: { fontSize: 13, fontWeight: "700" },
 
   swipeHint: { flexDirection: "row", alignItems: "center", marginLeft: "auto" },
-  swipeHintText: { fontSize: 12, color: C.green100, fontWeight: "700" },
+  swipeHintText: { fontSize: 14, color: C.green100, fontWeight: "700" },
 
   empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
   emptyIconWrap: {
@@ -968,14 +968,14 @@ const styles = StyleSheet.create({
     marginBottom: 16, borderWidth: 2, borderColor: C.green100,
   },
   emptyEmoji: { fontSize: 44 },
-  emptyTitle: { fontSize: 19, fontWeight: "800", color: C.textPrimary, marginBottom: 6 },
-  emptyDesc: { fontSize: 15, color: C.textMuted, textAlign: "center", marginBottom: 20, fontWeight: "700" },
+  emptyTitle: { fontSize: 20, fontWeight: "800", color: C.textPrimary, marginBottom: 6 },
+  emptyDesc: { fontSize: 16, color: C.textMuted, textAlign: "center", marginBottom: 20, fontWeight: "700" },
   emptyBtn: {
     flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: "#FFF8E1", borderRadius: 14,
     paddingHorizontal: 20, paddingVertical: 12,
     borderWidth: 2, borderColor: "#FFE082",
   },
-  emptyBtnText: { fontSize: 17, fontWeight: "800", color: "#5D4037" },
+  emptyBtnText: { fontSize: 18, fontWeight: "800", color: "#5D4037" },
 
 });

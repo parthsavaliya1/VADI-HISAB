@@ -739,14 +739,13 @@ function QuickActions({
             <View style={[styles.qaIcon, { backgroundColor: "#FFCDD2" }]}>
               <Ionicons
                 name="remove-circle-outline"
-                size={26}
+                size={20}
                 color={C.expense}
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.qaLabel, { color: C.expense }]}>
-                {t("dashboard", "addExpense")}
-              </Text>
+              <Text style={[styles.qaLabel, { color: C.expense }]}>{t("dashboard", "expense")}</Text>
+              <Text style={[styles.qaSub, { color: C.expense }]}>{t("dashboard", "addShort")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={C.expense} />
           </View>
@@ -761,12 +760,11 @@ function QuickActions({
             ]}
           >
             <View style={[styles.qaIcon, { backgroundColor: C.green100 }]}>
-              <Ionicons name="add-circle-outline" size={26} color={C.income} />
+              <Ionicons name="add-circle-outline" size={20} color={C.income} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.qaLabel, { color: C.income }]}>
-                {t("dashboard", "addIncome")}
-              </Text>
+              <Text style={[styles.qaLabel, { color: C.income }]}>{t("dashboard", "income")}</Text>
+              <Text style={[styles.qaSub, { color: C.income }]}>{t("dashboard", "addShort")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={C.income} />
           </View>
@@ -1441,8 +1439,10 @@ export default function Dashboard() {
                               </Text>
                             </View>
                             <View style={styles.cropCardRight}>
-                              <Text style={styles.cropName} numberOfLines={2}>{cropDisplayName(crop.cropName, t)}</Text>
-                              <Text style={styles.cropCategory}>{seasonCategoryLabel(crop.season, t)}</Text>
+                              <Text style={styles.cropName} numberOfLines={2}>
+                                {cropDisplayName(crop.cropName, t)}
+                                {crop.subType ? <Text style={styles.cropSubType}>{" - "}{crop.subType}</Text> : null}
+                              </Text>
                               <Text style={styles.cropMetaLine}>{cropDate}</Text>
                               {areaLine ? <Text style={styles.cropMetaLine}>{areaLine}</Text> : null}
                               <View style={styles.cropBadge}>
@@ -1521,8 +1521,8 @@ export default function Dashboard() {
                     </View>
                     <View style={styles.detailHeaderText}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <Text style={styles.detailName}>{cropDisplayName(c.cropName, t)}</Text>
-                        <Text style={styles.detailCategory}>{seasonCategoryLabel(c.season, t)}</Text>
+                        <Text style={styles.detailName}>{cropDisplayName(c.cropName, t)}{c.subType ? <Text style={styles.detailSubType}>{" - "}{c.subType}</Text> : null}</Text>
+                        {!c.subType && <Text style={styles.detailCategory}>{seasonCategoryLabel(c.season, t)}</Text>}
                         {c.landType === "bhagma" && c.bhagmaPercentage != null && (
                           <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
                             <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
@@ -1826,10 +1826,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 14,
   },
-  sectionTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary },
-  myCropsSectionTitle: { fontSize: 21, fontWeight: "800", color: C.green700 },
+  sectionTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
+  myCropsSectionTitle: { fontSize: 22, fontWeight: "800", color: C.green700 },
   seeAllBtn: { flexDirection: "row", alignItems: "center", gap: 2 },
-  seeAll: { fontSize: 17, color: C.green700, fontWeight: "800" },
+  seeAll: { fontSize: 18, color: C.green700, fontWeight: "800" },
 
   profitCard: {
     backgroundColor: C.surface,
@@ -1869,8 +1869,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  profitPakValue: { fontSize: 17, fontWeight: "700", color: C.textSecondary },
-  profitPakLabel: { fontSize: 13, color: C.textMuted, fontWeight: "600" },
+  profitPakValue: { fontSize: 18, fontWeight: "700", color: C.textSecondary },
+  profitPakLabel: { fontSize: 15, color: C.textMuted, fontWeight: "600" },
   profitAmountRow: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -1897,8 +1897,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  profitSubValue: { fontSize: 19, fontWeight: "700" },
-  profitSubCaption: { fontSize: 14, color: C.textMuted, fontWeight: "600" },
+  profitSubValue: { fontSize: 20, fontWeight: "700" },
+  profitSubCaption: { fontSize: 15, color: C.textMuted, fontWeight: "600" },
   profitPerBighaRow: {
     flexDirection: "row",
     gap: 8,
@@ -1918,8 +1918,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  profitPerBighaValue: { fontSize: 17, fontWeight: "700" },
-  profitPerBighaLabel: { fontSize: 12, color: C.textMuted, fontWeight: "600" },
+  profitPerBighaValue: { fontSize: 18, fontWeight: "700" },
+  profitPerBighaLabel: { fontSize: 14, color: C.textMuted, fontWeight: "600" },
 
   bhagyaUpadRow: {
     flexDirection: "row",
@@ -1933,8 +1933,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FFECB3",
   },
-  bhagyaUpadLabel: { fontSize: 13, color: "#E65100", fontWeight: "700" },
-  bhagyaUpadValue: { fontSize: 16, fontWeight: "800", color: "#BF360C" },
+  bhagyaUpadLabel: { fontSize: 15, color: "#E65100", fontWeight: "700" },
+  bhagyaUpadValue: { fontSize: 17, fontWeight: "800", color: "#BF360C" },
 
   qaRow: { flexDirection: "row", gap: 10 },
   qaHalf: { flex: 1 },
@@ -1986,8 +1986,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  qaLabel: { fontSize: 19, fontWeight: "800" },
-  qaSub: { fontSize: 16, color: C.textMuted, marginTop: 2, fontWeight: "700" },
+  qaLabel: { fontSize: 20, fontWeight: "800" },
+  qaSub: { fontSize: 17, color: C.textMuted, marginTop: 2, fontWeight: "700" },
 
   cropCarouselWrap: { position: "relative" },
   cropCard: {
@@ -2022,17 +2022,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: "rgba(46, 125, 50, 0.12)",
   },
-  cropBadgeText: { fontSize: 13, fontWeight: "800", color: C.green700 },
-  cropName: { fontSize: 20, fontWeight: "800", color: C.textPrimary, marginBottom: 2 },
-  cropCategory: { fontSize: 13, color: C.textMuted, fontWeight: "600", marginBottom: 6 },
+  cropBadgeText: { fontSize: 15, fontWeight: "800", color: C.green700 },
+  cropName: { fontSize: 21, fontWeight: "800", color: C.textPrimary, marginBottom: 2 },
+  cropSubType: { fontSize: 14, fontWeight: "600", color: C.textMuted },
+  cropCategory: { fontSize: 15, color: C.textMuted, fontWeight: "600", marginBottom: 6 },
   cropMetaLine: {
-    fontSize: 15,
+    fontSize: 16,
     color: C.textSecondary,
     fontWeight: "600",
     marginBottom: 3,
   },
   cropMeta: {
-    fontSize: 15,
+    fontSize: 16,
     color: C.textSecondary,
     fontWeight: "700",
   },
@@ -2084,7 +2085,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#FFE082",
   },
-  emptyCropBtnText: { fontSize: 18, color: "#5D4037", fontWeight: "800" },
+  emptyCropBtnText: { fontSize: 19, color: "#5D4037", fontWeight: "800" },
 
   detailCard: {
     borderRadius: 20,
@@ -2119,9 +2120,10 @@ const styles = StyleSheet.create({
   detailEmoji: { fontSize: 40 },
   detailHeaderText: { flex: 1 },
   detailName: { fontSize: 24, fontWeight: "800", color: C.textPrimary, marginBottom: 2 },
-  detailCategory: { fontSize: 14, color: C.textMuted, fontWeight: "600", marginLeft: 6 },
-  detailMeta: { fontSize: 16, color: C.textMuted, marginTop: 2, fontWeight: "600" },
-  detailDate: { fontSize: 14, color: C.textMuted, marginTop: 6, fontWeight: "600" },
+  detailSubType: { fontSize: 15, fontWeight: "600", color: C.textMuted },
+  detailCategory: { fontSize: 15, color: C.textMuted, fontWeight: "600", marginLeft: 6 },
+  detailMeta: { fontSize: 17, color: C.textMuted, marginTop: 2, fontWeight: "600" },
+  detailDate: { fontSize: 15, color: C.textMuted, marginTop: 6, fontWeight: "600" },
   editBtn: {
     width: 40,
     height: 40,
@@ -2298,7 +2300,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sheetTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary },
-  sheetSubtitle: { fontSize: 17, color: C.textMuted, marginTop: 2 },
+  sheetSubtitle: { fontSize: 18, color: C.textMuted, marginTop: 2 },
   sheetCloseBtn: {
     width: 32,
     height: 32,
@@ -2328,8 +2330,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   sheetCropName: { fontSize: 19, fontWeight: "800", color: C.textPrimary },
-  sheetCropMeta: { fontSize: 16, color: C.textMuted, marginTop: 2 },
-  bighaFont: { fontSize: 16, fontWeight: "800", color: C.textPrimary },
+  sheetCropMeta: { fontSize: 17, color: C.textMuted, marginTop: 2 },
+  bighaFont: { fontSize: 17, fontWeight: "800", color: C.textPrimary },
   sheetCropStatus: {
     flexDirection: "row",
     alignItems: "center",
@@ -2338,7 +2340,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  sheetCropStatusText: { fontSize: 14, fontWeight: "800" },
+  sheetCropStatusText: { fontSize: 15, fontWeight: "800" },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   sheetEmpty: { alignItems: "center", paddingVertical: 40 },
   sheetEmptyBtnAdd: { backgroundColor: C.green700 },
