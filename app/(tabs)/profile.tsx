@@ -47,86 +47,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal } from "react-native";
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Gujarati UI labels
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const T = {
-    title: "મારી પ્રોફાઇલ",
-    edit: "સુધારો",
-    editProfile: "પ્રોફાઇલ સુધારો",
-    cancel: "રદ કરો",
-    save: "સાચવો",
-    saving: "સાચવી રહ્યા છીએ...",
-    logout: "લૉગ આઉટ",
-    logoutTitle: "લૉગ આઉટ",
-    logoutMsg: "શું તમે ખરેખર લૉગ આઉટ કરવા માંગો છો?",
-    logoutYes: "હા, લૉગ આઉટ",
-    logoutNo: "ના",
-    saveSuccess: "✅ સફળ",
-    saveDone: "પ્રોફાઇલ સાચવી લેવામાં આવી!",
-    errTitle: "ભૂલ",
-    errName: "કૃપા કરીને નામ દાખલ કરો",
-    errDistrict: "કૃપા કરીને જિલ્લો પસંદ કરો",
-    errLand: "કૃપા કરીને માન્ય જમીન દાખલ કરો",
-    loading: "લોડ થઈ રહ્યું છે...",
-    loadErr: "પ્રોફાઇલ લોડ નહીં થઈ",
-    retry: "ફરી પ્રયાસ કરો",
-    sectionPersonal: "વ્યક્તિગત",
-    sectionLocation: "સ્થળ",
-    sectionFarm: "ખેતી",
-    sectionPrivacy: "પ્રાઇવસી",
-    fullName: "પૂરું નામ",
-    mobile: "મોબાઇલ",
-    village: "ગામ",
-    taluka: "તાલુકો",
-    district: "જિલ્લો",
-    totalLand: "કુલ જમીન",
-    waterSource: "પાણીનો સ્ત્રોત",
-    labourType: "મજૂર પ્રકાર",
-    tractor: "ટ્રેક્ટર",
-    tractorSub: "ટ્રેક્ટર ઉપલબ્ધ છે?",
-    dataSharing: "ડેટા શેરિંગ",
-    dataSharingSub: "ગામ-સ્તરના આંકડા",
-    dataSharingNote: "તમારો ડેટા ગામ-સ્તરના સરેરાશ અહેવાલ માટે ઉપયોગ થશે.",
-    namePH: "નામ દાખલ કરો",
-    landPH: "જમીન",
-    farmer: "ખેડૂત",
-    version: "VADI-Hisaab v1.0.0",
-    language: "ભાષા",
-    gujarati: "ગુજરાતી",
-    english: "અંગ્રેજી",
-    farmerCard: "મારી ખેડૂત કાર્ડ",
-    farmerCardSub: "ડાઉનલોડ કરો અથવા શેર કરો",
-    shareCard: "શેર કરો",
-    downloadCard: "ડાઉનલોડ (ચિત્ર)",
-    closeCard: "બંધ કરો",
-    contactUs: "અમારો સંપર્ક કરો",
-    contactSub: "ઇમેઇલ, ફોન — સહાયતા માટે",
-    email: "ઇમેઇલ",
-    phone: "ફોન",
-    savedToGallery: "કાર્ડ ગેલેરીમાં સાચવ્યું",
-    shareImage: "ચિત્ર શેર કરો",
-};
-
-// ─── English key → Gujarati label lookup maps ────────────────────────────────
-// These are used to convert English keys from DB into Gujarati for display
-
-const WATER_OPTIONS = [
-    { key: "Rain", label: "🌧 વરસાદ" },
-    { key: "Borewell", label: "⛽ બોરવેલ" },
-    { key: "Canal", label: "💧 નહેર" },
-];
-const LABOUR_OPTIONS = [
-    { key: "Family", label: "👨‍👩‍👧 પારિવારિક" },
-    { key: "Hired", label: "👷 ભાડે" },
-    { key: "Mixed", label: "🤝 મિશ્ર" },
-];
-const TRACTOR_SERVICE_OPTIONS = [
-    { key: "Rotavator", label: "રોટાવેટર" },
-    { key: "RAP", label: "RAP" },
-    { key: "Bagi", label: "બગી" },
-    { key: "Savda", label: "સવડા" },
-];
+// Options built from translations in ProfileScreen
 
 /** Look up Gujarati label from English key in any options array */
 function toLabel(options: { key: string; label: string }[], key: string) {
@@ -330,14 +251,28 @@ function LocationModal({ visible, title, items, selectedValue, onSelect, onClose
 // Edit Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
+function EditModal({
+    visible,
+    draft,
+    setDraft,
+    saving,
+    onSave,
+    onClose,
+    waterOptions,
+    labourOptions,
+    tractorServiceOptions,
+}: {
     visible: boolean;
     draft: ProfileDraft;
     setDraft: (d: ProfileDraft) => void;
     saving: boolean;
     onSave: () => void;
     onClose: () => void;
+    waterOptions: { key: string; label: string }[];
+    labourOptions: { key: string; label: string }[];
+    tractorServiceOptions: { key: string; label: string }[];
 }) {
+    const { t } = useLanguage();
     const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
 
     // Location modal states
@@ -375,9 +310,9 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
                         <Pressable onPress={onClose} style={editStyles.sheetCloseBtn}>
                             <Ionicons name="close" size={20} color="#6B7280" />
                         </Pressable>
-                        <Text style={editStyles.sheetTitle}>{T.editProfile}</Text>
+                        <Text style={editStyles.sheetTitle}>{t("profileTab", "editProfile")}</Text>
                         <Pressable onPress={onSave} disabled={saving} style={editStyles.sheetSaveBtn}>
-                            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={editStyles.sheetSaveBtnText}>{T.save}</Text>}
+                            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={editStyles.sheetSaveBtnText}>{t("profileTab", "save")}</Text>}
                         </Pressable>
                     </View>
 
@@ -385,85 +320,85 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
                         <ScrollView contentContainerStyle={editStyles.sheetScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
                             {/* Personal */}
-                            <Text style={editStyles.groupLabel}>👤 {T.sectionPersonal}</Text>
+                            <Text style={editStyles.groupLabel}>👤 {t("profileTab", "sectionPersonal")}</Text>
                             <View style={editStyles.inputGroup}>
-                                <Text style={editStyles.inputLabel}>{T.fullName}</Text>
+                                <Text style={editStyles.inputLabel}>{t("profileTab", "fullName")}</Text>
                                 <TextInput
                                     style={editStyles.textInput}
                                     value={draft.name}
                                     onChangeText={(v) => set("name", v)}
-                                    placeholder={T.namePH}
+                                    placeholder={t("profileTab", "namePH")}
                                     placeholderTextColor="#9CA3AF"
                                     selectionColor="#2E7D32"
                                 />
                             </View>
 
                             {/* Location */}
-                            <Text style={editStyles.groupLabel}>📍 {T.sectionLocation}</Text>
+                            <Text style={editStyles.groupLabel}>📍 {t("profileTab", "sectionLocation")}</Text>
                             <View style={editStyles.inputGroup}>
-                                {/* District dropdown — stores "Jamnagar", shows "જામનગર" */}
+                                {/* District dropdown — stores English key (e.g. Jamnagar), display label from location data */}
                                 <LocationDropdown
-                                    label={T.district}
+                                    label={t("profileTab", "district")}
                                     displayLabel={districtLabel}
-                                    placeholder="જિલ્લો પસંદ કરો..."
+                                    placeholder={t("profileTab", "selectDistrictPlaceholder")}
                                     onPress={() => setShowDistrict(true)}
                                 />
                                 {/* Taluka dropdown */}
                                 <LocationDropdown
-                                    label={T.taluka}
+                                    label={t("profileTab", "taluka")}
                                     displayLabel={talukaLabel}
-                                    placeholder={draft.district ? "તાલુકો પસંદ કરો..." : "પહેલા જિલ્લો પસંદ કરો"}
+                                    placeholder={draft.district ? t("profileTab", "selectTalukaPlaceholder") : t("profileTab", "selectDistrictFirst")}
                                     disabled={!draft.district}
                                     onPress={() => setShowTaluka(true)}
                                 />
                                 {/* Village dropdown */}
                                 <LocationDropdown
-                                    label={T.village}
+                                    label={t("profileTab", "village")}
                                     displayLabel={villageLabel}
-                                    placeholder={draft.taluka ? "ગામ પસંદ કરો..." : "પહેલા તાલુકો પસંદ કરો"}
+                                    placeholder={draft.taluka ? t("profileTab", "selectVillagePlaceholder") : t("profileTab", "selectTalukaFirst")}
                                     disabled={!draft.taluka}
                                     onPress={() => setShowVillage(true)}
                                 />
                             </View>
 
                             {/* Farm */}
-                            <Text style={editStyles.groupLabel}>🌾 {T.sectionFarm}</Text>
+                            <Text style={editStyles.groupLabel}>🌾 {t("profileTab", "sectionFarm")}</Text>
                             <View style={editStyles.inputGroup}>
-                                <Text style={editStyles.inputLabel}>{T.totalLand}</Text>
+                                <Text style={editStyles.inputLabel}>{t("profileTab", "totalLand")}</Text>
                                 <View style={editStyles.landRow}>
                                     <TextInput
                                         style={[editStyles.textInput, { flex: 1, marginRight: 10 }]}
                                         value={draft.totalLand}
                                         onChangeText={(v) => set("totalLand", v)}
-                                        placeholder={T.landPH}
+                                        placeholder={t("profileTab", "landPH")}
                                         placeholderTextColor="#9CA3AF"
                                         keyboardType="decimal-pad"
                                         selectionColor="#2E7D32"
                                     />
                                     <View style={editStyles.unitToggle}>
                                         <Pressable onPress={() => set("totalLandUnit", "acre")} style={[editStyles.unitBtn, draft.totalLandUnit === "acre" && editStyles.unitBtnActive]}>
-                                            <Text style={[editStyles.unitBtnText, draft.totalLandUnit === "acre" && editStyles.unitBtnTextActive]}>એકર</Text>
+                                            <Text style={[editStyles.unitBtnText, draft.totalLandUnit === "acre" && editStyles.unitBtnTextActive]}>{t("common", "acre")}</Text>
                                         </Pressable>
                                         <Pressable onPress={() => set("totalLandUnit", "bigha")} style={[editStyles.unitBtn, draft.totalLandUnit === "bigha" && editStyles.unitBtnActive]}>
-                                            <Text style={[editStyles.unitBtnText, draft.totalLandUnit === "bigha" && editStyles.unitBtnTextActive]}>વીઘા</Text>
+                                            <Text style={[editStyles.unitBtnText, draft.totalLandUnit === "bigha" && editStyles.unitBtnTextActive]}>{t("common", "bigha")}</Text>
                                         </Pressable>
                                     </View>
                                 </View>
                             </View>
 
                             <View style={editStyles.inputGroup}>
-                                <Text style={editStyles.inputLabel}>{T.waterSource}</Text>
+                                <Text style={editStyles.inputLabel}>{t("profileTab", "waterSource")}</Text>
                                 <MultiChipPicker
-                                    options={WATER_OPTIONS}
+                                    options={waterOptions}
                                     selected={draft.waterSources}
                                     onToggle={(k) => set("waterSources", draft.waterSources.includes(k) ? draft.waterSources.filter((x) => x !== k) : [...draft.waterSources, k])}
                                 />
                             </View>
 
                             <View style={editStyles.inputGroup}>
-                                <Text style={editStyles.inputLabel}>{T.labourType}</Text>
+                                <Text style={editStyles.inputLabel}>{t("profileTab", "labourType")}</Text>
                                 <MultiChipPicker
-                                    options={LABOUR_OPTIONS}
+                                    options={labourOptions}
                                     selected={draft.labourTypes}
                                     onToggle={(k) => set("labourTypes", draft.labourTypes.includes(k) ? draft.labourTypes.filter((x) => x !== k) : [...draft.labourTypes, k])}
                                 />
@@ -471,17 +406,17 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
 
                             <View style={editStyles.switchRow}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={editStyles.inputLabel}>🚜 {T.tractor}</Text>
-                                    <Text style={editStyles.inputSub}>{T.tractorSub}</Text>
+                                    <Text style={editStyles.inputLabel}>🚜 {t("profileTab", "tractor")}</Text>
+                                    <Text style={editStyles.inputSub}>{t("profileTab", "tractorSub")}</Text>
                                 </View>
                                 <Switch value={draft.tractorAvailable} onValueChange={(v) => set("tractorAvailable", v)} trackColor={{ false: "#E5E7EB", true: "#C8E6C9" }} thumbColor={draft.tractorAvailable ? "#2E7D32" : "#D1D5DB"} />
                             </View>
 
                             {draft.tractorAvailable && (
                                 <View style={editStyles.inputGroup}>
-                                    <Text style={editStyles.inputLabel}>ટ્રેક્ટર સેવાઓ</Text>
+                                    <Text style={editStyles.inputLabel}>{t("profileTab", "tractorServices")}</Text>
                                     <MultiChipPicker
-                                        options={TRACTOR_SERVICE_OPTIONS}
+                                        options={tractorServiceOptions}
                                         selected={draft.implementsAvailable}
                                         onToggle={(k) => set("implementsAvailable", draft.implementsAvailable.includes(k) ? draft.implementsAvailable.filter((x) => x !== k) : [...draft.implementsAvailable, k])}
                                     />
@@ -489,11 +424,11 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
                             )}
 
                             {/* Privacy */}
-                            <Text style={editStyles.groupLabel}>🔐 {T.sectionPrivacy}</Text>
+                            <Text style={editStyles.groupLabel}>🔐 {t("profileTab", "sectionPrivacy")}</Text>
                             <View style={editStyles.switchRow}>
                                 <View style={{ flex: 1, marginRight: 16 }}>
-                                    <Text style={editStyles.inputLabel}>{T.dataSharing}</Text>
-                                    <Text style={editStyles.inputSub}>{T.dataSharingSub}</Text>
+                                    <Text style={editStyles.inputLabel}>{t("profileTab", "dataSharing")}</Text>
+                                    <Text style={editStyles.inputSub}>{t("profileTab", "dataSharingSub")}</Text>
                                 </View>
                                 <Switch value={draft.dataSharing} onValueChange={(v) => set("dataSharing", v)} trackColor={{ false: "#E5E7EB", true: "#C8E6C9" }} thumbColor={draft.dataSharing ? "#2E7D32" : "#D1D5DB"} />
                             </View>
@@ -507,7 +442,7 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
             {/* Location sub-modals — rendered inside EditModal so z-index stacks correctly */}
             <LocationModal
                 visible={showDistrict}
-                title="જિલ્લો પસંદ કરો"
+                title={t("profileTab", "selectDistrict")}
                 items={districtItems}
                 selectedValue={draft.district}
                 onSelect={(item) => {
@@ -517,7 +452,7 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
             />
             <LocationModal
                 visible={showTaluka}
-                title="તાલુકો પસંદ કરો"
+                title={t("profileTab", "selectTaluka")}
                 items={talukaItems}
                 selectedValue={draft.taluka}
                 onSelect={(item) => {
@@ -527,7 +462,7 @@ function EditModal({ visible, draft, setDraft, saving, onSave, onClose }: {
             />
             <LocationModal
                 visible={showVillage}
-                title="ગામ પસંદ કરો"
+                title={t("profileTab", "selectVillage")}
                 items={villageItems}
                 selectedValue={draft.village}
                 onSelect={(item) => {
@@ -579,6 +514,22 @@ function CardHeader({ emoji, title }: { emoji: string; title: string }) {
 
 export default function Profile() {
     const { lang, setLang, t } = useLanguage();
+    const WATER_OPTIONS = React.useMemo(() => [
+        { key: "Rain", label: `🌧 ${t("profileTab", "waterRain")}` },
+        { key: "Borewell", label: `⛽ ${t("profileTab", "waterBorewell")}` },
+        { key: "Canal", label: `💧 ${t("profileTab", "waterCanal")}` },
+    ], [t]);
+    const LABOUR_OPTIONS = React.useMemo(() => [
+        { key: "Family", label: `👨‍👩‍👧 ${t("profileTab", "labourFamily")}` },
+        { key: "Hired", label: `👷 ${t("profileTab", "labourHired")}` },
+        { key: "Mixed", label: `🤝 ${t("profileTab", "labourMixed")}` },
+    ], [t]);
+    const TRACTOR_SERVICE_OPTIONS = React.useMemo(() => [
+        { key: "Rotavator", label: t("profileTab", "tractorRotavator") },
+        { key: "RAP", label: t("profileTab", "tractorRAP") },
+        { key: "Bagi", label: t("profileTab", "tractorBagi") },
+        { key: "Savda", label: t("profileTab", "tractorSavda") },
+    ], [t]);
     const [apiProfile, setApiProfile] = useState<APIFarmerProfile | null>(null);
     const [draft, setDraft] = useState<ProfileDraft | null>(null);
     const [phone, setPhone] = useState<string>("");
@@ -601,7 +552,7 @@ export default function Profile() {
             setApiProfile(data);
             setPhone((data as any).phone ?? (data as any).user?.phone ?? "");
         } catch (err: any) {
-            setLoadError(err.message ?? T.loadErr);
+            setLoadError(err.message ?? t("profileTab", "loadErr"));
         } finally {
             setLoading(false);
         }
@@ -630,8 +581,8 @@ export default function Profile() {
 
     const handleSave = async () => {
         if (!draft) return;
-        if (!draft.name.trim()) { Alert.alert(T.errTitle, T.errName); return; }
-        if (!draft.totalLand.trim() || isNaN(Number(draft.totalLand))) { Alert.alert(T.errTitle, T.errLand); return; }
+        if (!draft.name.trim()) { Alert.alert(t("profileTab", "errTitle"), t("profileTab", "errName")); return; }
+        if (!draft.totalLand.trim() || isNaN(Number(draft.totalLand))) { Alert.alert(t("profileTab", "errTitle"), t("profileTab", "errLand")); return; }
         setSaving(true);
         try {
             const updated = await updateProfile({
@@ -649,18 +600,18 @@ export default function Profile() {
             setApiProfile(updated.profile);
             setEditVisible(false);
             setDraft(null);
-            Alert.alert(T.saveSuccess, T.saveDone);
+            Alert.alert(t("profileTab", "saveSuccess"), t("profileTab", "saveDone"));
         } catch (err: any) {
-            Alert.alert(T.errTitle, err.message);
+            Alert.alert(t("profileTab", "errTitle"), err.message);
         } finally {
             setSaving(false);
         }
     };
 
     const handleLogout = () => {
-        Alert.alert(T.logoutTitle, T.logoutMsg, [
-            { text: T.logoutNo, style: "cancel" },
-            { text: T.logoutYes, style: "destructive", onPress: async () => { await logout(); router.replace("/(auth)/login"); } },
+        Alert.alert(t("profileTab", "logoutTitle"), t("profileTab", "logoutMsg"), [
+            { text: t("profileTab", "logoutNo"), style: "cancel" },
+            { text: t("profileTab", "logoutYes"), style: "destructive", onPress: async () => { await logout(); router.replace("/(auth)/login"); } },
         ]);
     };
 
@@ -673,15 +624,15 @@ export default function Profile() {
         const waterSources = Array.isArray((p as any).waterSources) ? (p as any).waterSources : ((p as any).waterSource != null ? [(p as any).waterSource] : []);
         const labourTypes = Array.isArray((p as any).labourTypes) ? (p as any).labourTypes : ((p as any).labourType != null ? [(p as any).labourType] : []);
         const implementsAvailable = Array.isArray((p as any).implementsAvailable) ? (p as any).implementsAvailable : [];
-        const landDisplay = `${p.totalLand?.value ?? "?"} ${p.totalLand?.unit === "bigha" ? "વીઘા" : "એકર"}`;
+        const landDisplay = `${p.totalLand?.value ?? "?"} ${p.totalLand?.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`;
         const waterDisplay = toLabels(WATER_OPTIONS, waterSources);
         const labourDisplay = toLabels(LABOUR_OPTIONS, labourTypes);
         const tractorServicesDisplay = implementsAvailable.length > 0 ? toLabels(TRACTOR_SERVICE_OPTIONS, implementsAvailable) : null;
-        let msg = `🌾 VADI-Hisaab — ખેડૂત પ્રોફાઇલ\n\nનામ: ${p.name}\nજિલ્લો: ${districtDisplay}\nતાલુકો: ${talukaDisplay}\nગામ: ${villageDisplay}\nકુલ જમીન: ${landDisplay}\nપાણીનો સ્ત્રોત: ${waterDisplay}\nમજૂર પ્રકાર: ${labourDisplay}\nટ્રેક્ટર: ${p.tractorAvailable ? "હા" : "ના"}`;
-        if (p.tractorAvailable && tractorServicesDisplay) msg += `\nટ્રેક્ટર સેવાઓ: ${tractorServicesDisplay}`;
+        let msg = `🌾 VADI-Hisaab — ${t("profileTab", "farmerProfileSharePrefix")}\n\n${t("profileTab", "shareName")}: ${p.name}\n${t("profileTab", "shareDistrict")}: ${districtDisplay}\n${t("profileTab", "shareTaluka")}: ${talukaDisplay}\n${t("profileTab", "shareVillage")}: ${villageDisplay}\n${t("profileTab", "shareTotalLand")}: ${landDisplay}\n${t("profileTab", "shareWater")}: ${waterDisplay}\n${t("profileTab", "shareLabour")}: ${labourDisplay}\n${t("profileTab", "shareTractor")}: ${p.tractorAvailable ? t("profileTab", "shareYes") : t("profileTab", "shareNo")}`;
+        if (p.tractorAvailable && tractorServicesDisplay) msg += `\n${t("profileTab", "shareTractorServices")}: ${tractorServicesDisplay}`;
         const farms = Array.isArray((p as any).farms) ? (p as any).farms : [];
-        if (farms.length) msg += "\nફાર્મ: " + farms.map((f: any) => `${f.name || "ફાર્મ"} ${f.area ?? 0} વીઘા`).join(", ");
-        msg += "\n\n— VADI-Hisaab એપથી શેર કર્યું";
+        if (farms.length) msg += "\n" + t("profileTab", "shareFarms") + ": " + farms.map((f: any) => `${f.name || t("profileTab", "shareFarm")} ${f.area ?? 0} ${t("common", "bigha")}`).join(", ");
+        msg += "\n\n— " + t("profileTab", "sharedFromApp");
         return msg;
     };
 
@@ -696,24 +647,24 @@ export default function Profile() {
 
     const handleDownloadCard = async () => {
         if (!MediaLibrary) {
-            Alert.alert(T.errTitle, "ડાઉનલોડ માટે એપમાં expo-media-library ઇન્સ્ટોલ કરો.");
+            Alert.alert(t("profileTab", "errTitle"), t("profileTab", "downloadInstallMsg"));
             return;
         }
         const uri = await captureCardImage();
         if (!uri) {
-            Alert.alert(T.errTitle, "કાર્ડ ચિત્ર બનાવવામાં નિષ્ફળ.");
+            Alert.alert(t("profileTab", "errTitle"), t("profileTab", "cardImageFailed"));
             return;
         }
         try {
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== "granted") {
-                Alert.alert(T.errTitle, "ગેલેરી સાચવવા માટે પરવાનગી આપો.");
+                Alert.alert(t("profileTab", "errTitle"), t("profileTab", "galleryPermission"));
                 return;
             }
             await MediaLibrary.saveToLibraryAsync(uri);
-            Alert.alert(T.saveSuccess, T.savedToGallery);
+            Alert.alert(t("profileTab", "saveSuccess"), t("profileTab", "savedToGallery"));
         } catch (e: any) {
-            Alert.alert(T.errTitle, e?.message ?? "ડાઉનલોડ નિષ્ફળ.");
+            Alert.alert(t("profileTab", "errTitle"), e?.message ?? t("profileTab", "downloadFailed"));
         }
     };
 
@@ -724,22 +675,22 @@ export default function Profile() {
                 try {
                     const isAvailable = await Sharing.isAvailableAsync();
                     if (isAvailable) {
-                        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: T.shareImage });
+                        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: t("profileTab", "shareImage") });
                         return;
                     }
                 } catch (e: any) {
-                    Alert.alert(T.errTitle, e?.message ?? "શેર નિષ્ફળ.");
+                    Alert.alert(t("profileTab", "errTitle"), e?.message ?? t("profileTab", "shareFailed"));
                     return;
                 }
             }
         }
         try {
-            await Share.share({ message: buildShareMessage(), title: T.farmerCard });
+            await Share.share({ message: buildShareMessage(), title: t("profileTab", "farmerCard") });
         } catch (_) {}
     };
 
     if (loading) {
-        return <View style={styles.centerScreen}><ActivityIndicator size="large" color="#2E7D32" /><Text style={styles.loadingText}>{T.loading}</Text></View>;
+        return <View style={styles.centerScreen}><ActivityIndicator size="large" color="#2E7D32" /><Text style={styles.loadingText}>{t("profileTab", "loading")}</Text></View>;
     }
     if (loadError) {
         return (
@@ -747,7 +698,7 @@ export default function Profile() {
                 <Ionicons name="cloud-offline-outline" size={52} color="#2D4230" />
                 <Text style={styles.loadErrText}>{loadError}</Text>
                 <TouchableOpacity style={styles.retryBtn} onPress={loadProfile}>
-                    <Text style={styles.retryBtnText}>{T.retry}</Text>
+                    <Text style={styles.retryBtnText}>{t("profileTab", "retry")}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -755,7 +706,7 @@ export default function Profile() {
 
     const p = apiProfile!;
     const initials = (p.name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
-    const landDisplay = `${p.totalLand?.value ?? "?"} ${p.totalLand?.unit === "bigha" ? "વીઘા" : "એકર"}`;
+    const landDisplay = `${p.totalLand?.value ?? "?"} ${p.totalLand?.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`;
 
     // ✅ Convert English keys from DB → Gujarati labels for display
     const taluka = (p as any).taluka ?? "";
@@ -782,10 +733,10 @@ export default function Profile() {
 
                     {/* ══ Light header: title + edit ══ */}
                     <Animated.View style={[styles.topBar, { transform: [{ scale: headerPulse }] }]}>
-                        <Text style={styles.topBarTitle}>{T.title}</Text>
+                        <Text style={styles.topBarTitle}>{t("profileTab", "title")}</Text>
                         <Pressable onPress={handleEditOpen} style={({ pressed }) => [styles.editFAB, pressed && styles.editFABPressed]}>
                             <Ionicons name="create-outline" size={16} color="#2E7D32" />
-                            <Text style={styles.editFABText}>{T.edit}</Text>
+                            <Text style={styles.editFABText}>{t("profileTab", "edit")}</Text>
                         </Pressable>
                     </Animated.View>
 
@@ -802,7 +753,7 @@ export default function Profile() {
                                 )}
                             </View>
                             <Text style={styles.farmerName}>{p.name}</Text>
-                            <Text style={styles.farmerRole}>🌾 {T.farmer}</Text>
+                            <Text style={styles.farmerRole}>🌾 {t("profileTab", "farmer")}</Text>
                             <View style={styles.farmerMeta}>
                                 {villageDisplay !== "—" && (
                                     <View style={styles.farmerMetaItem}>
@@ -827,13 +778,13 @@ export default function Profile() {
                     {/* ══ Farmer profile card — view / share ══ */}
                     <Pressable style={styles.farmerCardBtn} onPress={() => setCardVisible(true)}>
                         <Ionicons name="card-outline" size={22} color="#0F766E" />
-                        <Text style={styles.farmerCardBtnText}>{T.farmerCard}</Text>
-                        <Text style={styles.farmerCardBtnSub}>{T.farmerCardSub}</Text>
+                        <Text style={styles.farmerCardBtnText}>{t("profileTab", "farmerCard")}</Text>
+                        <Text style={styles.farmerCardBtnSub}>{t("profileTab", "farmerCardSub")}</Text>
                     </Pressable>
 
                     {/* ══ Settings: Language + Data sharing ══ */}
                     <View style={styles.settingsCard}>
-                        <Text style={styles.settingsCardTitle}>⚙️ સેટિંગ્સ</Text>
+                        <Text style={styles.settingsCardTitle}>⚙️ {t("profileTab", "settings")}</Text>
                         <View style={styles.settingsRow}>
                             <Text style={styles.settingsLabel}>{t("common", "language")}</Text>
                             <View style={styles.langChips}>
@@ -847,21 +798,21 @@ export default function Profile() {
                         </View>
                         <View style={[styles.settingsRow, { borderTopWidth: 1, borderTopColor: "#E8EDE6", paddingTop: 14, marginTop: 6 }]}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.settingsLabel}>{T.dataSharing}</Text>
-                                <Text style={styles.settingsSub}>{(p.analyticsConsent ? "ચાલુ" : "બંધ") + " — સુધારો માટે ઉપર સુધારો દબાવો"}</Text>
+                                <Text style={styles.settingsLabel}>{t("profileTab", "dataSharing")}</Text>
+                                <Text style={styles.settingsSub}>{(p.analyticsConsent ? t("profileTab", "on") : t("profileTab", "off")) + " — " + t("profileTab", "dataSharingEditHint")}</Text>
                             </View>
                         </View>
                     </View>
 
                     {/* Contact us — big menu */}
-                    <Pressable style={styles.contactCard} onPress={() => Alert.alert(T.contactUs, "ઇમેઇલ: support@vadihisaab.com\nફોન: +91 XXXXX XXXXX\n\nસહાયતા માટે સંપર્ક કરો.", [{ text: "ઠીક છે" }])}>
+                    <Pressable style={styles.contactCard} onPress={() => Alert.alert(t("profileTab", "contactUs"), t("profileTab", "contactAlertBody"), [{ text: t("common", "ok") }])}>
                         <View style={styles.contactCardInner}>
                             <View style={styles.contactIconWrap}>
                                 <Ionicons name="call" size={32} color="#fff" />
                             </View>
                             <View style={styles.contactTextWrap}>
-                                <Text style={styles.contactCardTitle}>{T.contactUs}</Text>
-                                <Text style={styles.contactCardSub}>{T.contactSub}</Text>
+                                <Text style={styles.contactCardTitle}>{t("profileTab", "contactUs")}</Text>
+                                <Text style={styles.contactCardSub}>{t("profileTab", "contactSub")}</Text>
                                 <View style={styles.contactRow}>
                                     <Ionicons name="mail-outline" size={18} color="#0F766E" />
                                     <Text style={styles.contactDetail}>support@vadihisaab.com</Text>
@@ -876,22 +827,22 @@ export default function Profile() {
 
                     {/* About us — short 2–3 line description */}
                     <View style={styles.aboutSection}>
-                        <Text style={styles.aboutSectionTitle}>અમારા વિશે</Text>
+                        <Text style={styles.aboutSectionTitle}>{t("profileTab", "aboutUs")}</Text>
                         <Text style={styles.aboutSectionBody}>
-                            VADI-Hisaab ખેડૂતો માટે હિસાબ અને નફો ટ્રેક કરવાનું એપ છે. પાક, ખર્ચ અને આવક એક જગ્યાએ નોંધો, અહેવાલ જુઓ અને નફો સ્પષ્ટ રીતે સમજો.
+                            {t("profileTab", "aboutBody")}
                         </Text>
                     </View>
-                    <Pressable style={styles.aboutLink} onPress={() => Alert.alert("અમારા વિશે", "VADI-Hisaab — ખેડૂત માટે સ્માર્ટ હિસાબ.\n\n" + T.version, [{ text: "ઠીક છે" }])}>
+                    <Pressable style={styles.aboutLink} onPress={() => Alert.alert(t("profileTab", "aboutUs"), t("profileTab", "aboutAlertBody") + "\n\n" + t("profileTab", "version"), [{ text: t("common", "ok") }])}>
                         <Ionicons name="information-circle-outline" size={20} color="#64748B" />
-                        <Text style={styles.aboutLinkText}>વધુ માહિતી</Text>
+                        <Text style={styles.aboutLinkText}>{t("profileTab", "moreInfo")}</Text>
                     </Pressable>
 
                     <Pressable onPress={handleLogout} style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}>
                         <Ionicons name="log-out-outline" size={18} color="#DC2626" />
-                        <Text style={styles.logoutBtnText}>{T.logout}</Text>
+                        <Text style={styles.logoutBtnText}>{t("profileTab", "logout")}</Text>
                     </Pressable>
 
-                    <Text style={styles.versionText}>{T.version}</Text>
+                    <Text style={styles.versionText}>{t("profileTab", "version")}</Text>
                     <View style={{ height: 100 }} />
                 </Animated.View>
             </Animated.ScrollView>
@@ -904,6 +855,9 @@ export default function Profile() {
                     saving={saving}
                     onSave={handleSave}
                     onClose={() => { setEditVisible(false); setDraft(null); }}
+                    waterOptions={WATER_OPTIONS}
+                    labourOptions={LABOUR_OPTIONS}
+                    tractorServiceOptions={TRACTOR_SERVICE_OPTIONS}
                 />
             )}
 
@@ -944,15 +898,15 @@ export default function Profile() {
                             {hasImageDownload && (
                                 <Pressable style={styles.cardModalDownloadBtn} onPress={handleDownloadCard}>
                                     <Ionicons name="download-outline" size={22} color="#fff" />
-                                    <Text style={styles.cardModalShareBtnText}>{T.downloadCard}</Text>
+                                    <Text style={styles.cardModalShareBtnText}>{t("profileTab", "downloadCard")}</Text>
                                 </Pressable>
                             )}
                             <Pressable style={styles.cardModalShareBtn} onPress={handleShareCard}>
                                 <Ionicons name="share-social" size={22} color="#fff" />
-                                <Text style={styles.cardModalShareBtnText}>{T.shareCard}</Text>
+                                <Text style={styles.cardModalShareBtnText}>{t("profileTab", "shareCard")}</Text>
                             </Pressable>
                             <Pressable style={styles.cardModalCloseBtn} onPress={() => setCardVisible(false)}>
-                                <Text style={styles.cardModalCloseBtnText}>{T.closeCard}</Text>
+                                <Text style={styles.cardModalCloseBtnText}>{t("profileTab", "closeCard")}</Text>
                             </Pressable>
                         </View>
                     </View>

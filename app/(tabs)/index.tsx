@@ -18,7 +18,7 @@ import {
 } from "@/utils/api";
 import { getCropColors } from "@/utils/cropColors";
 
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -72,6 +72,11 @@ const C = {
   coolBlue: "#00838F",
   coolBluePale: "#E0F7FA",
   coolBlueBorder: "#4DD0E1",
+
+  /** Cool orange for tractor — dark orange font, light card */
+  tractorOrange: "#E65100",
+  tractorOrangePale: "#FFF3E0",
+  tractorOrangeBorder: "#FFCC80",
 
   gold: "#F9A825",
   goldPale: "#FFFDE7",
@@ -768,7 +773,7 @@ function QuickActions({
         </PressableCard>
       </View>
 
-      {/* ટ્રેક્ટર આવક — cool blue (not warm) */}
+      {/* Tractor income — cool orange + tractor icon */}
       {profile?.tractorAvailable && (
         <PressableCard
           onPress={() => router.push("/income/add-tractor-income" as any)}
@@ -777,18 +782,18 @@ function QuickActions({
           <View
             style={[
               styles.qaCardFull,
-              { backgroundColor: C.coolBluePale, borderColor: C.coolBlueBorder },
+              { backgroundColor: C.tractorOrangePale, borderColor: C.tractorOrangeBorder },
             ]}
           >
-            <View style={[styles.qaIcon, { backgroundColor: "#B2EBF2" }]}>
-              <Ionicons name="construct-outline" size={26} color={C.coolBlue} />
+            <View style={[styles.qaIcon, { backgroundColor: "#FFE0B2" }]}>
+              <MaterialCommunityIcons name="tractor-variant" size={26} color={C.tractorOrange} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.qaLabel, { color: C.coolBlue, fontWeight: "700" }]}>
-                {t("dashboard", "tractorAddIncome")}
+              <Text style={[styles.qaLabel, { color: C.tractorOrange, fontWeight: "700" }]}>
+                + {t("dashboard", "tractorAddIncome")}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={C.coolBlue} />
+            <Ionicons name="chevron-forward" size={18} color={C.tractorOrange} />
           </View>
         </PressableCard>
       )}

@@ -3,6 +3,7 @@
  * Route: /crop/edit-crop?id=xxx
  */
 
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import {
   getCropById,
@@ -17,6 +18,7 @@ import {
 } from "@/utils/api";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -47,29 +49,22 @@ const C = {
 
 const paddingTop = Platform.OS === "ios" ? 52 : 40;
 
-const SEASONS: { value: CropSeason; label: string; icon: string }[] = [
-  { value: "Kharif", label: "ખરીફ", icon: "☔" },
-  { value: "Rabi", label: "રવી", icon: "❄️" },
-  { value: "Summer", label: "ઉનાળો", icon: "☀️" },
-];
-
-const CROPS: { value: string; label: string; emoji: string; subtypes: string[] }[] = [
-  { value: "Cotton", label: "કપાસ", emoji: "☁️", subtypes: ["Bt-Cotton", "Shankar-6", "RCH-2", "MRC-7017"] },
-  { value: "Groundnut", label: "મગફળી", emoji: "🥜", subtypes: ["GG-20", "GJG-22", "TG-37A", "J-11"] },
-  { value: "Jeera", label: "જીરું", emoji: "🌿", subtypes: ["GJ Jeera-2", "RZ-19", "RZ-209", "GCU-1"] },
-  { value: "Garlic", label: "લસણ", emoji: "🧄", subtypes: ["Desi", "Chinese", "Red", "White", "GG-4"] },
-  { value: "Onion", label: "ડુંગળી", emoji: "🧅", subtypes: ["Pusa Red", "Agrifound Dark Red", "Local"] },
-  { value: "Chana", label: "ચણા", emoji: "🌰", subtypes: ["GG-1", "GG-2", "Desi", "Kabuli"] },
-  { value: "Wheat", label: "ઘઉં", emoji: "🌾", subtypes: ["GW-496", "GW-322", "GW-496", "Lok-1"] },
-  { value: "Bajra", label: "બાજરી", emoji: "🌾", subtypes: ["GHB-558", "GHB-719", "GHB-744"] },
-  { value: "Maize", label: "મકાઈ", emoji: "🌽", subtypes: ["TATA-900M", "DKC-9144", "Pioneer-30V92"] },
-];
-
-const BHAGMA_SHARE_OPTIONS: { value: string; label: string }[] = [
-  { value: "50", label: "બીજા ભાગે" },
-  { value: "33.33", label: "ત્રિજા ભાગે" },
-  { value: "25", label: "ચોથા ભાગે" },
-];
+const CROP_SUBTYPES: Record<string, string[]> = {
+  Cotton: ["Bt-Cotton", "Shankar-6", "RCH-2", "MRC-7017"],
+  Groundnut: ["GG-20", "GJG-22", "TG-37A", "J-11"],
+  Jeera: ["GJ Jeera-2", "RZ-19", "RZ-209", "GCU-1"],
+  Garlic: ["Desi", "Chinese", "Red", "White", "GG-4"],
+  Onion: ["Pusa Red", "Agrifound Dark Red", "Local"],
+  Chana: ["GG-1", "GG-2", "Desi", "Kabuli"],
+  Wheat: ["GW-496", "GW-322", "GW-496", "Lok-1"],
+  Bajra: ["GHB-558", "GHB-719", "GHB-744"],
+  Maize: ["TATA-900M", "DKC-9144", "Pioneer-30V92"],
+};
+const CROP_EMOJIS: Record<string, string> = {
+  Cotton: "☁️", Groundnut: "🥜", Jeera: "🌿", Garlic: "🧄", Onion: "🧅",
+  Chana: "🌰", Wheat: "🌾", Bajra: "🌾", Maize: "🌽",
+};
+const CROP_VALUES = ["Cotton", "Groundnut", "Jeera", "Garlic", "Onion", "Chana", "Wheat", "Bajra", "Maize"];
 
 function SectionLabel({ text }: { text: string }) {
   return <Text style={styles.sectionLabel}>{text}</Text>;
@@ -78,7 +73,25 @@ function SectionLabel({ text }: { text: string }) {
 export default function EditCropScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const { t, tParam } = useLanguage();
   const { profile, setProfile } = useProfile();
+
+  const SEASONS: { value: CropSeason; label: string; icon: string }[] = [
+    { value: "Kharif", label: t("common", "kharif"), icon: "☔" },
+    { value: "Rabi", label: t("common", "rabi"), icon: "❄️" },
+    { value: "Summer", label: t("common", "summer"), icon: "☀️" },
+  ];
+  const CROPS = CROP_VALUES.map((value) => ({
+    value,
+    label: t("cropNames", value),
+    emoji: CROP_EMOJIS[value] ?? "🌱",
+    subtypes: CROP_SUBTYPES[value] ?? [],
+  }));
+  const BHAGMA_SHARE_OPTIONS: { value: string; label: string }[] = [
+    { value: "50", label: t("editCrop", "bhagmaShare50") },
+    { value: "33.33", label: t("editCrop", "bhagmaShare33") },
+    { value: "25", label: t("editCrop", "bhagmaShare25") },
+  ];
 
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
@@ -174,20 +187,20 @@ export default function EditCropScreen() {
 
   const finalCropName = customCrop.trim() || cropValue.trim();
   const validate = (): string | null => {
-    if (!season) return "કૃપા કરીને સિઝન પસંદ કરો.";
-    if (!finalCropName) return "કૃપા કરીને પાક પસંદ કરો અથવા ટાઈપ કરો.";
+    if (!season) return t("editCrop", "errSelectSeason");
+    if (!finalCropName) return t("editCrop", "errSelectCrop");
     const areaNum = Number(area);
-    if (!area || isNaN(areaNum) || areaNum <= 0) return "માન્ય વિસ્તાર (વીઘા) દાખલ કરો.";
-    if (farms.length > 0 && !selectedFarm) return "કૃપા કરીને વાડી પસંદ કરો.";
-    if (maxBigha != null && areaNum > maxBigha) return `આ વાડી પર મહત્તમ ${maxBigha} વીઘા દાખલ કરી શકો.`;
-    if (bhagmaOption === "ha" && !["25", "33.33", "50"].includes(bhagmaPercentage.trim())) return "કૃપા કરીને ભાગમા (બીજા / ત્રિજા / ચોથા ભાગે) પસંદ કરો.";
+    if (!area || isNaN(areaNum) || areaNum <= 0) return t("editCrop", "errValidArea");
+    if (farms.length > 0 && !selectedFarm) return t("editCrop", "errSelectFarm");
+    if (maxBigha != null && areaNum > maxBigha) return tParam("editCrop", "errMaxBigha", { max: String(Math.round(maxBigha)) });
+    if (bhagmaOption === "ha" && !["25", "33.33", "50"].includes(bhagmaPercentage.trim())) return t("editCrop", "errSelectBhagma");
     return null;
   };
 
   const handleSave = async () => {
     const err = validate();
     if (err) {
-      Alert.alert("⚠️ ભૂલ", err);
+      Alert.alert(`⚠️ ${t("editCrop", "errTitle")}`, err);
       return;
     }
     if (!id) return;
@@ -208,11 +221,11 @@ export default function EditCropScreen() {
     try {
       setSaving(true);
       await updateCrop(id, payload);
-      Alert.alert("✅ સફળ!", "પાકની વિગત સાચવાઈ.", [
-        { text: "ઠીક છે", onPress: () => router.back() },
+      Alert.alert(`✅ ${t("editCrop", "successTitle")}`, t("editCrop", "successMsg"), [
+        { text: t("editCrop", "ok"), onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      Alert.alert("ભૂલ", e?.message ?? "સાચવવામાં ભૂલ.");
+      Alert.alert(t("editCrop", "errTitle"), e?.message ?? t("editCrop", "errTitle"));
     } finally {
       setSaving(false);
     }
@@ -221,16 +234,16 @@ export default function EditCropScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.loadingText}>લોડ થઈ રહ્યું છે...</Text>
+        <Text style={styles.loadingText}>{t("editCrop", "loading")}</Text>
       </View>
     );
   }
   if (error || !id) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>{error ?? "ડેટા મળ્યો નથી"}</Text>
+        <Text style={styles.errorText}>{error ?? t("editCrop", "noData")}</Text>
         <TouchableOpacity style={styles.backBtnStandalone} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>પાછા જાઓ</Text>
+          <Text style={styles.backBtnText}>{t("editCrop", "back")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -243,7 +256,7 @@ export default function EditCropScreen() {
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       <View style={[styles.headerWrap, { backgroundColor: C.bg }]}>
-        <ScreenHeader title="✏️ પાક ફેરફાર" style={{ marginBottom: 0, backgroundColor: C.bg }} />
+        <ScreenHeader title={`✏️ ${t("editCrop", "title")}`} style={{ marginBottom: 0, backgroundColor: C.bg }} />
       </View>
 
       <ScrollView
@@ -253,7 +266,7 @@ export default function EditCropScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <SectionLabel text="વર્ષ (જૂન–જૂન)" />
+          <SectionLabel text={t("editCrop", "yearLabel")} />
           <View style={styles.yearRow}>
             {yearOptions.map((fy) => (
               <TouchableOpacity
@@ -268,7 +281,7 @@ export default function EditCropScreen() {
         </View>
 
         <View style={styles.card}>
-          <SectionLabel text="🌦️ સિઝન" />
+          <SectionLabel text={`🌦️ ${t("editCrop", "seasonLabel")}`} />
           <View style={styles.chipRow}>
             {SEASONS.map((s) => (
               <TouchableOpacity
@@ -284,7 +297,7 @@ export default function EditCropScreen() {
         </View>
 
         <View style={styles.card}>
-          <SectionLabel text="🌱 પાક" />
+          <SectionLabel text={`🌱 ${t("editCrop", "cropLabel")}`} />
           <View style={styles.cropGrid}>
             {CROPS.map((c) => (
               <TouchableOpacity
@@ -301,7 +314,7 @@ export default function EditCropScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.orDivider}>— અથવા, બીજો પાક ટાઈપ કરો —</Text>
+          <Text style={styles.orDivider}>— {t("editCrop", "customCropPlaceholder")} —</Text>
           <TextInput
             style={[styles.input, customCrop.length > 0 && styles.inputActive]}
             value={customCrop}
@@ -309,13 +322,13 @@ export default function EditCropScreen() {
               setCustomCrop(v);
               if (v.trim()) setCropValue("");
             }}
-            placeholder="પાકનું નામ ટાઈપ કરો..."
+            placeholder={t("editCrop", "cropNamePlaceholder")}
             placeholderTextColor={C.textMuted}
           />
         </View>
 
         <View style={styles.card}>
-          <SectionLabel text="🏷️ પ્રકાર/જાત (વૈકલ્પિક)" />
+          <SectionLabel text={`🏷️ ${t("editCrop", "subtypeLabel")}`} />
           {(cropValue || customCrop.trim()) ? (() => {
             const selectedCrop = CROPS.find((c) => c.value === cropValue);
             const subtypes = selectedCrop?.subtypes ?? [];
@@ -336,24 +349,24 @@ export default function EditCropScreen() {
                     ))}
                   </View>
                 )}
-                <Text style={styles.orDivider}>— અથવા કસ્ટમ પ્રકાર —</Text>
+                <Text style={styles.orDivider}>{t("editCrop", "orCustomType")}</Text>
                 <TextInput
                   style={[styles.input, { marginTop: 8 }]}
                   value={subType}
                   onChangeText={setSubType}
-                  placeholder="ટાઈપ કરો..."
+                  placeholder={t("editCrop", "typePlaceholder")}
                   placeholderTextColor={C.textMuted}
                 />
               </>
             );
           })() : (
-            <Text style={styles.hint}>પહેલા પાક પસંદ કરો</Text>
+            <Text style={styles.hint}>{t("editCrop", "selectCropFirst")}</Text>
           )}
         </View>
 
         {farms.length > 0 && (
           <View style={styles.card}>
-            <SectionLabel text="🌾 વાડી પસંદ કરો" />
+            <SectionLabel text={`🌾 ${t("editCrop", "farmSelectLabel")}`} />
             <View style={styles.chipRow}>
               {farms.map((farm, idx) => (
                 <TouchableOpacity
@@ -371,7 +384,7 @@ export default function EditCropScreen() {
         )}
 
         <View style={styles.card}>
-          <SectionLabel text="📐 વિસ્તાર (વીઘા) *" />
+          <SectionLabel text={`📐 ${t("editCrop", "areaLabelRequired")}`} />
           <View style={styles.areaRow}>
             <TextInput
               style={styles.areaInput}
@@ -382,11 +395,11 @@ export default function EditCropScreen() {
               keyboardType="numeric"
             />
             <View style={styles.areaUnit}>
-              <Text style={styles.areaUnitText}>વીઘા</Text>
+              <Text style={styles.areaUnitText}>{t("editCrop", "bighaUnit")}</Text>
             </View>
           </View>
           {maxBigha != null && (
-            <Text style={styles.hint}>મહત્તમ {maxBigha} વીઘા (અન્ય સક્રિય પાક સિવાય)</Text>
+            <Text style={styles.hint}>{tParam("editCrop", "maxBighaHint", { max: String(Math.round(maxBigha)) })}</Text>
           )}
           <View style={styles.presetRow}>
             {["1", "2", "5", "10", "15", "25"].map((n) => {
@@ -407,19 +420,19 @@ export default function EditCropScreen() {
         </View>
 
         <View style={styles.card}>
-          <SectionLabel text="🤝 ભાગમા આપ્યું છે?" />
+          <SectionLabel text={`🤝 ${t("editCrop", "bhagmaLabel")}`} />
           <View style={styles.chipRow}>
             <TouchableOpacity
               style={[styles.presetChip, bhagmaOption === "na" && styles.presetChipActive]}
               onPress={() => { setBhagmaOption("na"); setBhagmaPercentage(""); }}
             >
-              <Text style={[styles.presetChipText, bhagmaOption === "na" && styles.presetChipTextActive]}>ના</Text>
+              <Text style={[styles.presetChipText, bhagmaOption === "na" && styles.presetChipTextActive]}>{t("editCrop", "bhagmaNo")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.presetChip, bhagmaOption === "ha" && styles.presetChipActive]}
               onPress={() => setBhagmaOption("ha")}
             >
-              <Text style={[styles.presetChipText, bhagmaOption === "ha" && styles.presetChipTextActive]}>હા</Text>
+              <Text style={[styles.presetChipText, bhagmaOption === "ha" && styles.presetChipTextActive]}>{t("editCrop", "bhagmaYes")}</Text>
             </TouchableOpacity>
           </View>
           {bhagmaOption === "ha" && (
@@ -438,12 +451,12 @@ export default function EditCropScreen() {
         </View>
 
         <View style={styles.card}>
-          <SectionLabel text="📝 નોંધ (વૈકલ્પિક)" />
+          <SectionLabel text={`📝 ${t("editCrop", "notesLabelOptional")}`} />
           <TextInput
             style={[styles.input, styles.notesInput]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="બિયારણ જાત, ખેતર નંબર..."
+            placeholder={t("editCrop", "notesPlaceholderExample")}
             placeholderTextColor={C.textMuted}
             multiline
             numberOfLines={3}
@@ -463,7 +476,7 @@ export default function EditCropScreen() {
             end={{ x: 1, y: 0 }}
           >
             <Ionicons name="checkmark-circle" size={22} color="#fff" />
-            <Text style={styles.saveBtnText}>{saving ? "સાચવી રહ્યા છીએ..." : "ફેરફાર સાચવો"}</Text>
+            <Text style={styles.saveBtnText}>{saving ? t("editCrop", "savingBtn") : t("editCrop", "saveBtn")}</Text>
           </LinearGradient>
         </TouchableOpacity>
         <View style={{ height: 40 }} />
