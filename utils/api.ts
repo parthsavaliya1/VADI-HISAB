@@ -568,7 +568,8 @@ export interface MachineryExpensePayload {
 }
 
 export interface ExpensePayload {
-  cropId: string;
+  /** Omit or null for general expense (સામાન્ય ખર્ચ) not linked to any crop */
+  cropId?: string | null;
   category: ExpenseCategory;
   date?: string;
   notes?: string;

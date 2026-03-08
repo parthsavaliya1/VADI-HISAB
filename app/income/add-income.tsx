@@ -10,16 +10,36 @@
 
 import {
   createIncome,
+  getCrops,
+  getCurrentFinancialYear,
+  getFinancialYearOptions,
   getIncomeById,
   updateIncome,
+  type Crop,
   type IncomeCategory,
   type IncomePayload,
 } from "@/utils/api";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+
+/** Financial year "2025-26" → June 1, 2025 (start of FY) */
+function financialYearToStartDate(fy: string): Date {
+  const [y] = fy.split("-").map(Number);
+  return new Date(y, 5, 1); // month 5 = June
+}
+
+/** Year options: previous, current, next e.g. ["2024-25", "2025-26", "2026-27"] */
+function getYearOptions(): string[] {
+  const current = getCurrentFinancialYear();
+  const [startY] = current.split("-").map(Number);
+  const prev = `${startY - 1}-${String(startY % 100).padStart(2, "0")}`;
+  return [prev, ...getFinancialYearOptions()];
+}
 import {
   ActivityIndicator,
   Alert,
@@ -167,6 +187,76 @@ const DEFAULT_DATA: Record<IncomeCategory, SubFormData> = {
   } as RentalIncomeData,
   Other: { source: "", amount: "", description: "" } as OtherIncomeData,
 };
+
+// Crop dropdown label (same as expense screen)
+const CROP_NAME_GUJ: Record<string, string> = {
+  Cotton: "કપાસ",
+  Groundnut: "મગફળી",
+  Jeera: "જીરું",
+  Garlic: "લસણ",
+  Onion: "ડુંગળી",
+  Chana: "ચણા",
+  Wheat: "ઘઉં",
+  Bajra: "બાજરી",
+  Maize: "મકાઈ",
+};
+const SEASON_DISPLAY: Record<string, string> = {
+  Kharif: "☔ ખરીફ",
+  Rabi: "❄️ રવી",
+  Summer: "☀️ ઉનાળો",
+};
+const AREA_UNIT_GUJ: Record<string, string> = { Bigha: "વીઘા", Acre: "એકર", Hectare: "હેક્ટર" };
+function getCropDropdownLabel(c: Crop): string {
+  const emoji = c.cropEmoji ?? "🌱";
+  const name = CROP_NAME_GUJ[c.cropName ?? ""] ?? (c.cropName ?? "—");
+  const season = SEASON_DISPLAY[c.season ?? ""] ?? (c.season ?? "—");
+  const area = c.area != null ? String(c.area) : "—";
+  const unit = AREA_UNIT_GUJ[(c.areaUnit ?? "Bigha") as string] ?? "વીઘા";
+  return `${emoji} ${name} · ${season} · ${area} ${unit}`;
+}
+
+function SelectPicker({
+  options,
+  selected,
+  onSelect,
+  placeholder,
+}: {
+  options: { value: string; label: string }[];
+  selected: string;
+  onSelect: (v: string) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = options.find((o) => o.value === selected)?.label;
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <TouchableOpacity
+        style={[styles.selectBtn, open && styles.selectBtnOpen]}
+        onPress={() => setOpen((p) => !p)}
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.selectBtnText, !selectedLabel && { color: C.textMuted }]}>
+          {selectedLabel ?? placeholder}
+        </Text>
+        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={20} color={C.textSecondary} />
+      </TouchableOpacity>
+      {open && (
+        <View style={styles.dropList}>
+          {options.map((o) => (
+            <TouchableOpacity
+              key={o.value}
+              style={[styles.dropItem, selected === o.value && styles.dropItemActive]}
+              onPress={() => { onSelect(o.value); setOpen(false); }}
+            >
+              <Text style={[styles.dropItemText, selected === o.value && styles.dropItemTextActive]}>{o.label}</Text>
+              {selected === o.value && <Ionicons name="checkmark" size={20} color={C.green700} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🧩 Reusable field components
@@ -472,17 +562,70 @@ function OtherIncomeForm({
 // 🏠 Main Screen
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function AddIncomeScreen() {
-  // Expo Router params: ?cropId=xxx  OR  ?id=xxx (edit mode)
-  const params = useLocalSearchParams<{ cropId?: string; id?: string }>();
+  // Expo Router params: ?cropId=xxx  OR  ?id=xxx (edit)  OR  ?general=1 (no crop)  OR  ?year=2025-26
+  const params = useLocalSearchParams<{ cropId?: string; id?: string; general?: string; year?: string }>();
   const cropIdParam = params.cropId ?? null;
   const editId = params.id ?? null;
+  const isGeneralIncome = (Array.isArray(params.general) ? params.general[0] : params.general) === "1";
+  const paramYear = Array.isArray(params.year) ? params.year[0] : params.year;
   const isEdit = !!editId;
+
+  const yearOptions = getYearOptions();
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
+    () => (paramYear && yearOptions.includes(paramYear) ? paramYear : getCurrentFinancialYear()),
+  );
+
+  const [crops, setCrops] = useState<Crop[]>([]);
+  const [selectedCropId, setSelectedCropId] = useState<string>("");
+
+  // Visible categories: general = only Subsidy, Other; crop from dashboard = hide Rental Income; else all
+  const visibleCategories = useMemo(() => {
+    if (isGeneralIncome) return CATEGORIES.filter((c) => c.value === "Subsidy" || c.value === "Other");
+    if (cropIdParam) return CATEGORIES.filter((c) => c.value !== "Rental Income");
+    return CATEGORIES;
+  }, [isGeneralIncome, cropIdParam]);
 
   const [category, setCategory] = useState<IncomeCategory>("Crop Sale");
   const [subData, setSubData] = useState<SubFormData>(
     DEFAULT_DATA["Crop Sale"],
   );
-  const [date, setDate] = useState<Date>(new Date());
+  const [date, setDate] = useState<Date>(() =>
+    financialYearToStartDate(paramYear && yearOptions.includes(paramYear) ? paramYear : getCurrentFinancialYear()),
+  );
+  useEffect(() => {
+    if (!isEdit) setDate(financialYearToStartDate(selectedFinancialYear));
+  }, [selectedFinancialYear, isEdit]);
+
+  // Fetch crops when adding income linked to a crop (not general, not edit)
+  useEffect(() => {
+    if (isGeneralIncome || isEdit) return;
+    getCrops()
+      .then((r) => setCrops(r.data ?? []))
+      .catch(() => setCrops([]));
+  }, [isGeneralIncome, isEdit]);
+
+  useEffect(() => {
+    if (cropIdParam) setSelectedCropId(cropIdParam);
+  }, [cropIdParam]);
+
+  // Default category: general → Subsidy only; when crop selected hide Rental so switch if needed
+  useEffect(() => {
+    if (isGeneralIncome) {
+      if (category !== "Subsidy") {
+        setCategory("Subsidy");
+        setSubData(DEFAULT_DATA["Subsidy"]);
+      }
+      return;
+    }
+    if (!visibleCategories.some((c) => c.value === category)) {
+      const first = visibleCategories[0];
+      if (first) {
+        setCategory(first.value);
+        setSubData(DEFAULT_DATA[first.value]);
+      }
+    }
+  }, [isGeneralIncome, visibleCategories, category]);
+
   const [showPicker, setShowPicker] = useState(false);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
@@ -535,6 +678,8 @@ export default function AddIncomeScreen() {
   // ── Validation ──────────────────────────────────────────────────────────────
   const validate = (): string | null => {
     if (category === "Crop Sale") {
+      const effectiveCropId = selectedCropId || cropIdParam;
+      if (!effectiveCropId) return "પાક પસંદ કરો.";
       const d = subData as CropSaleData;
       if (!d.quantityKg || parseFloat(d.quantityKg) <= 0)
         return "માન્ય જથ્થો દાખલ કરો";
@@ -573,17 +718,18 @@ export default function AddIncomeScreen() {
       otherIncome: ["amount"],
     };
 
-    const raw = { ...(subData as Record<string, string>) };
+    const raw = { ...(subData as unknown as Record<string, string>) };
     const parsed: Record<string, string | number> = { ...raw };
     (numericKeys[fieldKey] ?? []).forEach((f) => {
       if (parsed[f] !== undefined) parsed[f] = parseFloat(raw[f]) || 0;
     });
 
+    const effectiveCropId = isGeneralIncome ? undefined : (selectedCropId || cropIdParam || undefined);
     return {
       category,
       date: date.toISOString(),
       notes,
-      ...(cropIdParam ? { cropId: cropIdParam } : {}),
+      ...(effectiveCropId ? { cropId: effectiveCropId } : {}),
       [fieldKey]: parsed,
     };
   };
@@ -627,6 +773,10 @@ export default function AddIncomeScreen() {
   // ── Active category meta ────────────────────────────────────────────────────
   const activeCat = CATEGORIES.find((c) => c.value === category)!;
 
+  const headerPaddingTop = Platform.OS === "ios" ? 52 : 40;
+  const headerTitle = isEdit ? "આવક સુધારો" : isGeneralIncome ? "સામાન્ય આવક" : activeCat ? `${activeCat.label} આવક` : "આવક ઉમેરો";
+  const headerSub = isEdit ? "" : isGeneralIncome ? "કોઈ પાક સંલગ્ન નહીં — અહેવાલમાં ગણાશે" : cropIdParam ? "પાક સાથે જોડાઈ" : "આવક પ્રકાર પસંદ કરો";
+
   // ─── UI ─────────────────────────────────────────────────────────────────────
   return (
     <ScrollView
@@ -635,35 +785,75 @@ export default function AddIncomeScreen() {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      {/* ── Page header ── */}
-      <View style={styles.pageHeader}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.pageTitle}>
-            {isEdit ? "આવક સુધારો" : "આવક ઉમેરો"}
-          </Text>
-          {cropIdParam && (
-            <Text style={styles.pageSubtitle}>પાક સાથે જોડાઈ</Text>
+      {/* ── Header (same as add-expense: gradient, back, title, subtitle, top space) ── */}
+      <LinearGradient
+        colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]}
+        style={[styles.header, { paddingTop: headerPaddingTop }]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.decorCircle1} />
+        <View style={styles.decorCircle2} />
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.headerBackBtn}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={20} color={C.green700} />
+          </TouchableOpacity>
+          <View style={{ alignItems: "center", flex: 1 }}>
+            <Text style={styles.headerTitle}>{headerTitle}</Text>
+            {headerSub ? <Text style={styles.headerSub}>{headerSub}</Text> : null}
+          </View>
+          <View style={{ width: 36 }} />
+        </View>
+      </LinearGradient>
+
+      {/* ── Financial year selector (before add) ── */}
+      {!isEdit && (
+        <View style={styles.yearCard}>
+          <Text style={styles.yearLabel}>📅 વર્ષ પસંદ કરો (જૂન–મે)</Text>
+          <View style={styles.yearRow}>
+            {yearOptions.map((fy) => {
+              const active = selectedFinancialYear === fy;
+              return (
+                <TouchableOpacity
+                  key={fy}
+                  onPress={() => setSelectedFinancialYear(fy)}
+                  style={[styles.yearPill, active && styles.yearPillActive]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.yearPillText, active && styles.yearPillTextActive]}>{fy}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* ── Crop select (same as expense): when adding income linked to a crop ── */}
+      {!isGeneralIncome && !isEdit && (
+        <View style={styles.cropSelectCard}>
+          <SectionLabel text="પાક પસંદ કરો *" />
+          {crops.length > 0 ? (
+            <SelectPicker
+              options={crops.map((c) => ({ value: c._id, label: getCropDropdownLabel(c) }))}
+              selected={selectedCropId || cropIdParam || ""}
+              onSelect={setSelectedCropId}
+              placeholder="આ આવક કયા પાક માટે?"
+            />
+          ) : (
+            <Text style={styles.generalExpenseNote}>કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો.</Text>
           )}
         </View>
-        {/* Active category badge */}
-        <View style={styles.catBadge}>
-          <Text style={styles.catBadgeEmoji}>{activeCat.emoji}</Text>
-          <Text style={styles.catBadgeText}>{activeCat.label}</Text>
-        </View>
-      </View>
+      )}
 
-      {/* ── Category ── */}
+      {/* ── Category (filtered: general = Subsidy+Other; crop from dashboard = hide ભાડાની આવક) ── */}
       <View style={styles.card}>
         <SectionLabel text="📂 આવકનો પ્રકાર" />
         <View style={styles.catGrid}>
-          {CATEGORIES.map((cat) => {
+          {visibleCategories.map((cat) => {
             const active = category === cat.value;
             return (
               <TouchableOpacity
@@ -796,6 +986,50 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   content: { padding: 16 },
 
+  // Header (same as add-expense)
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+    overflow: "hidden",
+    borderBottomWidth: 1,
+    borderBottomColor: C.borderLight,
+  },
+  decorCircle1: {
+    position: "absolute",
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "#C8E6C980",
+    top: -40,
+    right: -30,
+  },
+  decorCircle2: {
+    position: "absolute",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#C8E6C950",
+    bottom: 8,
+    left: 16,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerBackBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: C.green50,
+    borderWidth: 1,
+    borderColor: C.green100,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerTitle: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
+  headerSub: { fontSize: 15, color: C.textSecondary, marginTop: 2 },
+
   // Loading
   loadingWrap: {
     flex: 1,
@@ -840,6 +1074,111 @@ const styles = StyleSheet.create({
   },
   catBadgeEmoji: { fontSize: 16 },
   catBadgeText: { fontSize: 12, fontWeight: "700", color: C.green700 },
+
+  // Year selector
+  yearCard: {
+    backgroundColor: C.surface,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  yearLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.textMuted,
+    marginBottom: 10,
+  },
+  yearRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  yearPill: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: C.green50,
+    borderWidth: 1.5,
+    borderColor: C.borderLight,
+  },
+  yearPillActive: {
+    backgroundColor: C.green100,
+    borderColor: C.green700,
+  },
+  yearPillText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.textSecondary,
+  },
+  yearPillTextActive: {
+    color: C.green700,
+  },
+
+  // Crop select (same as expense)
+  cropSelectCard: {
+    backgroundColor: C.green50,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: C.green100,
+  },
+  selectBtn: {
+    backgroundColor: C.surface,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  selectBtnOpen: {
+    borderColor: C.green500,
+  },
+  selectBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: C.textPrimary,
+    flex: 1,
+  },
+  dropList: {
+    marginTop: 4,
+    backgroundColor: C.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+    maxHeight: 220,
+  },
+  dropItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: C.borderLight,
+  },
+  dropItemActive: {
+    backgroundColor: C.green50,
+  },
+  dropItemText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: C.textSecondary,
+    flex: 1,
+  },
+  dropItemTextActive: {
+    color: C.green700,
+  },
+  generalExpenseNote: {
+    fontSize: 15,
+    color: C.textMuted,
+    lineHeight: 22,
+  },
 
   // Card
   card: {

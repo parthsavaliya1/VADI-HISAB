@@ -451,6 +451,7 @@ function CropPickerModal({
   onClose,
   type,
   onSelectGeneralExpense,
+  onSelectGeneralIncome,
 }: {
   t: (s: string, k: string) => string;
   visible: boolean;
@@ -459,6 +460,7 @@ function CropPickerModal({
   onClose: () => void;
   type: "expense" | "income";
   onSelectGeneralExpense?: () => void;
+  onSelectGeneralIncome?: () => void;
 }) {
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
   const isExpense = type === "expense";
@@ -592,6 +594,7 @@ function CropPickerModal({
                 </TouchableOpacity>
               );
             })}
+            {/* સામાન્ય ખર્ચ only when Add Expense; સામાન્ય આવક only when Add Income */}
             {isExpense && onSelectGeneralExpense && (
               <TouchableOpacity
                 style={[styles.sheetCropRow, styles.sheetGeneralRow]}
@@ -609,6 +612,25 @@ function CropPickerModal({
                   <Text style={styles.sheetCropMeta}>કોઈ પાક સંલગ્ન નહીં</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            )}
+            {!isExpense && onSelectGeneralIncome && (
+              <TouchableOpacity
+                style={[styles.sheetCropRow, styles.sheetGeneralRow]}
+                onPress={() => {
+                  onSelectGeneralIncome();
+                  onClose();
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.sheetCropEmojiBg, { backgroundColor: C.incomePale }]}>
+                  <Ionicons name="wallet-outline" size={30} color={C.income} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sheetCropName}>સામાન્ય આવક / અન્ય આવક</Text>
+                  <Text style={styles.sheetCropMeta}>કોઈ પાક સંલગ્ન નહીં</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.income} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             )}
             <View style={{ height: 20 }} />
@@ -760,9 +782,7 @@ function RecentTransactions({
               activeOpacity={0.7}
               onPress={() =>
                 router.push(
-                  (t.type === "income"
-                    ? `/income/add-income?id=${t._id}`
-                    : `/expense/add-expense?id=${t._id}`) as any,
+                  `/transaction/details?id=${t._id}&type=${t.type}` as any,
                 )
               }
             >
@@ -1375,7 +1395,7 @@ export default function Dashboard() {
                     <TouchableOpacity
                       style={styles.editBtn}
                       onPress={() =>
-                        router.push(`/crop/add-crop?id=${c._id}` as any)
+                        router.push(`/crop/edit-crop?id=${c._id}` as any)
                       }
                     >
                       <Ionicons name="create-outline" size={20} color={C.green700} />
@@ -1454,14 +1474,14 @@ export default function Dashboard() {
         type={pickerType}
         onSelect={handleCropSelected}
         onClose={() => setPickerVisible(false)}
-        onSelectGeneralExpense={
-          pickerType === "expense"
-            ? () => {
-                setPickerVisible(false);
-                router.push("/expense/add-expense?general=1" as any);
-              }
-            : undefined
-        }
+        onSelectGeneralExpense={() => {
+          setPickerVisible(false);
+          router.push("/expense/add-expense?general=1" as any);
+        }}
+        onSelectGeneralIncome={() => {
+          setPickerVisible(false);
+          router.push("/income/add-income?general=1" as any);
+        }}
       />
     </View>
   );

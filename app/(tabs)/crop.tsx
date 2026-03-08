@@ -194,7 +194,7 @@ function CropCard({
 
         <TouchableOpacity
           style={[styles.swipeBtn, { backgroundColor: "#0284C7" }]}
-          onPress={() => { closeSwipe(); router.push(`/crop/add-crop?id=${item._id}`); }}
+          onPress={() => { closeSwipe(); router.push(`/crop/edit-crop?id=${item._id}` as any); }}
         >
           <Ionicons name="create-outline" size={20} color="#fff" />
           <Text style={styles.swipeBtnText}>ફેરફાર</Text>
@@ -309,7 +309,7 @@ function CropCard({
               <View style={styles.dropDivider} />
               <TouchableOpacity
                 style={styles.dropMenuItem}
-                onPress={() => { toggleMenu(); router.push(`/crop/add-crop?id=${item._id}`); }}
+                onPress={() => { toggleMenu(); router.push(`/crop/edit-crop?id=${item._id}` as any); }}
               >
                 <Ionicons name="create-outline" size={14} color={C.textSecondary} />
                 <Text style={styles.dropMenuText}>ફેરફાર કરો</Text>

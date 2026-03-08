@@ -2,6 +2,8 @@ import { useProfile } from "@/contexts/ProfileContext";
 import {
   createExpense,
   getCrops,
+  getCurrentFinancialYear,
+  getFinancialYearOptions,
   type AdvanceReason,
   type Crop,
   type ExpenseCategory,
@@ -32,6 +34,20 @@ import {
 } from "react-native";
 
 const BHAGMA_SHARING_KEY = "@vadi_bhagma_sharing";
+
+/** Financial year "2025-26" → June 1, 2025 (start of FY) */
+function financialYearToStartDate(fy: string): Date {
+  const [y] = fy.split("-").map(Number);
+  return new Date(y, 5, 1); // month 5 = June
+}
+
+/** Year options: previous, current, next e.g. ["2024-25", "2025-26", "2026-27"] */
+function getYearOptions(): string[] {
+  const current = getCurrentFinancialYear();
+  const [startY] = current.split("-").map(Number);
+  const prev = `${startY - 1}-${String(startY % 100).padStart(2, "0")}`;
+  return [prev, ...getFinancialYearOptions()];
+}
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CAT_GRID_PAD = 16;
@@ -279,16 +295,29 @@ function NumericInput({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AddExpense() {
-  const params = useLocalSearchParams<{ cropId?: string; general?: string }>();
+  const params = useLocalSearchParams<{ cropId?: string; general?: string; year?: string }>();
   const paramCropId = Array.isArray(params.cropId) ? params.cropId[0] : params.cropId;
+  const paramYear = Array.isArray(params.year) ? params.year[0] : params.year;
   const isGeneralExpense = (Array.isArray(params.general) ? params.general[0] : params.general) === "1";
   const { profile } = useProfile();
+
+  const yearOptions = getYearOptions();
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
+    () => paramYear && yearOptions.includes(paramYear) ? paramYear : getCurrentFinancialYear(),
+  );
+  const [expenseDate, setExpenseDate] = useState<Date>(() =>
+    financialYearToStartDate(paramYear && yearOptions.includes(paramYear) ? paramYear : getCurrentFinancialYear()),
+  );
 
   const [crops, setCrops] = useState<Crop[]>([]);
   const [selectedCropId, setSelectedCropId] = useState<string | "">("");
   const [generalDescription, setGeneralDescription] = useState("");
   const [generalAmount, setGeneralAmount] = useState("");
   const cropId = selectedCropId || paramCropId || undefined;
+
+  useEffect(() => {
+    setExpenseDate(financialYearToStartDate(selectedFinancialYear));
+  }, [selectedFinancialYear]);
 
   // Order: Active (live) first, then Harvested, then Closed
   const cropStatusOrder = (s: string | undefined) =>
@@ -405,7 +434,6 @@ export default function AddExpense() {
 
   const validate = (): string | null => {
     if (isGeneralExpense) {
-      if (!crops.length) return "સામાન્ય ખર્ચ માટે પહેલા ડેશબોર્ડથી ઓછામાં ઓછો એક પાક ઉમેરો.";
       if (!generalDescription.trim()) return "ખર્ચનો પ્રકાર / વિવરણ લખો (દા.ત. ફાર્મ વિકાસ, સાધન ખરીદી).";
       if (!generalAmount || Number(generalAmount) <= 0) return "ખર્ચની રકમ દાખલ કરો.";
       return null;
@@ -459,11 +487,11 @@ export default function AddExpense() {
       setSaving(true);
       if (category === "Labour" && labourMode === "Contract" && sharingType)
         persistSharing(sharingType, sharingCustom);
-      if (isGeneralExpense && crops[0]) {
+      if (isGeneralExpense) {
         await createExpense({
-          userId: profile?._id,
-          cropId: crops[0]._id,
+          cropId: null,
           category: "Labour",
+          date: expenseDate.toISOString(),
           notes: generalDescription.trim(),
           labourContract: {
             advanceReason: "Other",
@@ -476,9 +504,9 @@ export default function AddExpense() {
         return;
       }
       await createExpense({
-        userId: profile?._id,
         cropId: cropId as string,
         category: category as ExpenseCategory,
+        date: expenseDate.toISOString(),
         notes: notes.trim() || undefined,
         ...(category === "Seed" && {
           seed: {
@@ -563,7 +591,7 @@ export default function AddExpense() {
   };
 
   const activeCat = CATEGORIES.find((c) => c.value === category);
-  const paddingTop = Platform.OS === "ios" ? 50 : 36;
+  const paddingTop = Platform.OS === "ios" ? 52 : 40;
   const scrollRef = useRef<ScrollView>(null);
   const formSectionYRef = useRef(0);
   const scrollToForm = useCallback(() => {
@@ -634,58 +662,72 @@ export default function AddExpense() {
         showsVerticalScrollIndicator={false}
         keyboardDismissMode="on-drag"
       >
-        {/* ── General expense: description (what kind) + amount — not linked to any crop, used in report ── */}
+        {/* ── Financial year selector (before add) ── */}
+        <View style={styles.yearCard}>
+          <Text style={styles.yearLabel}>📅 વર્ષ પસંદ કરો (જૂન–મે)</Text>
+          <View style={styles.yearRow}>
+            {yearOptions.map((fy) => {
+              const active = selectedFinancialYear === fy;
+              return (
+                <TouchableOpacity
+                  key={fy}
+                  onPress={() => setSelectedFinancialYear(fy)}
+                  style={[styles.yearPill, active && styles.yearPillActive]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.yearPillText, active && styles.yearPillTextActive]}>{fy}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ── General expense: description + amount — not linked to any crop; no crop required ── */}
         {isGeneralExpense ? (
           <View style={styles.card}>
-            {crops.length === 0 ? (
-              <Text style={styles.generalExpenseNote}>સામાન્ય ખર્ચ માટે પહેલા ડેશબોર્ડથી ઓછામાં ઓછો એક પાક ઉમેરો.</Text>
-            ) : (
-              <>
-                <View style={styles.generalExpenseInfo}>
-                  <Ionicons name="information-circle" size={18} color={C.green700} />
-                  <Text style={styles.generalExpenseInfoText}>
-                    આ ખર્ચ કોઈ પાક સાથે લિંક નથી. વાર્ષિક ફાર્મ વિકાસ, સાધન ખરીદી વગેરે — અહેવાલમાં કુલ ખર્ચમાં ગણાશે.
-                  </Text>
-                </View>
-                <SectionLabel text="ખર્ચનો પ્રકાર / વિવરણ *" />
-                <TextInput
-                  style={styles.notesInput}
-                  value={generalDescription}
-                  onChangeText={setGeneralDescription}
-                  placeholder="દા.ત. ફાર્મ વિકાસ, સાધન ખરીદી, ભાડું, મરામત..."
-                  placeholderTextColor="#5B6570"
-                  multiline
-                />
-                <SectionLabel text="ખર્ચ રકમ *" />
-                <NumericInput
-                  value={generalAmount}
-                  onChange={setGeneralAmount}
-                  placeholder="0"
-                  prefix=""
-                />
-                <TouchableOpacity
-                  style={styles.saveBtn}
-                  onPress={handleSave}
-                  disabled={saving || !generalDescription.trim() || !generalAmount || Number(generalAmount) <= 0}
-                >
-                  <LinearGradient
-                    colors={["#2E7D32", "#4CAF50"]}
-                    style={styles.btnGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    {saving ? (
-                      <Text style={styles.btnText}>સાચવી રહ્યા છીએ...</Text>
-                    ) : (
-                      <>
-                        <Ionicons name="checkmark-circle" size={22} color="#fff" />
-                        <Text style={styles.btnText}>સાચવો</Text>
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              </>
-            )}
+            <View style={styles.generalExpenseInfo}>
+              <Ionicons name="information-circle" size={18} color={C.green700} />
+              <Text style={styles.generalExpenseInfoText}>
+                આ ખર્ચ કોઈ પાક સાથે લિંક નથી. વાર્ષિક ફાર્મ વિકાસ, સાધન ખરીદી વગેરે — અહેવાલમાં કુલ ખર્ચમાં ગણાશે.
+              </Text>
+            </View>
+            <SectionLabel text="ખર્ચનો પ્રકાર / વિવરણ *" />
+            <TextInput
+              style={styles.notesInput}
+              value={generalDescription}
+              onChangeText={setGeneralDescription}
+              placeholder="દા.ત. ફાર્મ વિકાસ, સાધન ખરીદી, ભાડું, મરામત..."
+              placeholderTextColor="#5B6570"
+              multiline
+            />
+            <SectionLabel text="ખર્ચ રકમ *" />
+            <NumericInput
+              value={generalAmount}
+              onChange={setGeneralAmount}
+              placeholder="0"
+              prefix=""
+            />
+            <TouchableOpacity
+              style={styles.saveBtn}
+              onPress={handleSave}
+              disabled={saving || !generalDescription.trim() || !generalAmount || Number(generalAmount) <= 0}
+            >
+              <LinearGradient
+                colors={["#2E7D32", "#4CAF50"]}
+                style={styles.btnGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                {saving ? (
+                  <Text style={styles.btnText}>સાચવી રહ્યા છીએ...</Text>
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={22} color="#fff" />
+                    <Text style={styles.btnText}>સાચવો</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         ) : (
           <>
@@ -1218,6 +1260,45 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 15, color: C.textSecondary, marginTop: 2 },
 
   scroll: { padding: CAT_GRID_PAD },
+  yearCard: {
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 18,
+    borderWidth: 1.5,
+    borderColor: C.borderLight,
+  },
+  yearLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.textMuted,
+    marginBottom: 10,
+  },
+  yearRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  yearPill: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: C.green50,
+    borderWidth: 1.5,
+    borderColor: C.borderLight,
+  },
+  yearPillActive: {
+    backgroundColor: C.green100,
+    borderColor: C.green700,
+  },
+  yearPillText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.textSecondary,
+  },
+  yearPillTextActive: {
+    color: C.green700,
+  },
   cropSelectCard: {
     backgroundColor: C.surfaceGreen,
     borderRadius: 16,
