@@ -115,6 +115,13 @@ function areaUnitLabel(unit: string | undefined, t: (s: string, k: string) => st
   return unit?.toLowerCase() === "acre" ? t("common", "acre") : t("common", "bigha");
 }
 
+/** Display vigha/bigha area as integer (no decimals). */
+function formatVighaDisplay(area: number | string | undefined): string {
+  const n = Number(area);
+  if (area == null || area === "" || isNaN(n)) return String(area ?? "—");
+  return String(Math.round(n));
+}
+
 /** Total land in bigha for per-bigha calculations (acre → bigha ≈ ×1.6) */
 function totalLandBigha(profile: { totalLand?: { value: number; unit?: string } } | null): number {
   const tl = profile?.totalLand;
@@ -565,7 +572,7 @@ function CropPickerModal({
                             ? "❄️ રવી"
                             : "☀️ ઉનાળો"}
                         {" · "}
-                        <Text style={styles.bighaFont}>{crop.area} </Text>
+                        <Text style={styles.bighaFont}>{formatVighaDisplay(crop.area)} </Text>
                         {areaUnitLabel(crop.areaUnit, t)}
                       </Text>
                       {crop.landType === "bhagma" && crop.bhagmaPercentage != null && (
@@ -1392,7 +1399,7 @@ export default function Dashboard() {
                       const isSel = selectedCrop === i;
                       const cropDate = formatDisplayDate(crop.createdAt);
                       const farmLabel = (crop as any).farmName || (crop as any).farm_name || "—";
-                      const areaLine = [farmLabel !== "—" ? farmLabel : null, `${crop.area} ${areaUnitLabel(crop.areaUnit, t)}`].filter(Boolean).join(" · ");
+                      const areaLine = [farmLabel !== "—" ? farmLabel : null, `${formatVighaDisplay(crop.area)} ${areaUnitLabel(crop.areaUnit, t)}`].filter(Boolean).join(" · ");
                       return (
                         <PressableCard
                           key={crop._id}
@@ -1476,9 +1483,15 @@ export default function Dashboard() {
             const areaBigha = cropAreaBigha(c.area, c.areaUnit);
             const incPerBigha = areaBigha > 0 ? inc / areaBigha : 0;
             const expPerBigha = areaBigha > 0 ? exp / areaBigha : 0;
+            const detailColors = getCropColors(c.cropName);
             return (
               <View style={styles.section}>
-                <View style={styles.detailCard}>
+                <LinearGradient
+                  colors={detailColors}
+                  style={[styles.detailCard, styles.detailCardGrad]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
                   <View style={styles.detailHeader}>
                     <View style={styles.detailEmojiWrap}>
                       <Text style={styles.detailEmoji}>
@@ -1499,7 +1512,7 @@ export default function Dashboard() {
                       <Text style={styles.detailMeta}>
                         {c.season === "Kharif" ? "ખરીફ" : c.season === "Rabi" ? "રવી" : "ઉનાળો"}
                         {" · "}
-                        {c.area} {areaUnitLabel(c.areaUnit, t)}
+                        {formatVighaDisplay(c.area)} {areaUnitLabel(c.areaUnit, t)}
                       </Text>
                       <Text style={styles.detailDate}>{formatDisplayDate(c.createdAt)}</Text>
                     </View>
@@ -1575,7 +1588,7 @@ export default function Dashboard() {
                       </View>
                     </PressableCard>
                   </View>
-                </View>
+                </LinearGradient>
               </View>
             );
           })();
@@ -2022,16 +2035,17 @@ const styles = StyleSheet.create({
   emptyCropBtnText: { fontSize: 18, color: "#5D4037", fontWeight: "800" },
 
   detailCard: {
-    backgroundColor: C.surface,
     borderRadius: 20,
     padding: 20,
-    borderWidth: 1,
-    borderColor: C.borderLight,
+    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 3,
+  },
+  detailCardGrad: {
+    borderWidth: 0,
   },
   detailHeader: {
     flexDirection: "row",

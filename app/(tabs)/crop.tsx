@@ -336,7 +336,7 @@ function CropCard({
             <View style={styles.footerItem}>
               <Ionicons name="resize-outline" size={13} color={C.textMuted} />
               <Text style={styles.footerText}>
-                {item.area} {item.areaUnit ?? "Bigha"}
+                {typeof item.area === "number" || item.area != null ? Math.round(Number(item.area)) : "—"} {item.areaUnit ?? "Bigha"}
               </Text>
             </View>
 
@@ -519,7 +519,7 @@ function StatsBar({
             <View style={styles.statBoxBighaContent}>
               <Ionicons name="resize-outline" size={20} color={C.green700} style={{ marginBottom: 4 }} />
               <Text style={[styles.statValueBigha, { color: C.green700 }]}>
-                {usedBigha % 1 !== 0 ? usedBigha.toFixed(1) : usedBigha}
+                {Math.round(usedBigha)}
               </Text>
               <Text style={styles.statLabelBigha}>કુલ વીઘા</Text>
             </View>
@@ -681,7 +681,7 @@ function ChartView({ crops, totalLandBigha = 0 }: { crops: Crop[]; totalLandBigh
               <View style={styles.pieCenter}>
                 <Text style={styles.pieCenterLabel}>કુલ</Text>
                 <Text style={styles.pieCenterValue}>
-                  {total % 1 !== 0 ? total.toFixed(1) : total}
+                  {Math.round(total)}
                 </Text>
                 <Text style={styles.pieCenterUnit}>વીઘા</Text>
               </View>
@@ -694,7 +694,7 @@ function ChartView({ crops, totalLandBigha = 0 }: { crops: Crop[]; totalLandBigh
                     {slice.label}
                   </Text>
                   <Text style={styles.pieLegendValue}>
-                    {slice.value % 1 !== 0 ? slice.value.toFixed(1) : slice.value}
+                    {Math.round(slice.value)}
                   </Text>
                   <Text style={styles.pieLegendUnit}>વીઘા</Text>
                   <Text style={styles.pieLegendPct}>

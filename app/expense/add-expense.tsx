@@ -181,7 +181,7 @@ function getCropDropdownLabel(c: Crop): string {
   const emoji = c.cropEmoji ?? "🌱";
   const name = cropDisplayNameGuj(c.cropName ?? "");
   const season = SEASON_DISPLAY[c.season ?? ""] ?? (c.season ?? "—");
-  const area = c.area != null ? String(c.area) : "—";
+  const area = c.area != null ? String(Math.round(Number(c.area))) : "—";
   const unit = AREA_UNIT_GUJ[(c.areaUnit ?? "Bigha") as string] ?? "વીઘા";
   const bhagma = c.landType === "bhagma" && c.bhagmaPercentage != null ? ` · ભાગમા ${c.bhagmaPercentage}%` : "";
   return `${emoji} ${name} · ${season} · ${area} ${unit}${bhagma}`;
