@@ -100,8 +100,7 @@ export function VighaChart({ crops, totalLandBigha = 0 }: { crops: Crop[]; total
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>વીઘા ચાર્ટ</Text>
-      <Text style={styles.subtitle}>સક્રિય પાક અને બાકી વીઘા</Text>
+      <Text style={styles.title}>કેટલા વીઘા માં શું વાવ્યું</Text>
       {!showPie ? (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyEmoji}>📊</Text>
@@ -160,8 +159,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  title: { fontSize: 21, fontWeight: "800", color: C.textPrimary, marginBottom: 4 },
-  subtitle: { fontSize: 15, fontWeight: "600", color: C.textMuted, marginBottom: 18 },
+  title: { fontSize: 24, fontWeight: "900", color: C.textPrimary, marginBottom: 16 },
   pieWrap: { alignSelf: "center", marginBottom: 24, position: "relative", alignItems: "center", justifyContent: "center" },
   pieCenter: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
   pieCenterLabel: { fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 2 },
@@ -181,9 +179,9 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
   },
   legendDot: { width: 14, height: 14, borderRadius: 7 },
-  legendLabel: { flex: 1, fontSize: 15, fontWeight: "800", color: C.textPrimary },
-  legendValue: { fontSize: 16, fontWeight: "900", color: C.green700, minWidth: 28, textAlign: "right" },
-  legendUnit: { fontSize: 13, fontWeight: "700", color: C.textMuted },
+  legendLabel: { flex: 1, fontSize: 18, fontWeight: "900", color: C.textPrimary },
+  legendValue: { fontSize: 19, fontWeight: "900", color: C.green700, minWidth: 36, textAlign: "right" },
+  legendUnit: { fontSize: 16, fontWeight: "800", color: C.textMuted },
   legendPct: { fontSize: 14, fontWeight: "800", color: C.textSecondary, minWidth: 36, textAlign: "right" },
   emptyWrap: { alignItems: "center", paddingVertical: 28, paddingHorizontal: 16 },
   emptyEmoji: { fontSize: 36, marginBottom: 12 },

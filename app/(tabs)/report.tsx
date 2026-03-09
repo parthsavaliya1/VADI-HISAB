@@ -13,6 +13,7 @@ import {
   getYearlyReport,
   type CropReportRow,
 } from "@/utils/api";
+import { formatWholeNumber } from "@/utils/format";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -85,7 +86,7 @@ const EXPENSE_CATEGORY_ORDER = ["Seed", "Fertilizer", "Pesticide", "Labour", "Ma
 const BAR_MAX_WIDTH = SCREEN_W - 32 - 100;
 
 function formatINR(n: number): string {
-  return n.toLocaleString("en-IN");
+  return formatWholeNumber(n);
 }
 
 function totalLandBigha(profile: { totalLand?: { value: number; unit?: string } } | null): number {
@@ -150,8 +151,13 @@ export default function ReportScreen() {
   const extraIncome = summary.extraIncome ?? 0;
   const cropExpense = summary.cropExpense ?? 0;
   const extraExpense = summary.extraExpense ?? 0;
+  const displayExpense = summary.cropExpense ?? summary.totalExpense;
+  const displayNetProfit = summary.totalIncome - displayExpense;
   const crops = (report?.crops ?? []) as CropReportRow[];
   const showRanking = analytics != null && analytics.percentileRank != null;
+  const rankingTopPercent = analytics?.percentileRank != null ? Math.max(1, Math.round(100 - analytics.percentileRank)) : null;
+  const compareDiff = compare ? (compare.myIncomePerBigha ?? 0) - (compare.avgIncomePerBigha ?? 0) : 0;
+  const compareDiffText = `${formatINR(Math.abs(compareDiff))} ${compareDiff >= 0 ? "વધારે" : "ઓછું"}`;
 
   return (
     <View style={styles.container}>
@@ -201,20 +207,20 @@ export default function ReportScreen() {
         >
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
-              <View style={[styles.summaryBox, { backgroundColor: C.incomePale }]}>
-                <Ionicons name="trending-up" size={16} color={C.income} />
+              <View style={[styles.summaryBox, styles.summaryBoxIncome]}>
+                <Ionicons name="trending-up" size={18} color={C.income} />
                 <Text style={[styles.summaryValue, { color: C.income }]}>{formatINR(summary.totalIncome)}</Text>
                 <Text style={styles.summaryLabel}>કુલ આવક</Text>
               </View>
-              <View style={[styles.summaryBox, { backgroundColor: C.expensePale }]}>
-                <Ionicons name="trending-down" size={16} color={C.expense} />
-                <Text style={[styles.summaryValue, { color: C.expense }]}>{formatINR(summary.totalExpense)}</Text>
+              <View style={[styles.summaryBox, styles.summaryBoxExpense]}>
+                <Ionicons name="trending-down" size={18} color={C.expense} />
+                <Text style={[styles.summaryValue, { color: C.expense }]}>{formatINR(displayExpense)}</Text>
                 <Text style={styles.summaryLabel}>કુલ ખર્ચ</Text>
               </View>
-              <View style={[styles.summaryBox, { backgroundColor: summary.netProfit >= 0 ? C.incomePale : C.expensePale }]}>
-                <Ionicons name="wallet" size={16} color={summary.netProfit >= 0 ? C.income : C.expense} />
-                <Text style={[styles.summaryValue, { color: summary.netProfit >= 0 ? C.income : C.expense }]}>
-                  {formatINR(summary.netProfit)}
+              <View style={[styles.summaryBox, { backgroundColor: displayNetProfit >= 0 ? C.incomePale : C.expensePale }]}>
+                <Ionicons name="wallet" size={18} color={displayNetProfit >= 0 ? C.income : C.expense} />
+                <Text style={[styles.summaryValue, { color: displayNetProfit >= 0 ? C.income : C.expense }]}>
+                  {formatINR(displayNetProfit)}
                 </Text>
                 <Text style={styles.summaryLabel}>ચોખ્ખો નફો</Text>
               </View>
@@ -222,13 +228,12 @@ export default function ReportScreen() {
           </View>
 
           {/* Expense category pie chart — Labour 30%, Machinery 39%, etc. */}
-          <ExpensePieChart byCategory={expenseAnalytics?.myByCategory ?? {}} />
+          <ExpensePieChart byCategory={expenseAnalytics?.myByCategory ?? {}} centerTotal={displayExpense} />
 
           {/* 1. Expense analysis — vertical bars, તમારો vs સરેરાશ (per bigha when available) */}
           {(expenseAnalytics || (report && (report as any).summary)) && (
             <View style={styles.chartCard}>
               <Text style={styles.chartCardTitle}>💸 ખર્ચ વિશ્લેષણ</Text>
-              <Text style={styles.chartCardSub}>તમારો vs સરેરાશ ખેડૂત — કેટેગરી પ્રમાણે</Text>
               {(expenseAnalytics && (expenseAnalytics.myArea ?? 0) > 0) && (
                 <Text style={styles.perBighaHighlight}>※ સરખામણી પ્રતિ વીઘા એકમમાં છે</Text>
               )}
@@ -243,47 +248,50 @@ export default function ReportScreen() {
                     return <Text style={styles.chartEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>;
                   }
                   const maxVal = Math.max(1, ...categories.map((cat) => Math.max(myBy[cat] || 0, avgBy[cat] || 0)));
-                  const colWidth = Math.max(36, (SCREEN_W - 32 - 24) / categories.length);
+                  const chartContentWidth = Math.max(SCREEN_W - 32 - 24, categories.length * 64);
+                  const colWidth = chartContentWidth / categories.length;
                   return (
                     <View style={styles.barChartWrap}>
-                      <View style={[styles.verticalChartRow, { height: VERTICAL_CHART_HEIGHT + 56 }]}>
-                        {categories.map((cat) => {
-                          const my = myBy[cat] || 0;
-                          const avg = avgBy[cat] || 0;
-                          const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
-                          return (
-                            <View key={cat} style={[styles.verticalBarCol, { width: colWidth }]}>
-                              <View style={styles.verticalBars}>
-                                <View
-                                  style={[
-                                    styles.verticalBar,
-                                    styles.barFillMy,
-                                    { width: hasCompare ? 14 : 22, height: Math.max(2, (my / maxVal) * VERTICAL_CHART_HEIGHT) },
-                                  ]}
-                                />
-                                {hasCompare && (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartScrollContent}>
+                        <View style={[styles.verticalChartRow, styles.verticalChartRowTall, { width: chartContentWidth }]}>
+                          {categories.map((cat) => {
+                            const my = myBy[cat] || 0;
+                            const avg = avgBy[cat] || 0;
+                            const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
+                            return (
+                              <View key={cat} style={[styles.verticalBarCol, styles.verticalBarColWide, { width: colWidth }]}>
+                                <View style={styles.verticalBars}>
                                   <View
                                     style={[
                                       styles.verticalBar,
-                                      styles.barFillAvg,
-                                      { width: 14, height: Math.max(2, (avg / maxVal) * VERTICAL_CHART_HEIGHT) },
+                                      styles.barFillMy,
+                                      { width: hasCompare ? 14 : 22, height: Math.max(2, (my / maxVal) * VERTICAL_CHART_HEIGHT) },
                                     ]}
                                   />
-                                )}
+                                  {hasCompare && (
+                                    <View
+                                      style={[
+                                        styles.verticalBar,
+                                        styles.barFillAvg,
+                                        { width: 14, height: Math.max(2, (avg / maxVal) * VERTICAL_CHART_HEIGHT) },
+                                      ]}
+                                    />
+                                  )}
+                                </View>
+                                <Text style={styles.verticalBarYear} numberOfLines={2}>{label}</Text>
+                                <View style={styles.verticalBarValues}>
+                                  <Text style={styles.barValue} numberOfLines={1}>{formatINR(my)}</Text>
+                                  {hasCompare && <Text style={styles.barValueAvg} numberOfLines={1}>{formatINR(avg)}</Text>}
+                                </View>
                               </View>
-                              <Text style={styles.verticalBarYear} numberOfLines={1}>{label}</Text>
-                              <View style={styles.verticalBarValues}>
-                                <Text style={styles.barValue} numberOfLines={1}>{formatINR(my)}</Text>
-                                {hasCompare && <Text style={styles.barValueAvg} numberOfLines={1}>{formatINR(avg)}</Text>}
-                              </View>
-                            </View>
-                          );
-                        })}
-                      </View>
+                            );
+                          })}
+                        </View>
+                      </ScrollView>
                       <View style={styles.barLegend}>
                         <View style={styles.barLegendItem}>
                           <View style={[styles.barLegendDot, { backgroundColor: C.expense }]} />
-                          <Text style={styles.barLegendText}>તમારો</Text>
+                          <Text style={styles.barLegendText}>તમારી</Text>
                         </View>
                         {hasCompare && (
                           <View style={styles.barLegendItem}>
@@ -299,9 +307,11 @@ export default function ReportScreen() {
                         if (higher.length === 0) return null;
                         return (
                           <View style={styles.improvementNote}>
-                            <Ionicons name="bulb-outline" size={18} color={C.green700} />
+                            <View style={styles.improvementNoteIconWrap}>
+                              <Ionicons name="bulb-outline" size={24} color={C.green700} />
+                            </View>
                             <Text style={styles.improvementNoteText}>
-                              સુધારણા: {higher.map((cat) => EXPENSE_CATEGORY_LABELS[cat] ?? cat).join(", ")} ખર્ચ સરેરાશ કરતાં વધારે છે. ખર્ચ ઘટાડવાથી કુલ નફો વધારો શકાશે.
+                              સૂચન: {higher.map((cat) => EXPENSE_CATEGORY_LABELS[cat] ?? cat).join(", ")} માં તમારો ખર્ચ સરેરાશ કરતાં વધારે છે. અહીં થોડું ધ્યાન આપશો તો નફો વધી શકે.
                             </Text>
                           </View>
                         );
@@ -319,29 +329,32 @@ export default function ReportScreen() {
                         return <Text style={styles.chartEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>;
                       }
                       const maxVal = Math.max(1, ...Object.values(myBy));
-                      const colWidth = Math.max(36, (SCREEN_W - 32 - 24) / categories.length);
+                      const chartContentWidth = Math.max(SCREEN_W - 32 - 24, categories.length * 64);
+                      const colWidth = chartContentWidth / categories.length;
                       return (
-                        <View style={[styles.verticalChartRow, { height: VERTICAL_CHART_HEIGHT + 56 }]}>
-                          {categories.map((cat) => {
-                            const my = myBy[cat] || 0;
-                            const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
-                            return (
-                              <View key={cat} style={[styles.verticalBarCol, { width: colWidth }]}>
-                                <View style={styles.verticalBars}>
-                                  <View
-                                    style={[
-                                      styles.verticalBar,
-                                      styles.barFillMy,
-                                      { width: 22, height: Math.max(2, (my / maxVal) * VERTICAL_CHART_HEIGHT) },
-                                    ]}
-                                  />
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartScrollContent}>
+                          <View style={[styles.verticalChartRow, styles.verticalChartRowTall, { width: chartContentWidth }]}>
+                            {categories.map((cat) => {
+                              const my = myBy[cat] || 0;
+                              const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
+                              return (
+                                <View key={cat} style={[styles.verticalBarCol, styles.verticalBarColWide, { width: colWidth }]}>
+                                  <View style={styles.verticalBars}>
+                                    <View
+                                      style={[
+                                        styles.verticalBar,
+                                        styles.barFillMy,
+                                        { width: 22, height: Math.max(2, (my / maxVal) * VERTICAL_CHART_HEIGHT) },
+                                      ]}
+                                    />
+                                  </View>
+                                  <Text style={styles.verticalBarYear} numberOfLines={2}>{label}</Text>
+                                  <Text style={styles.barValue}>{formatINR(my)}</Text>
                                 </View>
-                                <Text style={styles.verticalBarYear} numberOfLines={1}>{label}</Text>
-                                <Text style={styles.barValue}>{formatINR(my)}</Text>
-                              </View>
-                            );
-                          })}
-                        </View>
+                              );
+                            })}
+                          </View>
+                        </ScrollView>
                       );
                     })()
                   ) : (
@@ -358,8 +371,7 @@ export default function ReportScreen() {
           {/* 2. Production per bigha — vertical bar compare (તમારો vs સરેરાશ), same style as expense */}
           {compare && compare.myTotalArea > 0 && (
             <View style={styles.chartCard}>
-              <Text style={styles.chartCardTitle}>🌾 ઉત્પાદન પ્રતિ વીઘા</Text>
-              <Text style={styles.chartCardSub}>આવક પ્રતિ વીઘા — ભાવ ફેરફારથી સાચી સરખામણી</Text>
+              <Text style={styles.chartCardTitle}>🌾 આવક પ્રતિ વીઘા</Text>
               <Text style={styles.perBighaHighlight}>※ સરખામણી પ્રતિ વીઘા એકમમાં છે</Text>
               <View style={styles.verticalChartWrap}>
                 {(() => {
@@ -378,8 +390,8 @@ export default function ReportScreen() {
                             ]}
                           />
                         </View>
-                        <Text style={styles.verticalBarYear}>તમારો</Text>
-                        <Text style={[styles.rankingCompareValue, { color: C.income, fontSize: 14, marginTop: 2 }]}>{formatINR(myVal)}</Text>
+                        <Text style={styles.verticalBarYear}>તમારી</Text>
+                        <Text style={[styles.rankingCompareValue, styles.compareChartValue, { color: C.income }]}>{formatINR(myVal)}</Text>
                       </View>
                       <View style={[styles.verticalBarCol, { width: 90, marginHorizontal: 12 }]}>
                         <View style={styles.verticalBars}>
@@ -391,7 +403,7 @@ export default function ReportScreen() {
                           />
                         </View>
                         <Text style={styles.verticalBarYear}>સરેરાશ</Text>
-                        <Text style={[styles.rankingCompareValue, { fontSize: 14, color: C.textMuted, marginTop: 2 }]}>{formatINR(avgVal)}</Text>
+                        <Text style={[styles.rankingCompareValue, styles.compareChartValue, { color: C.textMuted }]}>{formatINR(avgVal)}</Text>
                       </View>
                     </View>
                   );
@@ -400,7 +412,7 @@ export default function ReportScreen() {
               <View style={styles.barLegend}>
                 <View style={styles.barLegendItem}>
                   <View style={[styles.barLegendDot, { backgroundColor: C.income }]} />
-                  <Text style={styles.barLegendText}>તમારો</Text>
+                  <Text style={styles.barLegendText}>તમારી</Text>
                 </View>
                 <View style={styles.barLegendItem}>
                   <View style={[styles.barLegendDot, { backgroundColor: C.textMuted }]} />
@@ -413,19 +425,19 @@ export default function ReportScreen() {
           {/* Crop vs Extra breakdown */}
           <View style={styles.breakdownCard}>
             <Text style={styles.breakdownTitle}>📋 આવક-ખર્ચ વિગત</Text>
-            <View style={styles.breakdownRow}>
+            <View style={[styles.breakdownRow, styles.breakdownRowIncome]}>
               <Text style={styles.breakdownLabel}>પાક આવક</Text>
               <Text style={[styles.breakdownValue, { color: C.income }]}>{formatINR(cropIncome)}</Text>
             </View>
-            <View style={styles.breakdownRow}>
+            <View style={[styles.breakdownRow, styles.breakdownRowIncome]}>
               <Text style={styles.breakdownLabel}>અન્ય આવક (ભાડા, સબસિડી વગેરે)</Text>
               <Text style={[styles.breakdownValue, { color: C.income }]}>{formatINR(extraIncome)}</Text>
             </View>
-            <View style={styles.breakdownRow}>
+            <View style={[styles.breakdownRow, styles.breakdownRowExpense]}>
               <Text style={styles.breakdownLabel}>પાક ખર્ચ</Text>
               <Text style={[styles.breakdownValue, { color: C.expense }]}>{formatINR(cropExpense)}</Text>
             </View>
-            <View style={styles.breakdownRow}>
+            <View style={[styles.breakdownRow, styles.breakdownRowExpense]}>
               <Text style={styles.breakdownLabel}>અન્ય ખર્ચ (ઘર, મશીન વગેરે)</Text>
               <Text style={[styles.breakdownValue, { color: C.expense }]}>{formatINR(extraExpense)}</Text>
             </View>
@@ -438,33 +450,33 @@ export default function ReportScreen() {
           {showRanking && analytics && (
             <View style={styles.rankingCard}>
               <Text style={styles.rankingTitle}>🏆 તમારો ક્રમ</Text>
-              <View style={styles.rankingRow}>
-                <Ionicons name="trophy" size={24} color={C.green700} />
+              {rankingTopPercent != null && (
+                <View style={styles.rankingHero}>
+                  <Ionicons name="trophy" size={28} color={C.green700} />
+                  <Text style={styles.rankingHeroText}>
+                    આ વર્ષે તમે <Text style={styles.rankingHighlight}>ટોચના {rankingTopPercent}% </Text>ખેડૂતોમાં છો
+                  </Text>
+                </View>
+              )}
+              <View style={styles.rankingPoint}>
+                <Ionicons name="checkmark-circle" size={20} color={C.green700} />
                 <Text style={styles.rankingText}>
-                  આ વર્ષ તમે <Text style={styles.rankingHighlight}>ટોચના {(100 - (analytics.percentileRank ?? 0)).toFixed(0)}%</Text> ખેડૂતોમાં છો
-                  (તમારી આવક {analytics.percentileRank?.toFixed(0)}% ખેડૂતો કરતાં વધારે છે).
+                  તમારી આવક ઘણા ખેડૂતો કરતાં સારી છે, એટલે તમારું કામ સાચી દિશામાં છે.
                 </Text>
               </View>
-              {analytics.sampleSize > 0 && (
-                <Text style={styles.rankingMeta}>{analytics.sampleSize} ખેડૂતો સાથે સરખામણી</Text>
-              )}
               {compare && compare.sampleSize > 0 && (
-                <View style={styles.rankingCompare}>
-                  <Text style={styles.rankingCompareLabel}>ઉપર ઉત્પાદન પ્રતિ વીઘા ચાર્ટ જુઓ — સરખામણી પ્રતિ વીઘા એકમમાં</Text>
-                  <Text style={styles.rankingCompareLabel}>સરેરાશ: {formatINR(compare.avgIncomePerBigha ?? 0)} · તમારી: {formatINR(compare.myIncomePerBigha ?? 0)}</Text>
+                <View style={styles.rankingPoint}>
+                  <Ionicons name="analytics" size={20} color={C.green700} />
+                  <Text style={styles.rankingText}>
+                    આવક પ્રતિ વીઘા સરેરાશ કરતાં {compareDiffText} છે.
+                  </Text>
                 </View>
               )}
-              {analytics.advice && analytics.advice.length > 0 && (
-                <View style={styles.adviceWrap}>
-                  {analytics.advice.map((a, i) => (
-                    <Text key={i} style={styles.adviceText}>• {a}</Text>
-                  ))}
-                </View>
-              )}
+              {analytics.sampleSize > 0 && <Text style={styles.rankingMeta}>{analytics.sampleSize} ખેડૂતોની સરખામણી પરથી</Text>}
             </View>
           )}
 
-          <Text style={styles.sectionTitle}>🌾 પાક વાઇઝ</Text>
+          <Text style={styles.sectionTitle}>🌾 આ વર્ષ ના પાક</Text>
           {crops.length === 0 ? (
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyEmoji}>📋</Text>
@@ -543,39 +555,44 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: "row", gap: 8 },
   summaryBox: {
     flex: 1,
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
-  summaryValue: { fontSize: 16, fontWeight: "800" },
-  summaryLabel: { fontSize: 13, color: C.textMuted, fontWeight: "700" },
+  summaryBoxIncome: { backgroundColor: "#ECFDF3" },
+  summaryBoxExpense: { backgroundColor: "#FEF2F2" },
+  summaryValue: { fontSize: 18, fontWeight: "900" },
+  summaryLabel: { fontSize: 14, color: C.textMuted, fontWeight: "700" },
   breakdownCard: {
     backgroundColor: C.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
+    padding: 18,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  breakdownTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary, marginBottom: 12 },
-  breakdownRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6 },
-  breakdownLabel: { fontSize: 16, color: C.textSecondary, flex: 1 },
-  breakdownValue: { fontSize: 18, fontWeight: "800", marginLeft: 8 },
+  breakdownTitle: { fontSize: 24, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
+  breakdownRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, marginBottom: 10 },
+  breakdownRowIncome: { backgroundColor: "#F0FDF4" },
+  breakdownRowExpense: { backgroundColor: "#FEF2F2" },
+  breakdownLabel: { fontSize: 18, color: C.textSecondary, flex: 1, fontWeight: "700" },
+  breakdownValue: { fontSize: 20, fontWeight: "900", marginLeft: 8 },
   chartCard: {
     backgroundColor: C.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
+    padding: 18,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  chartCardTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary, marginBottom: 4 },
+  chartCardTitle: { fontSize: 25, fontWeight: "900", color: C.textPrimary, marginBottom: 8 },
   chartCardSub: { fontSize: 15, color: C.textMuted, marginBottom: 14 },
-  perBighaHighlight: { fontSize: 14, color: C.green700, marginBottom: 10, fontWeight: "600" },
-  chartEmpty: { fontSize: 15, color: C.textMuted, textAlign: "center", paddingVertical: 12 },
-  chartHint: { fontSize: 14, color: C.textMuted, textAlign: "center", marginTop: 8 },
-  barChartWrap: { gap: 12 },
+  perBighaHighlight: { fontSize: 18, color: C.green700, marginBottom: 14, fontWeight: "800" },
+  chartEmpty: { fontSize: 18, color: C.textMuted, textAlign: "center", paddingVertical: 12, fontWeight: "600" },
+  chartHint: { fontSize: 16, color: C.textMuted, textAlign: "center", marginTop: 8, fontWeight: "600" },
+  barChartWrap: { gap: 14 },
   barRow: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 8 },
   barLabel: { fontSize: 15, fontWeight: "700", color: C.textSecondary, width: 72 },
   barGroup: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
@@ -586,33 +603,45 @@ const styles = StyleSheet.create({
   barFill: { height: "100%", borderRadius: 6 },
   barFillMy: { backgroundColor: C.expense },
   barFillAvg: { backgroundColor: C.textMuted },
-  barValue: { fontSize: 14, fontWeight: "700", color: C.expense, minWidth: 52 },
-  barValueAvg: { fontSize: 14, fontWeight: "700", color: C.textMuted, minWidth: 52 },
-  barLegend: { flexDirection: "row", gap: 16, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.borderLight },
+  barValue: { fontSize: 16, fontWeight: "800", color: C.expense, minWidth: 58 },
+  barValueAvg: { fontSize: 16, fontWeight: "800", color: C.textMuted, minWidth: 58 },
+  barLegend: { flexDirection: "row", gap: 22, marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.borderLight, justifyContent: "center" },
   barLegendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  barLegendDot: { width: 10, height: 10, borderRadius: 5 },
-  barLegendText: { fontSize: 14, color: C.textMuted, fontWeight: "600" },
+  barLegendDot: { width: 12, height: 12, borderRadius: 6 },
+  barLegendText: { fontSize: 17, color: C.textMuted, fontWeight: "800", textAlign: "center" },
   improvementNote: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 8,
+    gap: 12,
     marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: C.borderLight,
-    backgroundColor: C.surfaceGreen,
-    padding: 12,
-    borderRadius: 10,
+    backgroundColor: "#ECFDF5",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
   },
-  improvementNoteText: { flex: 1, fontSize: 15, color: C.textSecondary, lineHeight: 22 },
+  improvementNoteIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#D1FAE5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  improvementNoteText: { flex: 1, fontSize: 17, color: C.textSecondary, lineHeight: 25, fontWeight: "700" },
   verticalChartWrap: { marginVertical: 8 },
+  chartScrollContent: { paddingHorizontal: 4 },
   verticalChartRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    justifyContent: "space-between",
+    justifyContent: "center",
     height: VERTICAL_CHART_HEIGHT + 28,
   },
+  verticalChartRowTall: {
+    height: VERTICAL_CHART_HEIGHT + 82,
+  },
   verticalBarCol: { alignItems: "center", justifyContent: "flex-end" },
+  verticalBarColWide: { paddingHorizontal: 4 },
   verticalBars: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -626,27 +655,45 @@ const styles = StyleSheet.create({
   },
   verticalBarIncome: { backgroundColor: C.income },
   verticalBarExpense: { backgroundColor: C.expense },
-  verticalBarYear: { fontSize: 12, fontWeight: "700", color: C.textMuted, marginTop: 6 },
-  verticalBarValues: { flexDirection: "row", gap: 4, marginTop: 2, flexWrap: "wrap", justifyContent: "center" },
+  verticalBarYear: { fontSize: 15, fontWeight: "800", color: C.textMuted, marginTop: 8, textAlign: "center" },
+  verticalBarValues: { flexDirection: "row", gap: 4, marginTop: 6, flexWrap: "wrap", justifyContent: "center" },
   rankingCard: {
-    backgroundColor: C.surfaceGreen,
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: "#ECFDF5",
+    borderRadius: 20,
+    padding: 18,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: C.border,
+    borderWidth: 1.5,
+    borderColor: "#86EFAC",
   },
-  rankingTitle: { fontSize: 21, fontWeight: "800", color: C.textPrimary, marginBottom: 10 },
-  rankingRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
-  rankingText: { fontSize: 16, color: C.textSecondary, flex: 1 },
+  rankingTitle: { fontSize: 25, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
+  rankingHero: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+  },
+  rankingHeroText: { flex: 1, fontSize: 20, color: C.textSecondary, fontWeight: "800", lineHeight: 28 },
+  rankingPoint: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 10,
+  },
+  rankingText: { fontSize: 18, color: C.textSecondary, flex: 1, lineHeight: 26, fontWeight: "700" },
   rankingHighlight: { fontWeight: "800", color: C.green700 },
-  rankingMeta: { fontSize: 14, color: C.textMuted, marginTop: 4 },
+  rankingMeta: { fontSize: 16, color: C.textMuted, marginTop: 10, fontWeight: "700" },
   rankingCompare: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.borderLight },
   rankingCompareLabel: { fontSize: 14, color: C.textMuted, marginBottom: 2 },
   rankingCompareValue: { fontSize: 16, fontWeight: "800", marginBottom: 8 },
+  compareChartValue: { fontSize: 18, marginTop: 4 },
   adviceWrap: { marginTop: 10 },
   adviceText: { fontSize: 15, color: C.textSecondary, marginBottom: 4 },
-  sectionTitle: { fontSize: 23, fontWeight: "800", color: C.textPrimary, marginBottom: 14 },
+  sectionTitle: { fontSize: 25, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
   cropRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -659,15 +706,15 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
   },
   cropRowLeft: { flex: 1 },
-  cropRowName: { fontSize: 18, fontWeight: "800", color: C.textPrimary },
+  cropRowName: { fontSize: 21, fontWeight: "900", color: C.textPrimary },
   bhagmaBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
   bhagmaBadgeText: { fontSize: 13, fontWeight: "700" },
-  cropRowMeta: { fontSize: 15, color: C.textMuted, marginTop: 4, fontWeight: "600" },
-  cropRowProfit: { fontSize: 18, fontWeight: "800", marginLeft: 12 },
+  cropRowMeta: { fontSize: 17, color: C.textMuted, marginTop: 5, fontWeight: "700" },
+  cropRowProfit: { fontSize: 21, fontWeight: "900", marginLeft: 12 },
   emptyWrap: { alignItems: "center", paddingVertical: 40 },
   emptyEmoji: { fontSize: 48, marginBottom: 10 },
   emptyText: { fontSize: 18, color: C.textMuted, fontWeight: "700" },

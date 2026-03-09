@@ -19,6 +19,7 @@ import {
   type ExpenseCategory,
 } from "@/utils/api";
 import { getCropColors } from "@/utils/cropColors";
+import { formatArea, formatWholeNumber } from "@/utils/format";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
@@ -385,7 +386,7 @@ function AnimatedNumber({ value }: { value: number }) {
   }, [value]);
   return (
     <Text style={styles.netProfitAmount}>
-      {Math.abs(display).toLocaleString("en-IN")}
+      {formatWholeNumber(Math.abs(display))}
     </Text>
   );
 }
@@ -915,7 +916,7 @@ function RecentTransactions({
                   ]}
                 >
                   {t.amount > 0 ? "+" : ""}
-                  {Math.abs(t.amount).toLocaleString("en-IN")}
+                  {formatWholeNumber(Math.abs(t.amount))}
                 </Text>
                 <Ionicons
                   name="chevron-forward"
@@ -1117,7 +1118,7 @@ export default function Dashboard() {
     profile?.village ?? "",
   ).village;
   const farmerLand = profile?.totalLand
-    ? `${profile.totalLand.value} ${profile.totalLand.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`
+    ? `${profile.totalLand.unit === "bigha" ? formatArea(profile.totalLand.value) : formatWholeNumber(profile.totalLand.value)} ${profile.totalLand.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`
     : "";
   const avatarChar = farmerName.trim().charAt(0) || "🌾";
 
@@ -1368,7 +1369,7 @@ export default function Dashboard() {
                         <Text
                           style={[styles.profitSubValue, { color: item.color }]}
                         >
-                          {`${item.value.toLocaleString("en-IN")}`}
+                          {formatWholeNumber(item.value)}
                         </Text>
                         <Text style={styles.profitSubCaption}>
                           {item.label}
@@ -1381,13 +1382,13 @@ export default function Dashboard() {
                   <View style={styles.profitPerBighaRow}>
                     <View style={styles.profitPerBighaItem}>
                       <Text style={[styles.profitPerBighaValue, { color: C.income }]}>
-                        {Math.round(incomePerBigha).toLocaleString("en-IN")}
+                        {formatWholeNumber(incomePerBigha)}
                       </Text>
                       <Text style={styles.profitPerBighaLabel}>{t("dashboard", "incomePerBighaShort")}</Text>
                     </View>
                     <View style={styles.profitPerBighaItem}>
                       <Text style={[styles.profitPerBighaValue, { color: C.expense }]}>
-                        {Math.round(expensePerBigha).toLocaleString("en-IN")}
+                        {formatWholeNumber(expensePerBigha)}
                       </Text>
                       <Text style={styles.profitPerBighaLabel}>{t("dashboard", "expensePerBighaShort")}</Text>
                     </View>
@@ -1397,7 +1398,7 @@ export default function Dashboard() {
                   <View style={styles.bhagyaUpadRow}>
                     <Text style={styles.bhagyaUpadLabel}>{t("dashboard", "bhagyaUpad")}</Text>
                     <Text style={styles.bhagyaUpadValue}>
-                      ₹{Math.round(bhagyaUpadTotal).toLocaleString("en-IN")}
+                      ₹{formatWholeNumber(bhagyaUpadTotal)}
                     </Text>
                   </View>
                 )}
@@ -1603,7 +1604,7 @@ export default function Dashboard() {
                       <Text style={[styles.detailSummaryCellLabel, { color: C.income }]}>{t("dashboard", "income")}</Text>
                       <View style={styles.detailSummaryCellValueWrap}>
                         <Text style={[styles.detailSummaryCellValue, { color: C.income }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
-                          {inc.toLocaleString("en-IN")}
+                          {formatWholeNumber(inc)}
                         </Text>
                       </View>
                     </View>
@@ -1612,7 +1613,7 @@ export default function Dashboard() {
                       <Text style={[styles.detailSummaryCellLabel, { color: C.expense }]}>{t("dashboard", "expense")}</Text>
                       <View style={styles.detailSummaryCellValueWrap}>
                         <Text style={[styles.detailSummaryCellValue, { color: C.expense }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
-                          {exp.toLocaleString("en-IN")}
+                          {formatWholeNumber(exp)}
                         </Text>
                       </View>
                     </View>
@@ -1621,7 +1622,7 @@ export default function Dashboard() {
                       <Text style={[styles.detailSummaryCellLabel, { color: C.textPrimary }]}>{t("dashboard", "profit")}</Text>
                       <View style={styles.detailSummaryCellValueWrap}>
                         <Text style={[styles.detailSummaryCellValue, { color: C.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
-                          {net >= 0 ? "" : "−"}{Math.abs(net).toLocaleString("en-IN")}
+                          {net >= 0 ? "" : "−"}{formatWholeNumber(Math.abs(net))}
                         </Text>
                       </View>
                     </View>
@@ -1630,16 +1631,16 @@ export default function Dashboard() {
                     <View style={styles.detailBhagmaRow}>
                       <Text style={styles.detailBhagmaLabel}>{tParam("dashboard", "labourShareLabel", { pct: c.bhagmaPercentage ?? 0 })}</Text>
                       <Text style={[styles.detailBhagmaValue, { color: C.expense }]}>
-                        ₹{(c as any).labourShare.toLocaleString("en-IN")}
+                        ₹{formatWholeNumber((c as any).labourShare)}
                       </Text>
                     </View>
                   )}
                   {areaBigha > 0 && (
                     <View style={styles.detailUnitRow}>
                       <Text style={styles.detailUnitText}>
-                        <Text style={{ color: C.income, fontWeight: "700" }}>{t("dashboard", "incomePerBigha")}</Text> {Math.round(incPerBigha).toLocaleString("en-IN")}
+                        <Text style={{ color: C.income, fontWeight: "700" }}>{t("dashboard", "incomePerBigha")}</Text> {formatWholeNumber(incPerBigha)}
                         {"  ·  "}
-                        <Text style={{ color: C.expense, fontWeight: "700" }}>{t("dashboard", "expensePerBigha")}</Text> {Math.round(expPerBigha).toLocaleString("en-IN")}
+                        <Text style={{ color: C.expense, fontWeight: "700" }}>{t("dashboard", "expensePerBigha")}</Text> {formatWholeNumber(expPerBigha)}
                       </Text>
                     </View>
                   )}

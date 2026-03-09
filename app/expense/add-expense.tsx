@@ -1,4 +1,5 @@
 import { HEADER_PADDING_TOP } from "@/constants/theme";
+import { AppBackButton } from "@/components/AppBackButton";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
@@ -374,7 +375,7 @@ export default function AddExpense() {
           if (doc.seed) {
             setSeedType((doc.seed.seedType as SeedType) ?? "");
             setSeedQty(String(doc.seed.quantityKg ?? ""));
-            setSeedUnitRate(doc.seed.quantityKg && doc.seed.totalCost ? String((doc.seed.totalCost / doc.seed.quantityKg).toFixed(2)) : "");
+            setSeedUnitRate(doc.seed.quantityKg && doc.seed.totalCost ? String(Math.round(doc.seed.totalCost / doc.seed.quantityKg)) : "");
           }
           if (doc.fertilizer) {
             setFertProduct((doc.fertilizer.productName as FertilizerProduct) ?? "");
@@ -522,7 +523,7 @@ export default function AddExpense() {
       : 0;
   const seedRatePerKg =
     seedQuantityKg > 0 && seedCost && Number(seedCost) > 0
-      ? (Number(seedCost) / seedQuantityKg).toFixed(2)
+      ? String(Math.round(Number(seedCost) / seedQuantityKg))
       : null;
 
   const validate = (): string | null => {
@@ -754,12 +755,7 @@ export default function AddExpense() {
         <View style={styles.decorCircle1} />
         <View style={styles.decorCircle2} />
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={20} color={C.green700} />
-          </TouchableOpacity>
+          <AppBackButton onPress={() => router.back()} iconColor={C.green700} backgroundColor={C.surface} borderColor={C.green100} />
           <View style={{ alignItems: "center" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               {isGeneralExpense ? (
@@ -1006,8 +1002,8 @@ export default function AddExpense() {
               <View style={styles.derivedBox}>
                 <Ionicons name="calculator" size={16} color={C.green700} />
                 <Text style={styles.derivedText}>
-                  કુલ ખર્ચ: {Number(seedCost).toLocaleString("en-IN")}
-                  {seedRatePerKg && ` · દર ${seedRatePerKg}/કિ.ગ્રા.`}
+                  કુલ ખર્ચ: {Math.round(Number(seedCost)).toLocaleString("en-IN")}
+                  {seedRatePerKg && ` · દર ${Math.round(Number(seedRatePerKg))}/કિ.ગ્રા.`}
                 </Text>
               </View>
             )}
@@ -1048,7 +1044,7 @@ export default function AddExpense() {
               <View style={styles.totalBox}>
                 <Text style={styles.totalLabel}>કુલ = બૅગ × દર</Text>
                 <Text style={styles.totalValue}>
-                  {fertTotal.toLocaleString("en-IN")}
+                  {Math.round(fertTotal).toLocaleString("en-IN")}
                 </Text>
               </View>
             )}
@@ -1188,7 +1184,7 @@ export default function AddExpense() {
                   <View style={styles.totalBox}>
                     <Text style={styles.totalLabel}>કુલ =</Text>
                     <Text style={styles.totalValue}>
-                      {labourTotal.toLocaleString("en-IN")}
+                      {Math.round(labourTotal).toLocaleString("en-IN")}
                     </Text>
                   </View>
                 )}
@@ -1270,7 +1266,7 @@ export default function AddExpense() {
                   કુલ = {machineUnitType === "vigha" ? "વીઘા" : "કલાક"} × દર
                 </Text>
                 <Text style={styles.totalValue}>
-                  {machineTotal.toLocaleString("en-IN")}
+                  {Math.round(machineTotal).toLocaleString("en-IN")}
                 </Text>
               </View>
             )}

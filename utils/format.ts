@@ -9,3 +9,10 @@ export function formatArea(area: number | undefined | null): string {
   const one = Math.round(v * 10) / 10;
   return String(one);
 }
+
+/** Format non-area numbers for display as whole values only. */
+export function formatWholeNumber(value: number | undefined | null): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "0";
+  return Math.round(n).toLocaleString("en-IN");
+}

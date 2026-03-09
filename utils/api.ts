@@ -826,11 +826,14 @@ export type RentalAssetType =
   | "Tractor"
   | "Rotavator"
   | "RAP"
-  | "Bagi"
-  | "Savda"
+  | "Samar"
+  | "Sah Nakhya"
+  | "Vavetar"
+  | "Kyara Bandhya"
   | "Thresher"
-  | "Land"
-  | "Water Pump"
+  | "Bagu"
+  | "Fukani"
+  | "Kheti Kari"
   | "Other Equipment";
 
 export type OtherIncomeSource =

@@ -5,6 +5,7 @@
  */
 
 import { HEADER_PADDING_TOP } from "@/constants/theme";
+import { AppBackButton } from "@/components/AppBackButton";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { createIncome, type RentalAssetType } from "@/utils/api";
@@ -31,33 +32,37 @@ import {
 } from "react-native";
 
 const C = {
-  bg: "#F5F7F2",
+  bg: "#FFF7ED",
   surface: "#FFFFFF",
-  green700: "#2E7D32",
-  green500: "#4CAF50",
-  green100: "#C8E6C9",
-  green50: "#E8F5E9",
-  textPrimary: "#1A2E1C",
-  textSecondary: "#3D5C40",
-  textMuted: "#7A9B7E",
-  border: "#D8E8D8",
+  orange700: "#C2410C",
+  orange500: "#EA580C",
+  orange200: "#FED7AA",
+  orange100: "#FFEDD5",
+  orange50: "#FFF7ED",
+  textPrimary: "#111111",
+  textSecondary: "#2B2B2B",
+  textMuted: "#6B7280",
+  border: "#FED7AA",
 };
 
 const TRACTOR_ASSET_OPTIONS: { value: RentalAssetType; label: string }[] = [
   { value: "Tractor", label: "ટ્રેક્ટર" },
   { value: "Rotavator", label: "રોટાવેટર" },
-  { value: "RAP", label: "રેપ (RAP)" },
-  { value: "Bagi", label: "બાગી" },
-  { value: "Savda", label: "સવડા" },
+  { value: "RAP", label: "રૅપ" },
+  { value: "Samar", label: "સમાર" },
+  { value: "Sah Nakhya", label: "સહ નાખ્યા" },
+  { value: "Vavetar", label: "વાવેતર" },
+  { value: "Kyara Bandhya", label: "ક્યારા બાંધ્યા" },
   { value: "Thresher", label: "થ્રેશર" },
-  { value: "Land", label: "જમીન" },
-  { value: "Water Pump", label: "પાણીની મોટર" },
+  { value: "Bagu", label: "બાગુ" },
+  { value: "Fukani", label: "ફૂકણી" },
+  { value: "Kheti Kari", label: "ખેતી કરી" },
   { value: "Other Equipment", label: "અન્ય ઉપકરણ" },
 ];
 
 const PAYMENT_STATUS_OPTIONS: { value: "Pending" | "Completed"; label: string }[] = [
-  { value: "Pending", label: "બાકી (પેન્ડિંગ)" },
-  { value: "Completed", label: "ચૂકવણી થઈ (કમ્પ્લીટ)" },
+  { value: "Pending", label: "બાકી" },
+  { value: "Completed", label: "આપી દીધા" },
 ];
 
 function normalizePhone(phone: string) {
@@ -136,7 +141,7 @@ export default function AddTractorIncomeScreen() {
         },
       });
       refreshTransactions();
-      Toast.show({ type: "success", text1: "સફળ!", text2: "ટ્રેક્ટર આવક સાચવાઈ!" });
+      Toast.show({ type: "success", text1: "સફળ!", text2: "ટ્રેક્ટર ભાડું સાચવાયું!" });
       router.back();
     } catch (e) {
       Alert.alert("ભૂલ", (e as Error).message ?? "કંઈક ખોટું થયું.");
@@ -183,28 +188,39 @@ export default function AddTractorIncomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       <LinearGradient
-        colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]}
+        colors={["#FFF1E6", "#FFF7ED", "#FFF7ED"]}
         style={[styles.header, { paddingTop }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color={C.green700} />
-          </TouchableOpacity>
+          <AppBackButton onPress={() => router.back()} iconColor={C.orange700} backgroundColor={C.surface} borderColor={C.orange200} />
           <View style={styles.headerCenter}>
             <View style={styles.headerTractorWrap}>
-              <MaterialCommunityIcons name="tractor-variant" size={36} color={C.green700} />
+              <MaterialCommunityIcons name="tractor-variant" size={40} color={C.orange700} />
             </View>
-            <Text style={styles.headerTitle}>ટ્રેક્ટર આવક ઉમેરો</Text>
-            <Text style={styles.headerSub}>ભાડું / સેવા આવક</Text>
+            <Text style={styles.headerTitle}>ટ્રેક્ટર ભાડું / આવક ઉમેરો</Text>
           </View>
-          <View style={{ width: 36 }} />
+          <TouchableOpacity style={styles.headerDateCard} onPress={() => setShowDatePicker(true)}>
+            <Ionicons name="calendar-outline" size={20} color={C.orange700} />
+            <Text style={styles.headerDateText}>
+              {date.toLocaleDateString("gu-IN", { day: "2-digit", month: "short" })}
+            </Text>
+          </TouchableOpacity>
         </View>
+        {showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            maximumDate={new Date()}
+            onChange={handleDateChange}
+          />
+        )}
       </LinearGradient>
 
       <View style={styles.card}>
-        <Text style={styles.label}>ઉપકરણનો પ્રકાર *</Text>
+        <Text style={styles.label}>પ્રકાર</Text>
         <View style={styles.chipRow}>
           {TRACTOR_ASSET_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -218,10 +234,11 @@ export default function AddTractorIncomeScreen() {
             </TouchableOpacity>
           ))}
         </View>
+        <Text style={styles.typeNote}>ઉદાહરણ: રોટાવેટર, રૅપ, સમાર, સહ નાખ્યા, વાવેતર, ક્યારા બાંધ્યા, થ્રેશર, બાગુ, ફૂકણી, ખેતી કરી, અન્ય ઉપકરણ</Text>
       </View>
 
       <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
-        <Text style={styles.label}>ખેડૂત / ગ્રાહકનું નામ *</Text>
+        <Text style={styles.label}>ખેડૂત / ગ્રાહકનું નામ</Text>
         <TextInput
           style={styles.input}
           value={farmerName}
@@ -231,7 +248,7 @@ export default function AddTractorIncomeScreen() {
           onFocus={scrollToForm}
         />
         <TouchableOpacity style={styles.contactBtn} onPress={pickContact}>
-          <Ionicons name="people-outline" size={22} color={C.green700} />
+          <Ionicons name="people-outline" size={24} color={C.orange700} />
           <Text style={styles.contactBtnText}>મોબાઇલ કોન્ટેક્ટમાંથી પસંદ કરો</Text>
         </TouchableOpacity>
         {farmerPhone ? (
@@ -240,7 +257,7 @@ export default function AddTractorIncomeScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>કલાક / દિવસ *</Text>
+        <Text style={styles.label}>કલાક / દિવસ</Text>
         <TextInput
           style={styles.input}
           value={hoursOrDays}
@@ -253,7 +270,7 @@ export default function AddTractorIncomeScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>દર (પ્રતિ એકમ) *</Text>
+        <Text style={styles.label}>ભાડું (પ્રતિ એકમ)</Text>
         <TextInput
           style={styles.input}
           value={ratePerUnit}
@@ -268,12 +285,12 @@ export default function AddTractorIncomeScreen() {
       {total !== null && (
         <View style={styles.totalCard}>
           <Text style={styles.totalLabel}>કુલ રકમ</Text>
-          <Text style={styles.totalValue}>₹ {total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</Text>
+          <Text style={styles.totalValue}>₹ {Math.round(total).toLocaleString("en-IN")}</Text>
         </View>
       )}
 
       <View style={styles.card}>
-        <Text style={styles.label}>ચૂકવણી સ્થિતિ</Text>
+        <Text style={styles.label}>પૈસા ચૂકવાણી</Text>
         <View style={styles.statusRow}>
           {PAYMENT_STATUS_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -287,27 +304,6 @@ export default function AddTractorIncomeScreen() {
             </TouchableOpacity>
           ))}
         </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>📅 તારીખ</Text>
-        <View style={styles.dateRow}>
-          <Text style={styles.dateValue}>
-            {date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-          </Text>
-          <TouchableOpacity style={styles.calendarBtn} onPress={() => setShowDatePicker(true)}>
-            <Ionicons name="calendar-outline" size={24} color={C.green700} />
-          </TouchableOpacity>
-        </View>
-        {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            maximumDate={new Date()}
-            onChange={handleDateChange}
-          />
-        )}
       </View>
 
       <View style={styles.card}>
@@ -333,7 +329,7 @@ export default function AddTractorIncomeScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <>
-              <MaterialCommunityIcons name="tractor-variant" size={24} color="#fff" />
+              <MaterialCommunityIcons name="tractor-variant" size={26} color="#fff" />
               <Text style={styles.saveBtnText}>સાચવો</Text>
             </>
           )}
@@ -365,12 +361,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTractorWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: C.green100,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: C.orange100,
     borderWidth: 2,
-    borderColor: C.green700,
+    borderColor: C.orange700,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
@@ -379,46 +375,59 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: C.green50,
+    backgroundColor: C.orange50,
     borderWidth: 1,
-    borderColor: C.green100,
+    borderColor: C.orange200,
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
-  headerSub: { fontSize: 16, color: C.textSecondary, marginTop: 2 },
+  headerTitle: { fontSize: 24, fontWeight: "900", color: C.textPrimary, textAlign: "center" },
+  headerDateCard: {
+    minWidth: 78,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.orange200,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  headerDateText: { fontSize: 13, fontWeight: "800", color: C.textPrimary },
   card: {
     backgroundColor: C.surface,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 14,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: C.border,
   },
-  label: { fontSize: 18, fontWeight: "700", color: C.textPrimary, marginBottom: 10 },
+  label: { fontSize: 20, fontWeight: "800", color: C.textPrimary, marginBottom: 12 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: C.border,
-    backgroundColor: C.green50,
+    backgroundColor: C.orange50,
   },
-  chipActive: { backgroundColor: C.green100, borderColor: C.green700 },
-  chipText: { fontSize: 15, fontWeight: "600", color: C.textSecondary },
-  chipTextActive: { color: C.green700, fontWeight: "700" },
+  chipActive: { backgroundColor: "#FED7AA", borderColor: C.orange700 },
+  chipText: { fontSize: 16, fontWeight: "700", color: C.textSecondary },
+  chipTextActive: { color: C.textPrimary, fontWeight: "800" },
+  typeNote: { fontSize: 13, lineHeight: 18, color: C.textMuted, marginTop: 10, fontWeight: "600" },
   input: {
     borderWidth: 1.5,
     borderColor: C.border,
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 18,
+    paddingVertical: 15,
+    fontSize: 20,
     color: C.textPrimary,
-    backgroundColor: C.green50,
+    backgroundColor: C.orange50,
   },
-  notesInput: { minHeight: 80, textAlignVertical: "top" },
+  notesInput: { minHeight: 72, textAlignVertical: "top" },
   contactBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -426,25 +435,25 @@ const styles = StyleSheet.create({
     marginTop: 12,
     padding: 14,
     borderRadius: 12,
-    backgroundColor: C.green50,
+    backgroundColor: C.orange50,
     borderWidth: 1,
-    borderColor: C.green100,
+    borderColor: C.orange200,
   },
-  contactBtnText: { fontSize: 16, fontWeight: "700", color: C.green700 },
-  phoneText: { fontSize: 15, color: C.textSecondary, marginTop: 8 },
+  contactBtnText: { fontSize: 17, fontWeight: "800", color: C.orange700 },
+  phoneText: { fontSize: 16, color: C.textSecondary, marginTop: 8, fontWeight: "700" },
   totalCard: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: C.green50,
+    backgroundColor: C.orange50,
     borderRadius: 14,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1.5,
-    borderColor: C.green100,
+    borderColor: C.orange200,
   },
-  totalLabel: { fontSize: 18, fontWeight: "700", color: C.textPrimary },
-  totalValue: { fontSize: 22, fontWeight: "900", color: C.green700 },
+  totalLabel: { fontSize: 19, fontWeight: "800", color: C.textPrimary },
+  totalValue: { fontSize: 24, fontWeight: "900", color: C.orange700 },
   statusRow: { flexDirection: "row", gap: 12 },
   statusBtn: {
     flex: 1,
@@ -452,21 +461,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: C.border,
-    backgroundColor: C.green50,
+    backgroundColor: C.orange50,
     alignItems: "center",
   },
-  statusBtnActive: { backgroundColor: C.green700, borderColor: C.green700 },
-  statusText: { fontSize: 15, fontWeight: "700", color: C.textSecondary },
+  statusBtnActive: { backgroundColor: C.orange700, borderColor: C.orange700 },
+  statusText: { fontSize: 17, fontWeight: "800", color: C.textSecondary },
   statusTextActive: { color: "#fff" },
-  dateRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  dateValue: { fontSize: 18, fontWeight: "700", color: C.textPrimary },
-  calendarBtn: {
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: C.green50,
-    borderWidth: 1,
-    borderColor: C.green100,
-  },
   saveBtn: { borderRadius: 14, marginTop: 8 },
   saveBtnDisabled: { opacity: 0.7 },
   saveBtnInner: {
@@ -476,14 +476,14 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 18,
     paddingHorizontal: 24,
-    backgroundColor: "#1B5E20",
+    backgroundColor: C.orange700,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: "#2E7D32",
+    borderColor: "#9A3412",
   },
   saveBtnInnerDisabled: {
     backgroundColor: "#6B7280",
     borderColor: "#9CA3AF",
   },
-  saveBtnText: { fontSize: 19, fontWeight: "800", color: "#fff" },
+  saveBtnText: { fontSize: 21, fontWeight: "900", color: "#fff" },
 });

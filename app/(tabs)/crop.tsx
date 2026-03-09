@@ -20,6 +20,7 @@ import {
 } from "@/utils/api";
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { getCropColors } from "@/utils/cropColors";
+import { formatWholeNumber } from "@/utils/format";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -915,13 +916,13 @@ export default function CropScreen() {
                     <Text style={styles.modalTotalLine}>
                       કુલ ખર્ચ:{" "}
                       <Text style={styles.modalTotalAmount}>
-                        ₹ {totalExpense.toLocaleString("en-IN")}
+                        ₹ {formatWholeNumber(totalExpense)}
                       </Text>
                     </Text>
                     <Text style={styles.modalTotalLine}>
                       કુલ આવક:{" "}
                       <Text style={styles.modalTotalAmount}>
-                        ₹ {totalIncome.toLocaleString("en-IN")}
+                        ₹ {formatWholeNumber(totalIncome)}
                       </Text>
                     </Text>
                     {summaryCrop.landType === "bhagma" &&
@@ -957,7 +958,7 @@ export default function CropScreen() {
                           { color: netProfit >= 0 ? C.income : C.expense },
                         ]}
                       >
-                        ₹ {netProfit.toLocaleString("en-IN")}
+                        ₹ {formatWholeNumber(netProfit)}
                       </Text>
                     </Text>
                   </>

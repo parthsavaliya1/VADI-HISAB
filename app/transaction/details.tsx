@@ -15,6 +15,7 @@ import {
   type Income,
   type IncomeCategory,
 } from "@/utils/api";
+import { formatWholeNumber } from "@/utils/format";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
@@ -61,7 +62,7 @@ function formatDate(iso: string): string {
 }
 
 function formatINR(n: number): string {
-  return n.toLocaleString("en-IN");
+  return formatWholeNumber(n);
 }
 
 const EXPENSE_CAT_LABELS: Record<string, string> = {

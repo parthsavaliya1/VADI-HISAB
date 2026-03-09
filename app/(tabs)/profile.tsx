@@ -9,6 +9,7 @@ import {
 import { FarmerProfileCard } from "@/components/FarmerProfileCard";
 import type { FarmerProfile as APIFarmerProfile } from "@/utils/api";
 import { getMyProfile, logout, updateProfile } from "@/utils/api";
+import { formatArea, formatWholeNumber } from "@/utils/format";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -312,7 +313,7 @@ function EditModal({
                     {/* Header */}
                     <View style={editStyles.sheetHeader}>
                         <Pressable onPress={onClose} style={editStyles.sheetCloseBtn}>
-                            <Ionicons name="close" size={20} color="#6B7280" />
+                            <Ionicons name="close" size={24} color="#6B7280" />
                         </Pressable>
                         <Text style={editStyles.sheetTitle}>{t("profileTab", "editProfile")}</Text>
                         <Pressable onPress={onSave} disabled={saving} style={editStyles.sheetSaveBtn}>
@@ -487,7 +488,7 @@ function InfoRow({ icon, label, value, last = false }: { icon: string; label: st
         <>
             <View style={styles.infoRow}>
                 <View style={styles.infoIconWrap}>
-                    <Ionicons name={icon as any} size={14} color="#2E7D32" />
+                            <Ionicons name={icon as any} size={18} color="#2E7D32" />
                 </View>
                 <View style={styles.infoTextWrap}>
                     <Text style={styles.infoLabel}>{label}</Text>
@@ -632,7 +633,7 @@ export default function Profile() {
         const waterSources = Array.isArray((p as any).waterSources) ? (p as any).waterSources : ((p as any).waterSource != null ? [(p as any).waterSource] : []);
         const labourTypes = Array.isArray((p as any).labourTypes) ? (p as any).labourTypes : ((p as any).labourType != null ? [(p as any).labourType] : []);
         const implementsAvailable = Array.isArray((p as any).implementsAvailable) ? (p as any).implementsAvailable : [];
-        const landDisplay = `${p.totalLand?.value ?? "?"} ${p.totalLand?.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`;
+        const landDisplay = `${p.totalLand?.unit === "bigha" ? formatArea(p.totalLand?.value) : formatWholeNumber(p.totalLand?.value)} ${p.totalLand?.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`;
         const waterDisplay = toLabels(WATER_OPTIONS, waterSources);
         const labourDisplay = toLabels(LABOUR_OPTIONS, labourTypes);
         const tractorServicesDisplay = implementsAvailable.length > 0 ? toLabels(TRACTOR_SERVICE_OPTIONS, implementsAvailable) : null;
@@ -763,7 +764,7 @@ export default function Profile() {
 
     const p = apiProfile!;
     const initials = (p.name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
-    const landDisplay = `${p.totalLand?.value ?? "?"} ${p.totalLand?.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`;
+    const landDisplay = `${p.totalLand?.unit === "bigha" ? formatArea(p.totalLand?.value) : formatWholeNumber(p.totalLand?.value)} ${p.totalLand?.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`;
 
     // ✅ Convert English keys from DB → Gujarati labels for display
     const taluka = (p as any).taluka ?? "";
@@ -792,7 +793,7 @@ export default function Profile() {
                     <Animated.View style={[styles.topBar, { transform: [{ scale: headerPulse }] }]}>
                         <Text style={styles.topBarTitle}>{t("profileTab", "title")}</Text>
                         <Pressable onPress={handleEditOpen} style={({ pressed }) => [styles.editFAB, pressed && styles.editFABPressed]}>
-                            <Ionicons name="create-outline" size={16} color="#2E7D32" />
+                            <Ionicons name="create-outline" size={20} color="#2E7D32" />
                             <Text style={styles.editFABText}>{t("profileTab", "edit")}</Text>
                         </Pressable>
                     </Animated.View>
@@ -814,18 +815,18 @@ export default function Profile() {
                             <View style={styles.farmerMeta}>
                                 {villageDisplay !== "—" && (
                                     <View style={styles.farmerMetaItem}>
-                                        <Ionicons name="location-outline" size={14} color="#6B7B6E" />
+                                        <Ionicons name="location-outline" size={18} color="#6B7B6E" />
                                         <Text style={styles.farmerMetaText}>{villageDisplay}</Text>
                                     </View>
                                 )}
                                 {districtDisplay && (
                                     <View style={styles.farmerMetaItem}>
-                                        <Ionicons name="map-outline" size={14} color="#6B7B6E" />
+                                        <Ionicons name="map-outline" size={18} color="#6B7B6E" />
                                         <Text style={styles.farmerMetaText}>{districtDisplay}</Text>
                                     </View>
                                 )}
                                 <View style={styles.farmerMetaItem}>
-                                    <Ionicons name="leaf-outline" size={14} color="#6B7B6E" />
+                                    <Ionicons name="leaf-outline" size={18} color="#6B7B6E" />
                                     <Text style={styles.farmerMetaText}>{landDisplay}</Text>
                                 </View>
                             </View>
@@ -835,27 +836,27 @@ export default function Profile() {
                     {/* ══ Simple quick actions under profile ══ */}
                     <View style={styles.quickCard}>
                         <Pressable style={styles.quickRow} onPress={handleLanguagePress}>
-                            <Ionicons name="language-outline" size={20} color="#0F766E" />
+                            <Ionicons name="language-outline" size={24} color="#0F766E" />
                             <View style={styles.quickTextWrap}>
                                 <Text style={styles.quickTitle}>{t("common", "language")}</Text>
                                 <Text style={styles.quickSub}>
                                     {lang === "gu" ? t("common", "gujarati") : t("common", "english")}
                                 </Text>
                             </View>
-                            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                            <Ionicons name="chevron-forward" size={22} color="#9CA3AF" />
                         </Pressable>
 
                         <View style={styles.quickDivider} />
 
                         <Pressable style={styles.quickRow} onPress={handleDataSharingPress}>
-                            <Ionicons name="shield-checkmark-outline" size={20} color="#0F766E" />
+                            <Ionicons name="shield-checkmark-outline" size={24} color="#0F766E" />
                             <View style={styles.quickTextWrap}>
                                 <Text style={styles.quickTitle}>{t("profileTab", "dataSharing")}</Text>
                                 <Text style={styles.quickSub}>
                                     {p.analyticsConsent ? t("profileTab", "on") : t("profileTab", "off")}
                                 </Text>
                             </View>
-                            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                            <Ionicons name="chevron-forward" size={22} color="#9CA3AF" />
                         </Pressable>
 
                         <View style={styles.quickDivider} />
@@ -874,12 +875,12 @@ export default function Profile() {
                                 )
                             }
                         >
-                            <Ionicons name="information-circle-outline" size={20} color="#0F766E" />
+                            <Ionicons name="information-circle-outline" size={24} color="#0F766E" />
                             <View style={styles.quickTextWrap}>
                                 <Text style={styles.quickTitle}>{t("profileTab", "aboutUs")}</Text>
                                 <Text style={styles.quickSub}>{t("profileTab", "moreInfo")}</Text>
                             </View>
-                            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                            <Ionicons name="chevron-forward" size={22} color="#9CA3AF" />
                         </Pressable>
                     </View>
 
@@ -887,17 +888,17 @@ export default function Profile() {
                     <View style={styles.contactSimple}>
                         <Text style={styles.contactSimpleTitle}>{t("profileTab", "contactUs")}</Text>
                         <View style={styles.contactRow}>
-                            <Ionicons name="mail-outline" size={18} color="#0F766E" />
+                            <Ionicons name="mail-outline" size={22} color="#0F766E" />
                             <Text style={styles.contactDetail}>vadi.farmfresh@gmail.com</Text>
                         </View>
                         <View style={styles.contactRow}>
-                            <Ionicons name="call-outline" size={18} color="#0F766E" />
+                            <Ionicons name="call-outline" size={22} color="#0F766E" />
                             <Text style={styles.contactDetail}>966208938X</Text>
                         </View>
                     </View>
 
                     <Pressable onPress={handleLogout} style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}>
-                        <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+                        <Ionicons name="log-out-outline" size={22} color="#DC2626" />
                         <Text style={styles.logoutBtnText}>{t("profileTab", "logout")}</Text>
                     </Pressable>
 
@@ -986,29 +987,29 @@ export default function Profile() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#F6F9F4" },
     centerScreen: { flex: 1, justifyContent: "center", alignItems: "center", gap: 14, backgroundColor: "#F6F9F4" },
-    loadingText: { fontSize: 18, color: "#3D5C40" },
-    loadErrText: { fontSize: 16, color: "#EF4444", textAlign: "center", paddingHorizontal: 32, lineHeight: 24 },
-    retryBtn: { backgroundColor: "#2E7D32", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 14 },
-    retryBtnText: { color: "#fff", fontWeight: "700", fontSize: 18 },
+    loadingText: { fontSize: 21, color: "#3D5C40" },
+    loadErrText: { fontSize: 19, color: "#EF4444", textAlign: "center", paddingHorizontal: 32, lineHeight: 28 },
+    retryBtn: { backgroundColor: "#2E7D32", paddingHorizontal: 32, paddingVertical: 14, borderRadius: 16 },
+    retryBtnText: { color: "#fff", fontWeight: "700", fontSize: 20 },
     bgDecor1: { position: "absolute", width: 260, height: 260, borderRadius: 130, backgroundColor: "#E2EDE0", top: -70, right: -70 },
     bgDecor2: { position: "absolute", width: 160, height: 160, borderRadius: 80, backgroundColor: "#E8F0E6", top: 180, left: -50 },
     scrollContent: { paddingBottom: 20, paddingTop: HEADER_PADDING_TOP },
-    topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginBottom: 16 },
-    topBarTitle: { fontSize: 24, fontWeight: "800", color: "#1A2E1C", letterSpacing: 0.2 },
-    editFAB: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fff", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: "#C8E6C9", shadowColor: "#0A0E0B", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+    topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginBottom: 18 },
+    topBarTitle: { fontSize: 28, fontWeight: "800", color: "#1A2E1C", letterSpacing: 0.2 },
+    editFAB: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fff", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, borderWidth: 1.5, borderColor: "#C8E6C9", shadowColor: "#0A0E0B", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
     editFABPressed: { opacity: 0.85 },
-    editFABText: { fontSize: 16, fontWeight: "800", color: "#2E7D32" },
-    farmerCard: { backgroundColor: "#fff", borderRadius: 24, marginHorizontal: 18, marginBottom: 18, paddingVertical: 24, paddingHorizontal: 20, alignItems: "center", shadowColor: "#1A2E1C", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
+    editFABText: { fontSize: 18, fontWeight: "800", color: "#2E7D32" },
+    farmerCard: { backgroundColor: "#fff", borderRadius: 24, marginHorizontal: 18, marginBottom: 18, paddingVertical: 28, paddingHorizontal: 22, alignItems: "center", shadowColor: "#1A2E1C", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
     farmerCardInner: { alignItems: "center" },
-    farmerPhotoWrap: { width: 96, height: 96, borderRadius: 48, marginBottom: 14, overflow: "hidden" },
-    farmerPhoto: { width: "100%", height: "100%", borderRadius: 48 },
-    farmerPhotoPlaceholder: { width: "100%", height: "100%", borderRadius: 48, backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center" },
-    farmerInitials: { fontSize: 32, fontWeight: "900", color: "#2E7D32" },
-    farmerName: { fontSize: 26, fontWeight: "800", color: "#1A2E1C", marginBottom: 4, textAlign: "center" },
-    farmerRole: { fontSize: 17, color: "#6B7B6E", marginBottom: 12 },
-    farmerMeta: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12 },
-    farmerMetaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-    farmerMetaText: { fontSize: 15, color: "#5C6B5E", fontWeight: "600" },
+    farmerPhotoWrap: { width: 112, height: 112, borderRadius: 56, marginBottom: 16, overflow: "hidden" },
+    farmerPhoto: { width: "100%", height: "100%", borderRadius: 56 },
+    farmerPhotoPlaceholder: { width: "100%", height: "100%", borderRadius: 56, backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center" },
+    farmerInitials: { fontSize: 38, fontWeight: "900", color: "#2E7D32" },
+    farmerName: { fontSize: 30, fontWeight: "800", color: "#1A2E1C", marginBottom: 6, textAlign: "center" },
+    farmerRole: { fontSize: 20, color: "#6B7B6E", marginBottom: 14 },
+    farmerMeta: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 14 },
+    farmerMetaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+    farmerMetaText: { fontSize: 18, color: "#5C6B5E", fontWeight: "600" },
     farmerCardBtn: {
         backgroundColor: "#fff",
         borderRadius: 20,
@@ -1066,7 +1067,7 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         borderRadius: 14,
     },
-    cardModalShareBtnText: { fontSize: 17, fontWeight: "800", color: "#fff" },
+    cardModalShareBtnText: { fontSize: 18, fontWeight: "800", color: "#fff" },
     cardModalCloseBtn: { paddingVertical: 14, paddingHorizontal: 20, justifyContent: "center" },
     cardModalCloseBtnText: { fontSize: 17, fontWeight: "700", color: "#64748B" },
     contactCard: {
@@ -1095,8 +1096,8 @@ const styles = StyleSheet.create({
     contactTextWrap: { flex: 1 },
     contactCardTitle: { fontSize: 21, fontWeight: "800", color: "#0F172A", marginBottom: 4 },
     contactCardSub: { fontSize: 16, fontWeight: "600", color: "#64748B", marginBottom: 12 },
-    contactRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
-    contactDetail: { fontSize: 17, fontWeight: "700", color: "#0F172A" },
+    contactRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+    contactDetail: { fontSize: 20, fontWeight: "700", color: "#0F172A" },
     aboutSection: { paddingHorizontal: 20, paddingVertical: 16, marginBottom: 12, backgroundColor: "#F1F5F4", borderRadius: 14, borderWidth: 1, borderColor: "#E2E8E6" },
     aboutSectionTitle: { fontSize: 18, fontWeight: "800", color: "#334155", marginBottom: 8 },
     aboutSectionBody: { fontSize: 16, color: "#64748B", lineHeight: 24, fontWeight: "500" },
@@ -1134,17 +1135,17 @@ const styles = StyleSheet.create({
     switchInfoRow: { flexDirection: "row", alignItems: "center", paddingVertical: 6 },
     switchInfoLabel: { fontSize: 15, fontWeight: "700", color: "#0A0E0B" },
     switchInfoSub: { fontSize: 14, color: "#2D4230", marginTop: 2 },
-    logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 16, paddingVertical: 16, borderRadius: 18, backgroundColor: "#FFEBEE", borderWidth: 1.5, borderColor: "#FFCDD2", marginBottom: 12 },
+    logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginHorizontal: 16, paddingVertical: 18, borderRadius: 18, backgroundColor: "#FFEBEE", borderWidth: 1.5, borderColor: "#FFCDD2", marginBottom: 12 },
     logoutBtnPressed: { opacity: 0.7 },
-    logoutBtnText: { fontSize: 18, fontWeight: "800", color: "#B71C1C" },
-    versionText: { textAlign: "center", fontSize: 14, color: "#2D4230", marginBottom: 4 },
+    logoutBtnText: { fontSize: 21, fontWeight: "800", color: "#B71C1C" },
+    versionText: { textAlign: "center", fontSize: 16, color: "#2D4230", marginBottom: 4 },
     quickCard: {
         backgroundColor: "#FFFFFF",
         borderRadius: 20,
         marginHorizontal: 18,
-        marginBottom: 16,
-        paddingHorizontal: 18,
-        paddingVertical: 6,
+        marginBottom: 18,
+        paddingHorizontal: 20,
+        paddingVertical: 8,
         shadowColor: "#0A0E0B",
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
@@ -1154,24 +1155,24 @@ const styles = StyleSheet.create({
     quickRow: {
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 12,
-        gap: 12,
+        paddingVertical: 15,
+        gap: 14,
     },
     quickTextWrap: { flex: 1 },
-    quickTitle: { fontSize: 17, fontWeight: "700", color: "#1A2E1C" },
-    quickSub: { fontSize: 14, color: "#64748B", marginTop: 2 },
+    quickTitle: { fontSize: 20, fontWeight: "700", color: "#1A2E1C" },
+    quickSub: { fontSize: 17, color: "#64748B", marginTop: 3 },
     quickDivider: { height: 1, backgroundColor: "#EEF2EC" },
     contactSimple: {
         marginHorizontal: 18,
-        marginBottom: 18,
+        marginBottom: 20,
         paddingHorizontal: 4,
         paddingVertical: 4,
     },
     contactSimpleTitle: {
-        fontSize: 16,
+        fontSize: 21,
         fontWeight: "800",
         color: "#1A2E1C",
-        marginBottom: 6,
+        marginBottom: 8,
     },
 });
 
@@ -1182,45 +1183,45 @@ const editStyles = StyleSheet.create({
     modalOverlay: { flex: 1, justifyContent: "flex-end" },
     modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
     modalSheet: { height: SCREEN_H * 0.92, backgroundColor: "#F5F7F2", borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
-    sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#fff", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#E5E7EB", borderTopLeftRadius: 28, borderTopRightRadius: 28 },
-    sheetCloseBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#F3F4F6", justifyContent: "center", alignItems: "center" },
-    sheetTitle: { fontSize: 18, fontWeight: "800", color: "#1F2937" },
-    sheetSaveBtn: { backgroundColor: "#2E7D32", paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, minWidth: 60, alignItems: "center" },
-    sheetSaveBtnText: { fontSize: 16, fontWeight: "800", color: "#fff" },
-    sheetScroll: { padding: 18 },
-    groupLabel: { fontSize: 15, fontWeight: "800", color: "#2E7D32", letterSpacing: 0.8, marginBottom: 10, marginTop: 8, textTransform: "uppercase" },
-    inputGroup: { backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12, shadowColor: "#0D4A1F", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-    inputLabel: { fontSize: 15, fontWeight: "700", color: "#6B7280", marginBottom: 8 },
-    inputSub: { fontSize: 14, color: "#9CA3AF", marginTop: 2 },
-    textInput: { fontSize: 17, fontWeight: "600", color: "#1F2937", borderBottomWidth: 2, borderBottomColor: "#C8E6C9", paddingVertical: 6, paddingHorizontal: 2 },
+    sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#fff", paddingHorizontal: 18, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#E5E7EB", borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+    sheetCloseBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#F3F4F6", justifyContent: "center", alignItems: "center" },
+    sheetTitle: { fontSize: 21, fontWeight: "800", color: "#1F2937" },
+    sheetSaveBtn: { backgroundColor: "#2E7D32", paddingHorizontal: 22, paddingVertical: 10, borderRadius: 22, minWidth: 72, alignItems: "center" },
+    sheetSaveBtnText: { fontSize: 18, fontWeight: "800", color: "#fff" },
+    sheetScroll: { padding: 20 },
+    groupLabel: { fontSize: 17, fontWeight: "800", color: "#2E7D32", letterSpacing: 0.8, marginBottom: 12, marginTop: 10, textTransform: "uppercase" },
+    inputGroup: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: "#0D4A1F", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+    inputLabel: { fontSize: 18, fontWeight: "700", color: "#6B7280", marginBottom: 10 },
+    inputSub: { fontSize: 16, color: "#9CA3AF", marginTop: 3 },
+    textInput: { fontSize: 20, fontWeight: "600", color: "#1F2937", borderBottomWidth: 2, borderBottomColor: "#C8E6C9", paddingVertical: 8, paddingHorizontal: 2 },
     landRow: { flexDirection: "row", alignItems: "center" },
     unitToggle: { flexDirection: "row", borderWidth: 1.5, borderColor: "#C8E6C9", borderRadius: 12, overflow: "hidden" },
-    unitBtn: { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: "#F9FAFB" },
+    unitBtn: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#F9FAFB" },
     unitBtnActive: { backgroundColor: "#2E7D32" },
-    unitBtnText: { fontSize: 15, fontWeight: "700", color: "#9CA3AF" },
+    unitBtnText: { fontSize: 17, fontWeight: "700", color: "#9CA3AF" },
     unitBtnTextActive: { color: "#fff" },
-    chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#C8E6C9", backgroundColor: "#F9FAFB" },
+    chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+    chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 22, borderWidth: 1.5, borderColor: "#C8E6C9", backgroundColor: "#F9FAFB" },
     chipActive: { borderColor: "#2E7D32", backgroundColor: "#E8F5E9" },
-    chipText: { fontSize: 15, fontWeight: "600", color: "#6B7280" },
+    chipText: { fontSize: 17, fontWeight: "600", color: "#6B7280" },
     chipTextActive: { color: "#1B5E20", fontWeight: "800" },
-    switchRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12, shadowColor: "#0D4A1F", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+    switchRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: "#0D4A1F", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
     // Location dropdown in edit mode
-    locationBtn: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1.5, borderRadius: 12, borderColor: "#E5E7EB", backgroundColor: "#F9FAFB", paddingHorizontal: 12, paddingVertical: 11, marginBottom: 8 },
+    locationBtn: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1.5, borderRadius: 12, borderColor: "#E5E7EB", backgroundColor: "#F9FAFB", paddingHorizontal: 14, paddingVertical: 13, marginBottom: 8 },
     locationBtnFilled: { borderColor: "#66BB6A" },
     locationBtnDisabled: { opacity: 0.4 },
-    locationBtnText: { fontSize: 16, color: "#1F2937", fontWeight: "600", flex: 1 },
-    locationBtnPlaceholder: { color: "#9CA3AF", fontWeight: "400", fontSize: 16 },
-    locationBtnArrow: { fontSize: 16, color: "#2E7D32", marginLeft: 6, fontWeight: "700" },
+    locationBtnText: { fontSize: 18, color: "#1F2937", fontWeight: "600", flex: 1 },
+    locationBtnPlaceholder: { color: "#9CA3AF", fontWeight: "400", fontSize: 18 },
+    locationBtnArrow: { fontSize: 18, color: "#2E7D32", marginLeft: 6, fontWeight: "700" },
     // Location sub-modal
     locModalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
     locModalSheet: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: Platform.OS === "ios" ? 36 : 24, maxHeight: "60%" },
     locModalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "#E0E0E0", alignSelf: "center", marginTop: 12, marginBottom: 6 },
-    locModalTitle: { fontSize: 18, fontWeight: "800", color: "#1F2937", textAlign: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F3F4F6", marginBottom: 4 },
-    locItem: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F9FAFB" },
+    locModalTitle: { fontSize: 21, fontWeight: "800", color: "#1F2937", textAlign: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F3F4F6", marginBottom: 4 },
+    locItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F9FAFB" },
     locItemSelected: { backgroundColor: "#F0FDF4", borderRadius: 10, paddingHorizontal: 8 },
-    locItemLabel: { fontSize: 17, color: "#1F2937", fontWeight: "600" },
+    locItemLabel: { fontSize: 19, color: "#1F2937", fontWeight: "600" },
     locItemLabelSel: { color: "#2E7D32", fontWeight: "800" },
-    locItemSub: { fontSize: 14, color: "#9CA3AF", marginTop: 1 },
-    locItemCheck: { fontSize: 18, color: "#2E7D32", fontWeight: "900", marginLeft: 8 },
+    locItemSub: { fontSize: 16, color: "#9CA3AF", marginTop: 2 },
+    locItemCheck: { fontSize: 20, color: "#2E7D32", fontWeight: "900", marginLeft: 8 },
 });

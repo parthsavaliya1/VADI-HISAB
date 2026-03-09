@@ -1,4 +1,5 @@
 import { HEADER_PADDING_TOP } from "@/constants/theme";
+import { AppBackButton } from "@/components/AppBackButton";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -678,9 +679,7 @@ export default function AddCrop() {
         <View style={styles.decorCircle1} />
         <View style={styles.decorCircle2} />
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={20} color={C.green700} />
-          </TouchableOpacity>
+          <AppBackButton onPress={handleBack} iconColor={C.green700} backgroundColor={C.surface} borderColor={C.green100} />
             <View style={{ alignItems: "center" }}>
             <Text style={styles.headerTitle}>
               {isEdit ? "✏️ પાક ફેરફાર" : "🌱 નવો પાક ઉમેરો"}

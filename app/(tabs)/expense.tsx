@@ -7,6 +7,7 @@ import {
   type Expense,
   type ExpenseCategory,
 } from "@/utils/api";
+import { formatWholeNumber } from "@/utils/format";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -108,7 +109,7 @@ function formatDate(iso: string): string {
 }
 
 function formatINR(n: number): string {
-  return n.toLocaleString("en-IN");
+  return formatWholeNumber(n);
 }
 
 // ─── Empty State ──────────────────────────────────────────────────────────────

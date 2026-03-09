@@ -16,6 +16,7 @@ import {
   type Income,
   type IncomeCategory,
 } from "@/utils/api";
+import { formatWholeNumber } from "@/utils/format";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -153,7 +154,7 @@ function formatDate(iso: string): string {
 
 function formatINR(n: number | undefined | null): string {
   const x = Number(n);
-  return (Number.isFinite(x) ? Math.abs(x) : 0).toLocaleString("en-IN");
+  return formatWholeNumber(Number.isFinite(x) ? Math.abs(x) : 0);
 }
 
 // ─── Build merged list per year (latest year first, within year latest first) ─

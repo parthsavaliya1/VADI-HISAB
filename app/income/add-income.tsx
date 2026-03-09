@@ -9,6 +9,7 @@
  */
 
 import { HEADER_PADDING_TOP } from "@/constants/theme";
+import { AppBackButton } from "@/components/AppBackButton";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
@@ -975,13 +976,7 @@ export default function AddIncomeScreen() {
         <View style={styles.decorCircle1} />
         <View style={styles.decorCircle2} />
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.headerBackBtn}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={20} color={C.green700} />
-          </TouchableOpacity>
+          <AppBackButton onPress={() => router.back()} iconColor={C.green700} backgroundColor={C.surface} borderColor={C.green100} />
           <View style={{ alignItems: "center", flex: 1 }}>
             <Text style={styles.headerTitle}>{headerTitle}</Text>
             {headerSub ? <Text style={styles.headerSub}>{headerSub}</Text> : null}
@@ -993,7 +988,7 @@ export default function AddIncomeScreen() {
               </View>
             )}
           </View>
-          <View style={{ width: 36 }} />
+          <View style={{ width: 46 }} />
         </View>
       </LinearGradient>
 

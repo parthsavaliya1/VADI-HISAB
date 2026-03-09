@@ -3,6 +3,7 @@
  * Branded with logo, colorful section icons, landscape layout.
  */
 import type { FarmerProfile } from "@/utils/api";
+import { formatArea, formatWholeNumber } from "@/utils/format";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import React from "react";
@@ -55,7 +56,7 @@ export function FarmerProfileCard({
   const farms = Array.isArray(p.farms) ? p.farms : [];
   const totalLand = profile.totalLand?.value ?? 0;
   const landUnit = profile.totalLand?.unit === "bigha" ? "વીઘા" : "એકર";
-  const landText = totalLand ? `${totalLand} ${landUnit}` : "—";
+  const landText = totalLand ? `${profile.totalLand?.unit === "bigha" ? formatArea(totalLand) : formatWholeNumber(totalLand)} ${landUnit}` : "—";
   const waterText = toList(WATER, waterSources);
   const labourText = toList(LABOUR, labourTypes);
   const tractorServicesText = implementsAvailable.length > 0 ? toList(TRACTOR_SERVICES, implementsAvailable) : null;

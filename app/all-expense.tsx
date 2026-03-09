@@ -6,6 +6,7 @@ import {
   type Expense,
   type ExpenseCategory,
 } from "@/utils/api";
+import { formatWholeNumber } from "@/utils/format";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -73,7 +74,7 @@ function formatDate(iso: string): string {
 }
 
 function formatINR(n: number): string {
-  return n.toLocaleString("en-IN");
+  return formatWholeNumber(n);
 }
 
 function ExpenseRow({ item }: { item: Expense }) {
