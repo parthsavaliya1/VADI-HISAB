@@ -44,7 +44,7 @@ export function ScreenHeader({
             <Ionicons name="arrow-back" size={24} color={color} />
           </Pressable>
         ) : (
-          <View style={styles.backBtnPlaceholder} />
+          <View style={styles.noBackSpacer} />
         )}
         <View style={styles.titles}>
           <Text style={[styles.title, { color }]} numberOfLines={1}>
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 18,
     backgroundColor: AppTheme.green50,
     borderWidth: 1,
     borderColor: AppTheme.green100,
@@ -89,8 +89,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     borderColor: "rgba(255,255,255,0.3)",
   },
-  backBtnPlaceholder: { width: 40, height: 40, marginRight: 12 },
+  backBtnPlaceholder: { width: 40, height: 40, marginRight: 18 },
+  noBackSpacer: { width: 0, height: 40, marginRight: 0 },
   titles: { flex: 1, minWidth: 0 },
-  title: { fontSize: 20, fontWeight: "800" },
+  title: { fontSize: 28, fontWeight: "800", letterSpacing: 0.2 },
   subtitle: { fontSize: 14, fontWeight: "600", marginTop: 2 },
 });

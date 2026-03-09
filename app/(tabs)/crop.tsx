@@ -1,4 +1,3 @@
-import { AppBackButton } from "@/components/AppBackButton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
@@ -418,13 +417,9 @@ function StatsBar({
         <View style={styles.decorCircle2} />
 
         <View style={styles.statsHeaderRow}>
-          <AppBackButton onPress={() => router.back()} iconColor={C.textPrimary} backgroundColor={C.surface} borderColor="#D7E6D4" />
           <View style={styles.statsTitleRow}>
             <View>
-              <Text style={styles.statsGreeting}>🌾 {t("crop", "myCropListTitle")}</Text>
-              <Text style={styles.statsSubtitle}>
-                {tParam("crop", "cropsCount", { count: crops.length, year: selectedYear })}
-              </Text>
+              <Text style={styles.statsGreeting}>{t("crop", "myCropListTitle")}</Text>
             </View>
           </View>
         </View>
@@ -923,7 +918,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 18,
   },
   statsTitleRow: {
     flex: 1,
@@ -931,7 +926,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  statsGreeting: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
+  statsGreeting: { fontSize: 28, fontWeight: "800", color: C.textPrimary, letterSpacing: 0.2 },
   statsSubtitle: { fontSize: 16, color: C.textMuted, marginTop: 3, fontWeight: "700" },
   yearFilterWrap: { marginBottom: 16 },
   yearFilterLabel: { fontSize: 19, fontWeight: "700", color: C.textSecondary, marginBottom: 8 },

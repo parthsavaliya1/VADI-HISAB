@@ -905,7 +905,7 @@ function RecentTransactions({
           onPress={() => router.push("/all-transactions" as any)}
         >
           <Text style={styles.seeAll}>{t("dashboard", "seeAll")}</Text>
-          <Ionicons name="chevron-forward" size={14} color={C.green700} />
+          <Ionicons name="chevron-forward" size={22} color={C.green700} />
         </TouchableOpacity>
       </View>
       <View style={styles.txnList}>
@@ -1505,7 +1505,7 @@ export default function Dashboard() {
                   onPress={() => router.push("/crop" as any)}
                 >
                   <Text style={styles.seeAll}>{t("dashboard", "seeAll")}</Text>
-                  <Ionicons name="chevron-forward" size={20} color={C.green700} />
+                  <Ionicons name="chevron-forward" size={22} color={C.green700} />
                 </TouchableOpacity>
               </View>
 
@@ -1661,11 +1661,6 @@ export default function Dashboard() {
                           </View>
                         )}
                       </View>
-                      <Text style={styles.detailMeta}>
-                        {seasonCategoryLabel(c.season, t)}
-                        {" · "}
-                        {formatVighaDisplay(c.area)} {areaUnitLabel(c.areaUnit, t)}
-                      </Text>
                       <Text style={styles.detailDate}>{formatDisplayDate(c.createdAt)}</Text>
                     </View>
                     <TouchableOpacity
@@ -1734,7 +1729,7 @@ export default function Dashboard() {
                       <View style={[styles.detailActionBtn, styles.detailExpenseBtnCrop]}>
                         <Ionicons name="remove-circle-outline" size={20} color="#B71C1C" />
                         <Text style={styles.detailActionBtnTextExpense}>
-                          {t("dashboard", "addExpense")}
+                          ખર્ચ
                         </Text>
                       </View>
                     </PressableCard>
@@ -1747,7 +1742,7 @@ export default function Dashboard() {
                       <View style={[styles.detailActionBtn, styles.detailIncomeBtnCrop]}>
                         <Ionicons name="add-circle-outline" size={20} color="#1B5E20" />
                         <Text style={styles.detailActionBtnTextIncome}>
-                          {t("dashboard", "addIncome")}
+                          આવક
                         </Text>
                       </View>
                     </PressableCard>
@@ -1953,9 +1948,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   sectionTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
-  myCropsSectionTitle: { fontSize: 22, fontWeight: "800", color: C.green700 },
-  seeAllBtn: { flexDirection: "row", alignItems: "center", gap: 2 },
-  seeAll: { fontSize: 18, color: C.green700, fontWeight: "800" },
+  myCropsSectionTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
+  seeAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(46, 125, 50, 0.08)",
+  },
+  seeAll: { fontSize: 20, color: C.green700, fontWeight: "900" },
 
   profitCard: {
     backgroundColor: C.surface,
@@ -2374,8 +2377,8 @@ const styles = StyleSheet.create({
   },
   detailExpenseBtnCrop: { backgroundColor: "#FFEBEE", borderColor: "#EF9A9A" },
   detailIncomeBtnCrop: { backgroundColor: "#E8F5E9", borderColor: "#81C784" },
-  detailActionBtnTextExpense: { fontSize: 17, fontWeight: "800", color: "#B71C1C" },
-  detailActionBtnTextIncome: { fontSize: 17, fontWeight: "800", color: "#1B5E20" },
+  detailActionBtnTextExpense: { fontSize: 20, fontWeight: "800", color: "#B71C1C" },
+  detailActionBtnTextIncome: { fontSize: 20, fontWeight: "800", color: "#1B5E20" },
   detailExpenseBtn: { backgroundColor: C.expense },
   detailIncomeBtn: { backgroundColor: C.green700 },
   detailActionBtnText: { fontSize: 16, fontWeight: "800", color: "#fff" },

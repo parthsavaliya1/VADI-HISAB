@@ -164,7 +164,7 @@ export default function ReportScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
       <View style={[styles.headerWrap, { backgroundColor: C.bg }]}>
-        <ScreenHeader title="📊 અહેવાલ" subtitle="વાર્ષિક આવક-ખર્ચ સારાંશ" style={{ marginBottom: 0, paddingBottom: 8 }} />
+        <ScreenHeader title="અહેવાલ" showBack={false} style={{ marginBottom: 0, paddingBottom: 8 }} />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}

@@ -2,8 +2,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
-const TAB_ICON_SIZE = 32;
-const TAB_LABEL_FONT_SIZE = 16;
+const TAB_ICON_SIZE = 26;
+const TAB_LABEL_FONT_SIZE = 13;
 
 export default function TabLayout() {
   const { t } = useLanguage();
@@ -13,9 +13,9 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: "#2e7d32",
         tabBarStyle: {
-          minHeight: 76,
-          paddingTop: 10,
-          paddingBottom: 10,
+          minHeight: 66,
+          paddingTop: 8,
+          paddingBottom: 8,
         },
         tabBarLabelStyle: { fontSize: TAB_LABEL_FONT_SIZE, fontWeight: "700" },
         tabBarIconStyle: { marginBottom: -2 },
