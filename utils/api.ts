@@ -364,6 +364,8 @@ export interface CropReportRow extends Crop {
   income: number;
   expense: number;
   profit: number;
+  labourShare?: number;
+  farmerDirectExpense?: number;
 }
 
 export interface SeasonBreakdown {

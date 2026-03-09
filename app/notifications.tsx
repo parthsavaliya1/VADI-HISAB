@@ -1,4 +1,5 @@
 import { HEADER_PADDING_TOP } from "@/constants/theme";
+import { AppBackButton } from "@/components/AppBackButton";
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -123,9 +124,7 @@ export default function NotificationsScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
       <View style={[styles.header, { paddingTop: HEADER_PADDING_TOP }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color={C.green700} />
-        </TouchableOpacity>
+        <AppBackButton onPress={() => router.back()} iconColor={C.green700} backgroundColor={C.surface} borderColor={C.green100} />
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Notifications</Text>
           <Text style={styles.headerSubtitle}>

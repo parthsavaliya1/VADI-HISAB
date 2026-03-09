@@ -1,4 +1,5 @@
 import { useRefresh } from "@/contexts/RefreshContext";
+import { AppBackButton } from "@/components/AppBackButton";
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import Toast from "react-native-toast-message";
 import {
@@ -308,12 +309,7 @@ export default function ExpenseList() {
       >
         <View style={styles.decorCircle} />
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={20} color="#fff" />
-          </TouchableOpacity>
+          <AppBackButton onPress={() => router.back()} iconColor="#fff" backgroundColor="rgba(255,255,255,0.16)" borderColor="rgba(255,255,255,0.26)" />
           <View style={{ alignItems: "center" }}>
             <Text style={styles.headerTitle}>💰 ખર્ચ યાદી</Text>
             {cropName ? (

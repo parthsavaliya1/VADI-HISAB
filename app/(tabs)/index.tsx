@@ -496,7 +496,6 @@ function CropPickerModal({
   onClose,
   type,
   onSelectGeneralExpense,
-  onSelectBhagyaUpad,
   onSelectGeneralIncome,
 }: {
   t: (s: string, k: string) => string;
@@ -507,7 +506,6 @@ function CropPickerModal({
   onClose: () => void;
   type: "expense" | "income";
   onSelectGeneralExpense?: () => void;
-  onSelectBhagyaUpad?: () => void;
   onSelectGeneralIncome?: () => void;
 }) {
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
@@ -552,7 +550,7 @@ function CropPickerModal({
           </TouchableOpacity>
         </View>
 
-        {crops.length === 0 && !onSelectGeneralExpense && !onSelectBhagyaUpad ? (
+        {crops.length === 0 && !onSelectGeneralExpense ? (
           <View style={styles.sheetEmpty}>
             <Text style={{ fontSize: 58, marginBottom: 14 }}>🌱</Text>
             <Text style={styles.sheetEmptyText}>{t("dashboard", "noCrops")}</Text>
@@ -651,25 +649,6 @@ function CropPickerModal({
                 </TouchableOpacity>
               );
             })}
-            {/* ભાગ્યા નો ઉપાડ — just above સામાન્ય ખર્ચ when Add Expense */}
-            {isExpense && onSelectBhagyaUpad && (
-              <TouchableOpacity
-                style={[styles.sheetCropRow, styles.sheetGeneralRow]}
-                onPress={() => {
-                  onSelectBhagyaUpad();
-                  onClose();
-                }}
-                activeOpacity={0.75}
-              >
-                <View style={[styles.sheetCropEmojiBg, { backgroundColor: "#FFF8E1" }]}>
-                  <Ionicons name="wallet-outline" size={30} color="#D97706" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.sheetCropName}>{t("dashboard", "bhagyaUpad")}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: 6 }} />
-              </TouchableOpacity>
-            )}
             {/* સામાન્ય ખર્ચ only when Add Expense; સામાન્ય આવક only when Add Income */}
             {isExpense && onSelectGeneralExpense && (
               <TouchableOpacity
@@ -722,104 +701,90 @@ function QuickActions({
   t,
   onAddExpense,
   onAddIncome,
+  onAddBhagyaUpad,
   profile,
 }: {
   t: (s: string, k: string) => string;
   onAddExpense: () => void;
   onAddIncome: () => void;
+  onAddBhagyaUpad: () => void;
   profile: { tractorAvailable?: boolean } | null;
 }) {
+  const showTractor = !!profile?.tractorAvailable;
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>⚡ {t("dashboard", "quickActions")}</Text>
       <View style={{ height: 14 }} />
       <View style={styles.qaRow}>
         <PressableCard onPress={onAddExpense} style={styles.qaHalf}>
-          <View
-            style={[
-              styles.qaCard,
-              { backgroundColor: C.expensePale, borderColor: "#FFCDD2" },
-            ]}
-          >
+          <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: C.expensePale, borderColor: "#FFCDD2" }]}>
             <View style={[styles.qaIcon, { backgroundColor: "#FFCDD2" }]}>
-              <Ionicons
-                name="remove-circle-outline"
-                size={20}
-                color={C.expense}
-              />
+              <Ionicons name="remove-circle-outline" size={20} color={C.expense} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.qaLabel, { color: C.expense }]}>{t("dashboard", "expense")}</Text>
-              <Text style={[styles.qaSub, { color: C.expense }]}>{t("dashboard", "addShort")}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={C.expense} />
           </View>
         </PressableCard>
 
-        {/* ✅ Triggers income picker → /income/add-income */}
         <PressableCard onPress={onAddIncome} style={styles.qaHalf}>
-          <View
-            style={[
-              styles.qaCard,
-              { backgroundColor: C.incomePale, borderColor: C.green100 },
-            ]}
-          >
+          <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: C.incomePale, borderColor: C.green100 }]}>
             <View style={[styles.qaIcon, { backgroundColor: C.green100 }]}>
               <Ionicons name="add-circle-outline" size={20} color={C.income} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.qaLabel, { color: C.income }]}>{t("dashboard", "income")}</Text>
-              <Text style={[styles.qaSub, { color: C.income }]}>{t("dashboard", "addShort")}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={C.income} />
           </View>
         </PressableCard>
       </View>
 
-      {/* Tractor income — cool orange + tractor icon */}
-      {profile?.tractorAvailable && (
-        <PressableCard
-          onPress={() => router.push("/income/add-tractor-income" as any)}
-          style={{ marginTop: 10 }}
-        >
-          <View
-            style={[
-              styles.qaCardFull,
-              { backgroundColor: C.tractorOrangePale, borderColor: C.tractorOrangeBorder },
-            ]}
-          >
-            <View style={[styles.qaIcon, { backgroundColor: "#FFE0B2" }]}>
-              <MaterialCommunityIcons name="tractor-variant" size={26} color={C.tractorOrange} />
+      {showTractor ? (
+        <View style={[styles.qaRow, { marginTop: 10 }]}>
+          <PressableCard onPress={onAddBhagyaUpad} style={styles.qaHalf}>
+            <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: "#F0F9FF", borderColor: "#BAE6FD" }]}>
+              <View style={[styles.qaIcon, { backgroundColor: "#E0F2FE" }]}>
+                <Ionicons name="wallet-outline" size={20} color="#0369A1" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.qaLabel, { color: "#0369A1" }]}>{t("dashboard", "bhagyaUpad")}</Text>
+              </View>
+            </View>
+          </PressableCard>
+
+          <PressableCard onPress={() => router.push("/income/add-tractor-income" as any)} style={styles.qaHalf}>
+            <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: C.tractorOrangePale, borderColor: C.tractorOrangeBorder }]}>
+              <View style={[styles.qaIcon, { backgroundColor: "#FFE0B2" }]}>
+                <MaterialCommunityIcons name="tractor-variant" size={20} color={C.tractorOrange} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.qaLabel, { color: C.tractorOrange }]}>ટ્રેક્ટર ની આવક</Text>
+              </View>
+            </View>
+          </PressableCard>
+        </View>
+      ) : (
+        <PressableCard onPress={onAddBhagyaUpad} style={{ marginTop: 10 }}>
+          <View style={[styles.qaCardFull, styles.qaCommonCard, { backgroundColor: "#F0F9FF", borderColor: "#BAE6FD" }]}>
+            <View style={[styles.qaIcon, { backgroundColor: "#E0F2FE" }]}>
+              <Ionicons name="wallet-outline" size={20} color="#0369A1" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.qaLabel, { color: C.tractorOrange, fontWeight: "700" }]}>
-                + {t("dashboard", "tractorAddIncome")}
-              </Text>
+              <Text style={[styles.qaLabel, { color: "#0369A1" }]}>{t("dashboard", "bhagyaUpad")}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={C.tractorOrange} />
           </View>
         </PressableCard>
       )}
 
-      <PressableCard
-        onPress={() => router.push("/crop/add-crop")}
-        style={{ marginTop: 10 }}
-      >
-        <View
-          style={[
-            styles.qaCardFull,
-            styles.qaCardFullAddCrop,
-          ]}
-        >
+      <PressableCard onPress={() => router.push("/crop/add-crop")} style={{ marginTop: 10 }}>
+        <View style={[styles.qaCardFull, styles.qaCommonCard, styles.qaCardFullAddCrop]}>
           <View style={[styles.qaIcon, styles.qaCardFullAddCropIcon]}>
-            <Ionicons name="leaf" size={26} color="#5D4037" />
+            <Ionicons name="leaf" size={23} color="#5D4037" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.qaLabel, styles.qaCardFullAddCropText]}>
-              + {t("dashboard", "addNewCrop")}
-            </Text>
+            <Text style={[styles.qaLabel, styles.qaCardFullAddCropText]}>નવો પાક ઉમેરો</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#5D4037" />
         </View>
       </PressableCard>
     </View>
@@ -962,30 +927,33 @@ export default function Dashboard() {
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const [prof, cropRes, yearlyReport, expRes, incRes, notificationRes] = await Promise.all([
+      const [prof, cropRes, yearlyReport, expRes, incRes, notificationRes, bhagyaExpRes] = await Promise.all([
         getMyProfile(),
         getCrops(1, 100, undefined, undefined, financialYear),
         getYearlyReport(financialYear),
         getExpenses(undefined, undefined, undefined, 1, 30, financialYear),
         getIncomes(1, 30, undefined, undefined, undefined, financialYear),
         getNotifications(1, 20),
+        getExpenses(undefined, "Labour", undefined, 1, 500, financialYear),
       ]);
       setProfile(prof);
       setUnreadNotificationCount(notificationRes.pagination?.unreadCount ?? 0);
       const reportCrops = (yearlyReport as any).crops ?? [];
       const extraIncome = (yearlyReport as any).summary?.extraIncome ?? 0;
       const extraExpense = (yearlyReport as any).summary?.extraExpense ?? 0;
+      const bhagyaUpad = (bhagyaExpRes.data ?? [])
+        .filter((e) => !e.cropId && e.category === "Labour")
+        .reduce((sum, e) => sum + (e.amount ?? 0), 0);
       // Main summary: total income includes extra; total expense = sum of individual crop expenses only (matches what user sees on each crop card)
       const cropIncome = reportCrops.reduce((s: number, r: any) => s + (r.income ?? 0), 0);
       const cropExpense = reportCrops.reduce((s: number, r: any) => s + (r.expense ?? 0), 0);
       const allIncome = cropIncome + extraIncome;
-      const allExpense = cropExpense + extraExpense;
       setSummary({
         totalIncome: allIncome,
         totalExpense: cropExpense, // કુલ ખર્ચ = crop expense only
         netProfit: allIncome - cropExpense, // ચોખ્ખો નફો = આવક - ખર્ચ
       });
-      setBhagyaUpadTotal(extraExpense); // ભાગ્યા નો ઉપાડ (no-crop expense)
+      setBhagyaUpadTotal(bhagyaUpad);
       setCrops(
         cropRes.data.map((c: Crop) => {
           const report = reportCrops.find((r: any) => r._id === c._id);
@@ -1378,6 +1346,14 @@ export default function Dashboard() {
                     </View>
                   ))}
                 </View>
+                {bhagyaUpadTotal > 0 && (
+                  <View style={styles.bhagyaUpadRow}>
+                    <Text style={styles.bhagyaUpadLabel}>{t("dashboard", "bhagyaUpad")}</Text>
+                    <Text style={styles.bhagyaUpadValue}>
+                      ₹{formatWholeNumber(bhagyaUpadTotal)}
+                    </Text>
+                  </View>
+                )}
                 {landBigha > 0 && (
                   <View style={styles.profitPerBighaRow}>
                     <View style={styles.profitPerBighaItem}>
@@ -1394,14 +1370,6 @@ export default function Dashboard() {
                     </View>
                   </View>
                 )}
-                {bhagyaUpadTotal > 0 && (
-                  <View style={styles.bhagyaUpadRow}>
-                    <Text style={styles.bhagyaUpadLabel}>{t("dashboard", "bhagyaUpad")}</Text>
-                    <Text style={styles.bhagyaUpadValue}>
-                      ₹{formatWholeNumber(bhagyaUpadTotal)}
-                    </Text>
-                  </View>
-                )}
               </View>
             </View>
           </PressableCard>
@@ -1411,6 +1379,7 @@ export default function Dashboard() {
           t={t}
           onAddExpense={openExpensePicker}
           onAddIncome={openIncomePicker}
+          onAddBhagyaUpad={() => router.push("/expense/add-bhagya-upad" as any)}
           profile={profile}
         />
 
@@ -1696,10 +1665,6 @@ export default function Dashboard() {
           setPickerVisible(false);
           router.push("/expense/add-expense?general=1" as any);
         }}
-        onSelectBhagyaUpad={() => {
-          setPickerVisible(false);
-          router.push("/expense/add-bhagya-upad" as any);
-        }}
         onSelectGeneralIncome={() => {
           setPickerVisible(false);
           router.push("/income/add-income?general=1" as any);
@@ -1977,18 +1942,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 10,
-    paddingVertical: 10,
+    marginBottom: 2,
+    paddingVertical: 9,
     paddingHorizontal: 12,
     borderRadius: 10,
-    backgroundColor: "#FFF8E1",
+    backgroundColor: "#FFFBE6",
     borderWidth: 1,
-    borderColor: "#FFECB3",
+    borderColor: "#FDE68A",
   },
-  bhagyaUpadLabel: { fontSize: 15, color: "#E65100", fontWeight: "700" },
-  bhagyaUpadValue: { fontSize: 17, fontWeight: "800", color: "#BF360C" },
+  bhagyaUpadLabel: { fontSize: 15, color: "#A16207", fontWeight: "700" },
+  bhagyaUpadValue: { fontSize: 17, fontWeight: "800", color: "#92400E" },
 
   qaRow: { flexDirection: "row", gap: 10 },
+  qaRowCompact: { flexDirection: "column" },
   qaHalf: { flex: 1 },
+  qaFullCompact: { flex: undefined },
   qaCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -2002,18 +1970,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  qaCardCompact: {
+    minHeight: 78,
+  },
   qaCardFull: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
     borderRadius: 18,
-    padding: 16,
+    padding: 14,
     borderWidth: 1.5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
+  },
+  qaCommonCard: {
+    minHeight: 72,
   },
   qaCardFullAddCrop: {
     backgroundColor: "#FFF8E1",
@@ -2028,16 +2002,16 @@ const styles = StyleSheet.create({
   },
   qaCardFullAddCropText: {
     color: "#5D4037",
-    fontSize: 18,
+    fontSize: 22,
   },
   qaIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 13,
+    width: 46,
+    height: 46,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
-  qaLabel: { fontSize: 20, fontWeight: "800" },
+  qaLabel: { fontSize: 22, fontWeight: "800" },
   qaSub: { fontSize: 17, color: C.textMuted, marginTop: 2, fontWeight: "700" },
 
   cropCarouselWrap: { position: "relative" },

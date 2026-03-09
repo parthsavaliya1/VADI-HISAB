@@ -1,3 +1,4 @@
+import { AppBackButton } from "@/components/AppBackButton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
@@ -7,7 +8,6 @@ import {
   getCurrentFinancialYear,
   getFinancialYearOptions,
   getMyProfile,
-  markCropHarvested,
   updateCropStatus,
   getIncomes,
   getExpenseSummary,
@@ -32,7 +32,6 @@ import {
   Animated,
   Dimensions,
   FlatList,
-  PanResponder,
   Platform,
   Pressable,
   RefreshControl,
@@ -45,7 +44,6 @@ import {
   View,
 } from "react-native";
 const { width: SCREEN_W } = Dimensions.get("window");
-const SWIPE_THRESHOLD = -80;
 
 // ─── Color system ─────────────────────────────────────────────────────────────
 // Match dashboard theme
@@ -128,8 +126,8 @@ function CropCard({
   tParam,
   onDelete,
   onStatusChange,
-  onHarvest,
   onOpenDetails,
+  onRequestMenuOpen,
 }: {
   item: Crop;
   index: number;
@@ -137,13 +135,11 @@ function CropCard({
   tParam: (s: string, k: string, p: Record<string, string | number>) => string;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: CropStatus) => void;
-  onHarvest: (id: string) => void;
   onOpenDetails: (crop: Crop) => void;
+  onRequestMenuOpen: (index: number) => void;
 }) {
-  const translateX = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.95)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
-  const [swiped, setSwiped] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuAnim = useRef(new Animated.Value(0)).current;
 
@@ -154,34 +150,11 @@ function CropCard({
     ]).start();
   }, []);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) =>
-        Math.abs(g.dx) > 10 && Math.abs(g.dy) < 20,
-      onPanResponderMove: (_, g) => {
-        if (g.dx < 0) translateX.setValue(Math.max(g.dx, -120));
-      },
-      onPanResponderRelease: (_, g) => {
-        if (g.dx < SWIPE_THRESHOLD) {
-          Animated.spring(translateX, { toValue: -120, useNativeDriver: true }).start();
-          setSwiped(true);
-        } else {
-          Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
-          setSwiped(false);
-        }
-      },
-    }),
-  ).current;
-
-  const closeSwipe = () => {
-    Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
-    setSwiped(false);
-  };
-
   const toggleMenu = () => {
     const next = !menuOpen;
     setMenuOpen(next);
     Animated.spring(menuAnim, { toValue: next ? 1 : 0, useNativeDriver: true }).start();
+    if (next) requestAnimationFrame(() => onRequestMenuOpen(index));
   };
 
   const seasonKey = item.season ?? "";
@@ -198,54 +171,7 @@ function CropCard({
         { opacity: cardOpacity, transform: [{ scale: cardScale }] },
       ]}
     >
-      {/* Swipe action buttons */}
-      <View style={styles.swipeActions}>
-        {/* Harvest shortcut — only for Active crops */}
-        {item.status === "Active" ? (
-          <TouchableOpacity
-            style={[styles.swipeBtn, { backgroundColor: "#B45309" }]}
-            onPress={() => { closeSwipe(); onHarvest(item._id); }}
-          >
-            <Ionicons name="leaf" size={20} color="#fff" />
-            <Text style={styles.swipeBtnText}>{t("crop", "harvest")}</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.swipeBtn, { backgroundColor: C.green700 }]}
-            onPress={() => {
-              closeSwipe();
-              const next: CropStatus =
-                item.status === "Harvested" ? "Closed" : "Active";
-              onStatusChange(item._id, next);
-            }}
-          >
-            <Ionicons name="swap-horizontal" size={20} color="#fff" />
-            <Text style={styles.swipeBtnText}>{t("crop", "statusShort")}</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={[styles.swipeBtn, { backgroundColor: "#0284C7" }]}
-          onPress={() => { closeSwipe(); router.push(`/crop/edit-crop?id=${item._id}` as any); }}
-        >
-          <Ionicons name="create-outline" size={20} color="#fff" />
-          <Text style={styles.swipeBtnText}>{t("crop", "edit")}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.swipeBtn, { backgroundColor: C.expense }]}
-          onPress={() => { closeSwipe(); onDelete(item._id); }}
-        >
-          <Ionicons name="trash-outline" size={20} color="#fff" />
-          <Text style={styles.swipeBtnText}>{t("crop", "delete")}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Main card */}
-      <Animated.View
-        style={[styles.card, { transform: [{ translateX }] }]}
-        {...panResponder.panHandlers}
-      >
+      <Animated.View style={styles.card}>
         {/* Top accent bar — same crop color as dashboard/chart */}
         <View style={[styles.cardAccentBar, { backgroundColor: cropColor }]} />
 
@@ -300,8 +226,9 @@ function CropCard({
                 </View>
               </View>
             </View>
-            <TouchableOpacity onPress={toggleMenu} style={styles.menuTrigger}>
-              <Ionicons name="ellipsis-vertical" size={18} color={C.textMuted} />
+            <TouchableOpacity onPress={toggleMenu} style={styles.menuTrigger} activeOpacity={0.85}>
+              <Text style={styles.menuTriggerText}>વિકલ્પ</Text>
+              <Ionicons name="chevron-forward" size={22} color={C.green700} />
             </TouchableOpacity>
           </View>
 
@@ -329,36 +256,22 @@ function CropCard({
                 </TouchableOpacity>
               ))}
 
-              {/* Quick harvest option in dropdown for Active crops */}
-              {item.status === "Active" && (
-                <>
-                  <View style={styles.dropDivider} />
-                  <TouchableOpacity
-                    style={styles.dropMenuItem}
-                    onPress={() => { toggleMenu(); onHarvest(item._id); }}
-                  >
-                    <Ionicons name="leaf-outline" size={14} color="#B45309" />
-                    <Text style={[styles.dropMenuText, { color: "#B45309" }]}>
-                      {t("crop", "harvestAndYield")}
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              )}
-
               <View style={styles.dropDivider} />
               <TouchableOpacity
                 style={styles.dropMenuItem}
                 onPress={() => { toggleMenu(); router.push(`/crop/edit-crop?id=${item._id}` as any); }}
               >
-                <Ionicons name="create-outline" size={14} color={C.textSecondary} />
+                <Ionicons name="create-outline" size={20} color={C.textSecondary} />
                 <Text style={styles.dropMenuText}>{t("crop", "editCrop")}</Text>
+                <Ionicons name="chevron-forward" size={18} color={C.textMuted} style={{ marginLeft: "auto" }} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.dropMenuItem}
                 onPress={() => { toggleMenu(); onDelete(item._id); }}
               >
-                <Ionicons name="trash-outline" size={14} color={C.expense} />
+                <Ionicons name="trash-outline" size={20} color={C.expense} />
                 <Text style={[styles.dropMenuText, { color: C.expense }]}>{t("crop", "deleteCrop")}</Text>
+                <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: "auto" }} />
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -399,12 +312,6 @@ function CropCard({
               </View>
             ) : null}
 
-            {index === 0 && !swiped && (
-              <View style={styles.swipeHint}>
-                <Ionicons name="chevron-back" size={10} color={C.green100} />
-                <Text style={styles.swipeHintText}>← {t("crop", "swipeHint")}</Text>
-              </View>
-            )}
           </View>
           </View>
         </TouchableOpacity>
@@ -511,9 +418,7 @@ function StatsBar({
         <View style={styles.decorCircle2} />
 
         <View style={styles.statsHeaderRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={24} color={C.textPrimary} />
-          </TouchableOpacity>
+          <AppBackButton onPress={() => router.back()} iconColor={C.textPrimary} backgroundColor={C.surface} borderColor="#D7E6D4" />
           <View style={styles.statsTitleRow}>
             <View>
               <Text style={styles.statsGreeting}>🌾 {t("crop", "myCropListTitle")}</Text>
@@ -727,23 +632,18 @@ export default function CropScreen() {
     }
   };
 
-  // ── Harvest — marks as Harvested with today's date ────────────────────────
-  const handleHarvest = async (id: string) => {
-    try {
-      const updated = await markCropHarvested(id);
-      setCrops((prev) =>
-        prev.map((c) =>
-          c._id === id
-            ? { ...c, status: updated.status, harvestDate: updated.harvestDate }
-            : c,
-        ),
-      );
-    } catch (err: any) {
-      Alert.alert(t("common", "error"), err.message);
-    }
-  };
-
   const filtered = crops.filter((c) => c.status === filter);
+  const listRef = useRef<FlatList<Crop>>(null);
+
+  const ensureMenuVisible = useCallback((index: number) => {
+    setTimeout(() => {
+      listRef.current?.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0.45,
+      });
+    }, 80);
+  }, []);
 
   const counts: Record<string, number> = {
     Active: crops.filter((c) => c.status === "Active").length,
@@ -830,6 +730,7 @@ export default function CropScreen() {
             <EmptyState filter={filter} t={t} tParam={tParam} />
           ) : (
             <FlatList
+              ref={listRef}
               data={filtered}
               keyExtractor={(item) => item._id}
               renderItem={({ item, index }) => (
@@ -840,12 +741,25 @@ export default function CropScreen() {
                   tParam={tParam}
                   onDelete={handleDelete}
                   onStatusChange={handleStatusChange}
-                  onHarvest={handleHarvest}
                   onOpenDetails={openSummary}
+                  onRequestMenuOpen={ensureMenuVisible}
                 />
               )}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
+              onScrollToIndexFailed={(info) => {
+                listRef.current?.scrollToOffset({
+                  offset: Math.max(0, info.averageItemLength * info.index - 220),
+                  animated: true,
+                });
+                setTimeout(() => {
+                  listRef.current?.scrollToIndex({
+                    index: info.index,
+                    animated: true,
+                    viewPosition: 0.45,
+                  });
+                }, 120);
+              }}
               refreshControl={
                 <RefreshControl
                   refreshing={refreshing}
@@ -1094,13 +1008,6 @@ const styles = StyleSheet.create({
   listContent: { padding: 14, paddingBottom: 24 },
 
   cardWrapper: { marginBottom: 12 },
-  swipeActions: {
-    position: "absolute", right: 0, top: 0, bottom: 0,
-    flexDirection: "row", borderRadius: 18, overflow: "hidden",
-  },
-  swipeBtn: { width: 40, justifyContent: "center", alignItems: "center", gap: 3 },
-  swipeBtnText: { fontSize: 8, color: "#fff", fontWeight: "700" },
-
   card: {
     backgroundColor: C.surface, borderRadius: 18, overflow: "hidden",
     borderWidth: 1, borderColor: C.borderLight,
@@ -1126,24 +1033,36 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusDot: { width: 9, height: 9, borderRadius: 4.5 },
   statusText: { fontSize: 15, fontWeight: "700" },
 
-  menuTrigger: { padding: 4, marginLeft: 4 },
+  menuTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginLeft: 6,
+    borderRadius: 12,
+    backgroundColor: C.green50,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  menuTriggerText: { fontSize: 15, fontWeight: "800", color: C.green700 },
   dropMenu: {
-    backgroundColor: C.surface, borderRadius: 14,
+    backgroundColor: C.surface, borderRadius: 18,
     borderWidth: 1, borderColor: C.borderLight,
-    marginTop: 8, marginBottom: 4,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 12, elevation: 6, overflow: "hidden",
+    marginTop: 10, marginBottom: 6,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12, shadowRadius: 16, elevation: 8, overflow: "hidden",
   },
   dropMenuItem: {
     flexDirection: "row", alignItems: "center", gap: 10,
-    paddingHorizontal: 14, paddingVertical: 11,
+    paddingHorizontal: 18, paddingVertical: 15,
   },
   dropMenuItemActive: { backgroundColor: C.green50 },
-  dropMenuText: { fontSize: 16, color: C.textSecondary, fontWeight: "700" },
-  dropDivider: { height: 1, backgroundColor: C.borderLight, marginHorizontal: 10 },
+  dropMenuText: { fontSize: 19, color: C.textSecondary, fontWeight: "800" },
+  dropDivider: { height: 1, backgroundColor: C.borderLight, marginHorizontal: 14 },
 
   cardFooter: {
     flexDirection: "row", gap: 14, paddingTop: 10,
@@ -1159,9 +1078,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8,
   },
   yieldBadgeText: { fontSize: 13, fontWeight: "700" },
-
-  swipeHint: { flexDirection: "row", alignItems: "center", marginLeft: "auto" },
-  swipeHintText: { fontSize: 14, color: C.green100, fontWeight: "700" },
 
   empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
   emptyIconWrap: {
@@ -1190,9 +1106,9 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 480,
-    borderRadius: 18,
+    borderRadius: 24,
     backgroundColor: C.surface,
-    padding: 18,
+    padding: 22,
     borderWidth: 1,
     borderColor: C.border,
   },
@@ -1205,26 +1121,28 @@ const styles = StyleSheet.create({
   modalHeaderRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: "800",
+    fontSize: 27,
+    fontWeight: "900",
     color: C.textPrimary,
   },
   modalArea: {
-    marginTop: 2,
-    fontSize: 18,
-    fontWeight: "800",
+    marginTop: 4,
+    fontSize: 21,
+    fontWeight: "900",
     color: C.textSecondary,
   },
   modalDate: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "800",
     color: C.textSecondary,
   },
   modalCloseBtn: {
-    padding: 6,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: C.green50,
   },
   modalSub: {
     fontSize: 15,
@@ -1274,25 +1192,26 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   modalSectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: 21,
+    fontWeight: "900",
     color: C.textSecondary,
-    marginTop: 10,
-    marginBottom: 4,
+    marginTop: 14,
+    marginBottom: 8,
   },
   modalCatRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 3,
+    paddingVertical: 7,
   },
   modalCatLabel: {
-    fontSize: 15,
+    fontSize: 18,
     color: C.textSecondary,
+    fontWeight: "700",
   },
   modalCatValue: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 18,
+    fontWeight: "900",
     color: C.expense,
   },
   modalEmptyText: {
@@ -1307,29 +1226,30 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   modalLoadingText: {
-    fontSize: 12,
+    fontSize: 15,
     color: C.textMuted,
   },
   modalTotalLine: {
-    marginTop: 8,
-    fontSize: 16,
+    marginTop: 10,
+    fontSize: 19,
     color: C.textSecondary,
+    lineHeight: 28,
   },
   modalTotalAmount: {
-    fontSize: 19,
-    fontWeight: "800",
+    fontSize: 22,
+    fontWeight: "900",
     color: C.textPrimary,
   },
   modalBigClose: {
-    marginTop: 10,
-    borderRadius: 12,
+    marginTop: 16,
+    borderRadius: 16,
     backgroundColor: C.green700,
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 14,
   },
   modalBigCloseText: {
-    fontSize: 15,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "900",
     color: "#fff",
   },
 

@@ -5,6 +5,7 @@
  */
 
 import { useRefresh } from "@/contexts/RefreshContext";
+import { AppBackButton } from "@/components/AppBackButton";
 import {
   deleteExpense,
   deleteIncome,
@@ -181,9 +182,7 @@ export default function TransactionDetailsScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error ?? "ડેટા મળ્યો નથી"}</Text>
-        <TouchableOpacity style={styles.backBtnStandalone} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>પાછા જાઓ</Text>
-        </TouchableOpacity>
+        <AppBackButton onPress={() => router.back()} iconColor={C.green700} backgroundColor={C.surface} borderColor={C.green100} style={{ marginTop: 16 }} />
       </View>
     );
   }

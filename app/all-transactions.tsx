@@ -4,6 +4,7 @@
  * Opened from dashboard "બધા જુઓ" at તાજા વ્યવહાર.
  */
 
+import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getExpenses,
@@ -63,7 +64,11 @@ interface TxnItem {
   icon: string;
   category: string;
   financialYear: string;
+  isTractorIncome?: boolean;
+  isBhagyaExpense?: boolean;
 }
+
+type TxnFilter = "all" | "crop" | "income" | "expense" | "tractor" | "bhagya";
 
 function expenseAmount(e: Expense): number {
   const top = (e as any).amount;
@@ -163,7 +168,11 @@ function buildYearWiseTxns(
   incomesByYear: Record<string, Income[]>,
   crops: Crop[],
 ): { year: string; txns: TxnItem[] }[] {
-  const years = getFinancialYearOptionsExtended();
+  const years = [...getFinancialYearOptionsExtended()].sort((a, b) => {
+    const aStart = Number(a.split("-")[0] || 0);
+    const bStart = Number(b.split("-")[0] || 0);
+    return bStart - aStart;
+  });
   const out: { year: string; txns: TxnItem[] }[] = [];
 
   for (const fy of years) {
@@ -181,6 +190,7 @@ function buildYearWiseTxns(
         icon: expenseIcon(e.category),
         category: e.category,
         financialYear: fy,
+        isBhagyaExpense: !e.cropId && e.category === "Labour",
       })),
       ...incs.map((i) => {
         const rawDate = i.date ?? (i as any).createdAt ?? "";
@@ -195,6 +205,7 @@ function buildYearWiseTxns(
           icon: incomeIcon(i.category),
           category: i.category,
           financialYear: fy,
+          isTractorIncome: i.category === "Rental Income",
         };
       }),
     ];
@@ -233,7 +244,7 @@ function TxnRow({ item, onPress }: { item: TxnItem; onPress: () => void }) {
 }
 
 // ─── Year section header ──────────────────────────────────────────────────────
-function YearHeader({ year, incomeTotal, expenseTotal }: { year: string; incomeTotal: number; expenseTotal: number }) {
+function YearHeader({ year }: { year: string }) {
   return (
     <LinearGradient
       colors={["#E8F5E9", "#F1F8F1"]}
@@ -243,16 +254,7 @@ function YearHeader({ year, incomeTotal, expenseTotal }: { year: string; incomeT
     >
       <View style={styles.yearHeaderRow}>
         <Text style={styles.yearTitle}>{year}</Text>
-        <View style={styles.yearBadges}>
-          <View style={[styles.yearBadge, { backgroundColor: C.incomePale }]}>
-            <Ionicons name="arrow-up-circle" size={14} color={C.income} />
-            <Text style={[styles.yearBadgeText, { color: C.income }]}>{formatINR(incomeTotal)}</Text>
-          </View>
-          <View style={[styles.yearBadge, { backgroundColor: C.expensePale }]}>
-            <Ionicons name="arrow-down-circle" size={14} color={C.expense} />
-            <Text style={[styles.yearBadgeText, { color: C.expense }]}>{formatINR(expenseTotal)}</Text>
-          </View>
-        </View>
+        <Ionicons name="time-outline" size={18} color={C.textMuted} />
       </View>
     </LinearGradient>
   );
@@ -260,11 +262,13 @@ function YearHeader({ year, incomeTotal, expenseTotal }: { year: string; incomeT
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export default function AllTransactionsScreen() {
+  const { profile } = useProfile();
   const { transactionsRefreshKey } = useRefresh();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [yearWise, setYearWise] = useState<{ year: string; txns: TxnItem[] }[]>([]);
   const [crops, setCrops] = useState<Crop[]>([]);
+  const [activeFilter, setActiveFilter] = useState<TxnFilter>("all");
 
   const fetchAll = useCallback(async () => {
     try {
@@ -306,6 +310,29 @@ export default function AllTransactionsScreen() {
     router.push(`/transaction/details?id=${t._id}&type=${t.type}` as any);
   };
 
+  const filterChips: { key: TxnFilter; label: string }[] = [
+    { key: "all", label: "બધા" },
+    { key: "income", label: "આવક" },
+    { key: "expense", label: "ખર્ચ" },
+    { key: "bhagya", label: "ભાગ્યા નો ખર્ચો" },
+    ...(profile?.tractorAvailable ? [{ key: "tractor" as const, label: "ટ્રેક્ટર આવક" }] : []),
+  ];
+
+  const filteredYearWise = yearWise
+    .map(({ year, txns }) => ({
+      year,
+      txns: txns.filter((t) => {
+        if (activeFilter === "all") return true;
+        if (activeFilter === "income") return t.type === "income" && !t.isTractorIncome;
+        if (activeFilter === "expense") return t.type === "expense" && !t.isBhagyaExpense;
+        if (activeFilter === "bhagya") return t.type === "expense" && !!t.isBhagyaExpense;
+        if (activeFilter === "tractor") return t.type === "income" && !!t.isTractorIncome;
+        if (activeFilter === "crop") return t.cropName !== "—";
+        return true;
+      }),
+    }))
+    .filter(({ txns }) => txns.length > 0);
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
@@ -333,19 +360,37 @@ export default function AllTransactionsScreen() {
             />
           }
         >
-          {yearWise.length === 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+            style={styles.filterScroll}
+          >
+            {filterChips.map((chip) => {
+              const active = activeFilter === chip.key;
+              return (
+                <TouchableOpacity
+                  key={chip.key}
+                  style={[styles.filterChip, active && styles.filterChipActive]}
+                  onPress={() => setActiveFilter(chip.key)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{chip.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          {filteredYearWise.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>📭</Text>
               <Text style={styles.emptyTitle}>કોઈ વ્યવહાર નથી</Text>
-              <Text style={styles.emptySub}>આવક અથવા ખર્ચ ઉમેરો</Text>
+              <Text style={styles.emptySub}>આ ફિલ્ટર માટે કોઈ વ્યવહાર નથી</Text>
             </View>
           ) : (
-            yearWise.map(({ year, txns }) => {
-              const incomeTotal = txns.filter((t) => t.type === "income").reduce((s, t) => s + (Number(t.amount) || 0), 0);
-              const expenseTotal = txns.filter((t) => t.type === "expense").reduce((s, t) => s + Math.abs(Number(t.amount) || 0), 0);
+            filteredYearWise.map(({ year, txns }) => {
               return (
                 <View key={year} style={styles.section}>
-                  <YearHeader year={year} incomeTotal={incomeTotal} expenseTotal={expenseTotal} />
+                  <YearHeader year={year} />
                   <View style={styles.txnList}>
                     {txns.map((t) => (
                       <TxnRow key={`${t.type}-${t._id}`} item={t} onPress={() => openDetail(t)} />
@@ -371,6 +416,22 @@ const styles = StyleSheet.create({
 
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 24 },
+  filterScroll: { marginBottom: 14 },
+  filterRow: { flexDirection: "row", gap: 10, paddingRight: 4 },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  filterChipActive: {
+    backgroundColor: C.green700,
+    borderColor: C.green700,
+  },
+  filterChipText: { fontSize: 15, fontWeight: "700", color: C.textSecondary },
+  filterChipTextActive: { color: "#fff" },
 
   section: { marginBottom: 24 },
   yearHeader: {
@@ -382,18 +443,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  yearHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 },
+  yearHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   yearTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
-  yearBadges: { flexDirection: "row", gap: 8 },
-  yearBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  yearBadgeText: { fontSize: 12, fontWeight: "700" },
 
   txnList: { gap: 8 },
   txnCard: {
