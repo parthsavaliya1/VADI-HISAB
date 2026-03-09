@@ -1,7 +1,6 @@
 import { AppTheme } from "@/constants/theme";
 import { ExpensePieChart } from "@/components/ExpensePieChart";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { VighaChart } from "@/components/VighaChart";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
@@ -137,6 +136,20 @@ export default function ReportScreen() {
   const rankingTopPercent = analytics?.percentileRank != null ? Math.max(1, Math.round(100 - analytics.percentileRank)) : null;
   const compareDiff = compare ? (compare.myIncomePerBigha ?? 0) - (compare.avgIncomePerBigha ?? 0) : 0;
   const compareDiffText = `${formatINR(Math.abs(compareDiff))} ${compareDiff >= 0 ? "વધારે" : "ઓછું"}`;
+  const avgVal = compare?.avgIncomePerBigha ?? 0;
+  const incomePctVsAvg = avgVal > 0 && compare ? Math.round(((compare.myIncomePerBigha ?? 0) - avgVal) / avgVal * 100) : 0;
+
+  const expenseAnalyticsData = expenseAnalytics && (expenseAnalytics.myArea ?? 0) > 0 && expenseAnalytics.sampleSize > 0;
+  const myBy = expenseAnalyticsData ? (expenseAnalytics?.myPerBighaByCategory || {}) : {};
+  const avgBy = expenseAnalyticsData ? (expenseAnalytics?.avgPerBighaByCategory || {}) : {};
+  const myExpenseTotal = Object.values(myBy).reduce((s, v) => s + v, 0);
+  const avgExpenseTotal = Object.values(avgBy).reduce((s, v) => s + v, 0);
+  const expensePctVsAvg = avgExpenseTotal > 0 ? Math.round((myExpenseTotal - avgExpenseTotal) / avgExpenseTotal * 100) : 0;
+  const expenseLowerIsBetter = myExpenseTotal <= avgExpenseTotal;
+
+  const expenseHigherCategories = expenseAnalyticsData
+    ? EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > (avgBy[cat] || 0) && (myBy[cat] || 0) > 0)
+    : [];
 
   return (
     <View style={styles.container}>
@@ -209,13 +222,10 @@ export default function ReportScreen() {
           {/* Expense category pie chart — Labour 30%, Machinery 39%, etc. */}
           <ExpensePieChart byCategory={expenseAnalytics?.myByCategory ?? {}} centerTotal={displayExpense} />
 
-          {/* 1. Expense analysis — vertical bars, તમારો vs સરેરાશ (per bigha when available) */}
+          {/* 1. Expense type comparison — ખર્ચ પ્રકાર તુલના */}
           {(expenseAnalytics || (report && (report as any).summary)) && (
-            <View style={styles.chartCard}>
-              <Text style={styles.chartCardTitle}>💸 ખર્ચ વિશ્લેષણ</Text>
-              {(expenseAnalytics && (expenseAnalytics.myArea ?? 0) > 0) && (
-                <Text style={styles.perBighaHighlight}>※ સરખામણી પ્રતિ વીઘા એકમમાં છે</Text>
-              )}
+            <View style={styles.expenseTypeCard}>
+              <Text style={styles.expenseTypeTitle}>💸 ખર્ચ પ્રકાર તુલના</Text>
               {expenseAnalytics && ((expenseAnalytics.myArea ?? 0) > 0 || expenseAnalytics.mySummary?.length) ? (
                 (() => {
                   const usePerBigha = (expenseAnalytics.myArea ?? 0) > 0;
@@ -224,182 +234,252 @@ export default function ReportScreen() {
                   const hasCompare = expenseAnalytics.sampleSize > 0;
                   const categories = EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > 0 || (avgBy[cat] || 0) > 0);
                   if (categories.length === 0) {
-                    return <Text style={styles.chartEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>;
+                    return <Text style={styles.expenseTypeEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>;
                   }
                   const maxVal = Math.max(1, ...categories.map((cat) => Math.max(myBy[cat] || 0, avgBy[cat] || 0)));
-                  const chartContentWidth = Math.max(SCREEN_W - 32 - 24, categories.length * 64);
-                  const colWidth = chartContentWidth / categories.length;
                   return (
-                    <View style={styles.barChartWrap}>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartScrollContent}>
-                        <View style={[styles.verticalChartRow, styles.verticalChartRowTall, { width: chartContentWidth }]}>
-                          {categories.map((cat) => {
-                            const my = myBy[cat] || 0;
-                            const avg = avgBy[cat] || 0;
-                            const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
-                            return (
-                              <View key={cat} style={[styles.verticalBarCol, styles.verticalBarColWide, { width: colWidth }]}>
-                                <View style={styles.verticalBars}>
-                                  <View
-                                    style={[
-                                      styles.verticalBar,
-                                      styles.barFillMy,
-                                      { width: hasCompare ? 14 : 22, height: Math.max(2, (my / maxVal) * VERTICAL_CHART_HEIGHT) },
-                                    ]}
-                                  />
-                                  {hasCompare && (
-                                    <View
-                                      style={[
-                                        styles.verticalBar,
-                                        styles.barFillAvg,
-                                        { width: 14, height: Math.max(2, (avg / maxVal) * VERTICAL_CHART_HEIGHT) },
-                                      ]}
-                                    />
-                                  )}
-                                </View>
-                                <Text style={styles.verticalBarYear} numberOfLines={2}>{label}</Text>
-                                <View style={styles.verticalBarValues}>
-                                  <Text style={styles.barValue} numberOfLines={1}>{formatINR(my)}</Text>
-                                  {hasCompare && <Text style={styles.barValueAvg} numberOfLines={1}>{formatINR(avg)}</Text>}
-                                </View>
-                              </View>
-                            );
-                          })}
-                        </View>
-                      </ScrollView>
-                      <View style={styles.barLegend}>
-                        <View style={styles.barLegendItem}>
-                          <View style={[styles.barLegendDot, { backgroundColor: C.expense }]} />
-                          <Text style={styles.barLegendText}>તમારી</Text>
+                    <View style={styles.expenseTypeWrap}>
+                      <View style={styles.expenseTypeLegend}>
+                        <View style={styles.expenseTypeLegendItem}>
+                          <View style={[styles.expenseTypeLegendDot, { backgroundColor: C.expense }]} />
+                          <Text style={styles.expenseTypeLegendText}>તમારી</Text>
                         </View>
                         {hasCompare && (
-                          <View style={styles.barLegendItem}>
-                            <View style={[styles.barLegendDot, { backgroundColor: C.textMuted }]} />
-                            <Text style={styles.barLegendText}>સરેરાશ ({expenseAnalytics.sampleSize})</Text>
+                          <View style={styles.expenseTypeLegendItem}>
+                            <View style={[styles.expenseTypeLegendDot, { backgroundColor: C.textMuted }]} />
+                            <Text style={styles.expenseTypeLegendText}>સરેરાશ</Text>
                           </View>
                         )}
                       </View>
-                      {usePerBigha && hasCompare && (() => {
-                        const higher = EXPENSE_CATEGORY_ORDER.filter(
-                          (cat) => (myBy[cat] || 0) > (avgBy[cat] || 0) && (myBy[cat] || 0) > 0,
-                        );
-                        if (higher.length === 0) return null;
+                      {categories.map((cat) => {
+                        const my = myBy[cat] || 0;
+                        const avg = avgBy[cat] || 0;
+                        const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
                         return (
-                          <View style={styles.improvementNote}>
-                            <View style={styles.improvementNoteIconWrap}>
-                              <Ionicons name="bulb-outline" size={24} color={C.green700} />
+                          <View key={cat} style={styles.expenseTypeRow}>
+                            <Text style={styles.expenseTypeLabel} numberOfLines={1}>{label}</Text>
+                            <View style={styles.expenseTypeBars}>
+                              <View style={styles.expenseTypeBarRow}>
+                                <View style={styles.expenseTypeTrack}>
+                                  <View
+                                    style={[
+                                      styles.expenseTypeFill,
+                                      { width: `${Math.min(100, (my / maxVal) * 100)}%`, backgroundColor: C.expense },
+                                    ]}
+                                  />
+                                </View>
+                                <Text style={[styles.expenseTypeVal, { color: C.expense }]}>{formatINR(my)}</Text>
+                              </View>
+                              {hasCompare && (
+                                <View style={styles.expenseTypeBarRow}>
+                                  <View style={styles.expenseTypeTrack}>
+                                    <View
+                                      style={[
+                                        styles.expenseTypeFillAvg,
+                                        { width: `${Math.min(100, (avg / maxVal) * 100)}%` },
+                                      ]}
+                                    />
+                                  </View>
+                                  <Text style={[styles.expenseTypeVal, { color: C.textMuted }]}>{formatINR(avg)}</Text>
+                                </View>
+                              )}
                             </View>
-                            <Text style={styles.improvementNoteText}>
-                              સૂચન: {higher.map((cat) => EXPENSE_CATEGORY_LABELS[cat] ?? cat).join(", ")} માં તમારો ખર્ચ સરેરાશ કરતાં વધારે છે. અહીં થોડું ધ્યાન આપશો તો નફો વધી શકે.
-                            </Text>
                           </View>
                         );
-                      })()}
+                      })}
+                      {expenseHigherCategories.length > 0 && (
+                        <View style={styles.expenseTypeSuggestion}>
+                          <Ionicons name="bulb" size={18} color="#B45309" />
+                          <Text style={styles.expenseTypeSuggestionText}>
+                            <Text style={styles.expenseTypeSuggestionHighlight}>
+                              {expenseHigherCategories.map((c) => EXPENSE_CATEGORY_LABELS[c] ?? c).join(", ")}
+                            </Text>
+                            {" "}માં ખર્ચ વધારે. અહીં ધ્યાન આપશો.
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   );
                 })()
               ) : (
-                <View style={styles.barChartWrap}>
+                <View style={styles.expenseTypeWrap}>
                   {expenseAnalytics?.mySummary?.length ? (
                     (() => {
                       const myBy = expenseAnalytics.myByCategory || {};
                       const categories = EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > 0);
                       if (categories.length === 0) {
-                        return <Text style={styles.chartEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>;
+                        return <Text style={styles.expenseTypeEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>;
                       }
                       const maxVal = Math.max(1, ...Object.values(myBy));
-                      const chartContentWidth = Math.max(SCREEN_W - 32 - 24, categories.length * 64);
-                      const colWidth = chartContentWidth / categories.length;
                       return (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartScrollContent}>
-                          <View style={[styles.verticalChartRow, styles.verticalChartRowTall, { width: chartContentWidth }]}>
-                            {categories.map((cat) => {
-                              const my = myBy[cat] || 0;
-                              const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
-                              return (
-                                <View key={cat} style={[styles.verticalBarCol, styles.verticalBarColWide, { width: colWidth }]}>
-                                  <View style={styles.verticalBars}>
-                                    <View
-                                      style={[
-                                        styles.verticalBar,
-                                        styles.barFillMy,
-                                        { width: 22, height: Math.max(2, (my / maxVal) * VERTICAL_CHART_HEIGHT) },
-                                      ]}
-                                    />
+                        <>
+                          {categories.map((cat) => {
+                            const my = myBy[cat] || 0;
+                            const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
+                            return (
+                              <View key={cat} style={styles.expenseTypeRow}>
+                                <Text style={styles.expenseTypeLabel} numberOfLines={1}>{label}</Text>
+                                <View style={styles.expenseTypeBars}>
+                                  <View style={styles.expenseTypeBarRow}>
+                                    <View style={styles.expenseTypeTrack}>
+                                      <View
+                                        style={[
+                                          styles.expenseTypeFill,
+                                          { width: `${Math.min(100, (my / maxVal) * 100)}%`, backgroundColor: C.expense },
+                                        ]}
+                                      />
+                                    </View>
+                                    <Text style={[styles.expenseTypeVal, { color: C.expense }]}>{formatINR(my)}</Text>
                                   </View>
-                                  <Text style={styles.verticalBarYear} numberOfLines={2}>{label}</Text>
-                                  <Text style={styles.barValue}>{formatINR(my)}</Text>
                                 </View>
-                              );
-                            })}
-                          </View>
-                        </ScrollView>
+                              </View>
+                            );
+                          })}
+                        </>
                       );
                     })()
                   ) : (
-                    <Text style={styles.chartEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>
+                    <Text style={styles.expenseTypeEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>
                   )}
                   {(!expenseAnalytics?.sampleSize || expenseAnalytics.sampleSize === 0) && (
-                    <Text style={styles.chartHint}>સરખામણી માટે સેટિંગ્સમાં એનાલિટિક્સ સહમતી ચાલુ કરો</Text>
+                    <Text style={styles.expenseTypeHint}>સરખામણી માટે સેટિંગ્સમાં એનાલિટિક્સ સહમતી ચાલુ કરો</Text>
                   )}
                 </View>
               )}
             </View>
           )}
 
-          {/* 2. Production per bigha — vertical bar compare (તમારો vs સરેરાશ), same style as expense */}
-          {compare && compare.myTotalArea > 0 && (
-            <View style={styles.chartCard}>
-              <Text style={styles.chartCardTitle}>🌾 આવક પ્રતિ વીઘા</Text>
-              <Text style={styles.perBighaHighlight}>※ સરખામણી પ્રતિ વીઘા એકમમાં છે</Text>
-              <View style={styles.verticalChartWrap}>
-                {(() => {
-                  const myVal = compare.myIncomePerBigha ?? 0;
-                  const avgVal = compare.avgIncomePerBigha ?? 0;
-                  const maxV = Math.max(1, myVal, avgVal);
-                  return (
-                    <View style={[styles.verticalChartRow, { height: VERTICAL_CHART_HEIGHT + 50, justifyContent: "center" }]}>
-                      <View style={[styles.verticalBarCol, { width: 90, marginHorizontal: 12 }]}>
-                        <View style={styles.verticalBars}>
-                          <View
-                            style={[
-                              styles.verticalBar,
-                              styles.verticalBarIncome,
-                              { width: 32, height: Math.max(2, (myVal / maxV) * VERTICAL_CHART_HEIGHT) },
-                            ]}
-                          />
-                        </View>
-                        <Text style={styles.verticalBarYear}>તમારી</Text>
-                        <Text style={[styles.rankingCompareValue, styles.compareChartValue, { color: C.income }]}>{formatINR(myVal)}</Text>
-                      </View>
-                      <View style={[styles.verticalBarCol, { width: 90, marginHorizontal: 12 }]}>
-                        <View style={styles.verticalBars}>
-                          <View
-                            style={[
-                              styles.verticalBar,
-                              { backgroundColor: C.textMuted, width: 32, height: Math.max(2, (avgVal / maxV) * VERTICAL_CHART_HEIGHT) },
-                            ]}
-                          />
-                        </View>
-                        <Text style={styles.verticalBarYear}>સરેરાશ</Text>
-                        <Text style={[styles.rankingCompareValue, styles.compareChartValue, { color: C.textMuted }]}>{formatINR(avgVal)}</Text>
-                      </View>
-                    </View>
-                  );
-                })()}
-              </View>
-              <View style={styles.barLegend}>
-                <View style={styles.barLegendItem}>
-                  <View style={[styles.barLegendDot, { backgroundColor: C.income }]} />
-                  <Text style={styles.barLegendText}>તમારી</Text>
+          {/* 2. Expense per bigha — common design */}
+          {expenseAnalyticsData && (
+            <View style={styles.perBighaCard}>
+              <Text style={styles.perBighaTitle}>💸 ખર્ચ પ્રતિ વીઘા</Text>
+
+              <View style={styles.perBighaHeroRow}>
+                <View style={[styles.perBighaHeroBox, styles.perBighaHeroBoxMine]}>
+                  <Text style={styles.perBighaHeroLabel}>તમારી</Text>
+                  <Text style={[styles.perBighaHeroValue, { color: C.expense }]}>₹{formatINR(myExpenseTotal)}</Text>
                 </View>
-                <View style={styles.barLegendItem}>
-                  <View style={[styles.barLegendDot, { backgroundColor: C.textMuted }]} />
-                  <Text style={styles.barLegendText}>સરેરાશ {compare.sampleSize > 0 ? `(${compare.sampleSize})` : ""}</Text>
+                <View style={styles.perBighaVsBadge}>
+                  <Text style={styles.perBighaVsText}>VS</Text>
+                </View>
+                <View style={styles.perBighaHeroBox}>
+                  <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]}>સરેરાશ</Text>
+                  <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>₹{formatINR(avgExpenseTotal)}</Text>
                 </View>
               </View>
+
+              <View style={[styles.perBighaPctBadge, expenseLowerIsBetter ? styles.perBighaPctBadgeGood : styles.perBighaPctBadgeNeutral]}>
+                <Ionicons name={expenseLowerIsBetter ? "trending-down" : "trending-up"} size={18} color={expenseLowerIsBetter ? C.green700 : C.expense} />
+                <Text style={[styles.perBighaPctText, { color: expenseLowerIsBetter ? C.green700 : C.expense }]}>
+                  સરેરાશ કરતાં {Math.abs(expensePctVsAvg)}% {expenseLowerIsBetter ? "ઓછું ✓" : "વધારે"}
+                </Text>
+              </View>
+
+              <View style={styles.perBighaRaceWrap}>
+                <View style={styles.perBighaRaceRow}>
+                  <Text style={styles.perBighaRaceLabel}>તમારી</Text>
+                  <View style={styles.perBighaRaceTrack}>
+                    <View
+                      style={[
+                        styles.perBighaRaceFill,
+                        { width: `${Math.min(100, (myExpenseTotal / Math.max(1, myExpenseTotal, avgExpenseTotal)) * 100)}%`, backgroundColor: C.expense },
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.perBighaRaceVal, { color: C.expense }]}>{formatINR(myExpenseTotal)}</Text>
+                </View>
+                <View style={styles.perBighaRaceRow}>
+                  <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]}>સરેરાશ</Text>
+                  <View style={styles.perBighaRaceTrack}>
+                    <View
+                      style={[
+                        styles.perBighaRaceFillAvg,
+                        { width: `${Math.min(100, (avgExpenseTotal / Math.max(1, myExpenseTotal, avgExpenseTotal)) * 100)}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.perBighaRaceVal, { color: C.textMuted }]}>{formatINR(avgExpenseTotal)}</Text>
+                </View>
+              </View>
+
+              {expenseLowerIsBetter && (
+                <View style={styles.perBighaWinRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={C.textPrimary} />
+                  <Text style={styles.perBighaWinText}>તમારો ખર્ચ સરેરાશ કરતાં ઓછો છે!</Text>
+                </View>
+              )}
             </View>
           )}
+
+          {/* 3. Income per bigha — common design */}
+          {compare && compare.myTotalArea > 0 && (() => {
+            const myVal = compare.myIncomePerBigha ?? 0;
+            const avg = compare.avgIncomePerBigha ?? 0;
+            const maxV = Math.max(1, myVal, avg);
+            const aboveAvg = myVal >= avg;
+            return (
+              <View style={styles.perBighaCard}>
+                <Text style={styles.perBighaTitle}>🌾 આવક પ્રતિ વીઘા</Text>
+
+                <View style={styles.perBighaHeroRow}>
+                  <View style={[styles.perBighaHeroBox, styles.perBighaHeroBoxMine]}>
+                    <Text style={styles.perBighaHeroLabel}>તમારી</Text>
+                    <Text style={[styles.perBighaHeroValue, { color: C.green700 }]}>₹{formatINR(myVal)}</Text>
+                  </View>
+                  <View style={styles.perBighaVsBadge}>
+                    <Text style={styles.perBighaVsText}>VS</Text>
+                  </View>
+                  <View style={styles.perBighaHeroBox}>
+                    <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]}>સરેરાશ</Text>
+                    <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>₹{formatINR(avg)}</Text>
+                  </View>
+                </View>
+
+                {compare.sampleSize > 0 && (
+                  <View style={[styles.perBighaPctBadge, aboveAvg ? styles.perBighaPctBadgeGood : styles.perBighaPctBadgeNeutral]}>
+                    <Ionicons name={aboveAvg ? "trending-up" : "trending-down"} size={18} color={aboveAvg ? C.green700 : C.textMuted} />
+                    <Text style={[styles.perBighaPctText, { color: aboveAvg ? C.green700 : C.textMuted }]}>
+                      સરેરાશ કરતાં {Math.abs(incomePctVsAvg)}% {aboveAvg ? "વધારે" : "ઓછું"}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.perBighaRaceWrap}>
+                  <View style={styles.perBighaRaceRow}>
+                    <Text style={styles.perBighaRaceLabel}>તમારી</Text>
+                    <View style={styles.perBighaRaceTrack}>
+                      <View
+                        style={[
+                          styles.perBighaRaceFill,
+                          { width: `${Math.min(100, (myVal / maxV) * 100)}%`, backgroundColor: C.green700 },
+                        ]}
+                      />
+                    </View>
+                    <Text style={[styles.perBighaRaceVal, { color: C.green700 }]}>{formatINR(myVal)}</Text>
+                  </View>
+                  <View style={styles.perBighaRaceRow}>
+                    <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]}>સરેરાશ</Text>
+                    <View style={styles.perBighaRaceTrack}>
+                      <View
+                        style={[
+                          styles.perBighaRaceFillAvg,
+                          { width: `${Math.min(100, (avg / maxV) * 100)}%` },
+                        ]}
+                      />
+                    </View>
+                    <Text style={[styles.perBighaRaceVal, { color: C.textMuted }]}>{formatINR(avg)}</Text>
+                  </View>
+                </View>
+
+                {aboveAvg && compare.sampleSize > 0 && (
+                  <View style={styles.perBighaWinRow}>
+                    <Ionicons name="trophy" size={18} color={C.textPrimary} />
+                    <Text style={styles.perBighaWinText}>તમે સરેરાશ કરતાં આગળ છો!</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })()}
 
           {/* Crop vs Extra breakdown */}
           <View style={styles.breakdownCard}>
@@ -422,36 +502,43 @@ export default function ReportScreen() {
             </View>
           </View>
 
-          {/* વીઘા ચાર્ટ — active crops + બાકી વીઘા */}
-          <VighaChart crops={crops} totalLandBigha={totalLandBigha(profile)} />
-
-          {/* Farmer ranking */}
+          {/* તમારો ક્રમ — Farmer ranking */}
           {showRanking && analytics && (
             <View style={styles.rankingCard}>
-              <Text style={styles.rankingTitle}>🏆 તમારો ક્રમ</Text>
-              {rankingTopPercent != null && (
-                <View style={styles.rankingHero}>
-                  <Ionicons name="trophy" size={28} color={C.green700} />
-                  <Text style={styles.rankingHeroText}>
-                    આ વર્ષે તમે <Text style={styles.rankingHighlight}>ટોચના {rankingTopPercent}% </Text>ખેડૂતોમાં છો
-                  </Text>
+              <View style={styles.rankingHeader}>
+                <View style={styles.rankingTrophyWrap}>
+                  <Ionicons name="trophy" size={32} color={C.green700} />
                 </View>
-              )}
-              <View style={styles.rankingPoint}>
-                <Ionicons name="checkmark-circle" size={20} color={C.green700} />
-                <Text style={styles.rankingText}>
-                  તમારી આવક ઘણા ખેડૂતો કરતાં સારી છે, એટલે તમારું કામ સાચી દિશામાં છે.
-                </Text>
+                <View style={styles.rankingHeaderText}>
+                  <Text style={styles.rankingTitle}>તમારો ક્રમ</Text>
+                  {rankingTopPercent != null && (
+                    <Text style={styles.rankingBadge}>ટોચના {rankingTopPercent}%</Text>
+                  )}
+                </View>
               </View>
-              {compare && compare.sampleSize > 0 && (
-                <View style={styles.rankingPoint}>
-                  <Ionicons name="analytics" size={20} color={C.green700} />
-                  <Text style={styles.rankingText}>
-                    આવક પ્રતિ વીઘા સરેરાશ કરતાં {compareDiffText} છે.
-                  </Text>
-                </View>
+
+              {rankingTopPercent != null && (
+                <Text style={styles.rankingHeroText}>
+                  આ વર્ષે તમે ટોચના <Text style={styles.rankingHighlight}>{rankingTopPercent}%</Text> ખેડૂતોમાં છો
+                </Text>
               )}
-              {analytics.sampleSize > 0 && <Text style={styles.rankingMeta}>{analytics.sampleSize} ખેડૂતોની સરખામણી પરથી</Text>}
+
+              <View style={styles.rankingPoints}>
+                <View style={styles.rankingPoint}>
+                  <Ionicons name="checkmark-circle" size={22} color={C.green700} />
+                  <Text style={styles.rankingText}>તમારી આવક ઘણા ખેડૂતો કરતાં સારી છે. તમારું કામ સાચી દિશામાં છે.</Text>
+                </View>
+                {compare && compare.sampleSize > 0 && (
+                  <View style={styles.rankingPoint}>
+                    <Ionicons name="analytics" size={22} color={C.green700} />
+                    <Text style={styles.rankingText}>આવક પ્રતિ વીઘા સરેરાશ કરતાં {compareDiffText}.</Text>
+                  </View>
+                )}
+              </View>
+
+              {analytics.sampleSize > 0 && (
+                <Text style={styles.rankingMeta}>{analytics.sampleSize} ખેડૂતોની સરખામણી</Text>
+              )}
             </View>
           )}
 
@@ -467,6 +554,11 @@ export default function ReportScreen() {
                 <View style={styles.cropRowLeft}>
                   <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                     <Text style={styles.cropRowName}>{cropDisplayName(row.cropName)}</Text>
+                    {row.area != null && row.area > 0 && (
+                      <View style={styles.vighaBadge}>
+                        <Text style={styles.vighaBadgeText}>{Math.round(row.area)} વીઘા</Text>
+                      </View>
+                    )}
                     {row.landType === "bhagma" && row.bhagmaPercentage != null && (
                       <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
                         <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
@@ -566,9 +658,61 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
+  chartCardLight: { backgroundColor: "#FFFFFF" },
   chartCardTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 8 },
+  expenseTypeCard: {
+    marginBottom: 20,
+    borderRadius: 18,
+    padding: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F0F1F3",
+  },
+  expenseTypeTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
+  expenseTypeEmpty: { fontSize: 16, color: C.textMuted, textAlign: "center", paddingVertical: 20, fontWeight: "600" },
+  expenseTypeHint: { fontSize: 14, color: C.textMuted, textAlign: "center", marginTop: 12, fontWeight: "600" },
+  expenseTypeWrap: { gap: 12 },
+  expenseTypeLegend: { flexDirection: "row", gap: 20, marginBottom: 10, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: "#F0F1F3" },
+  expenseTypeLegendItem: { flexDirection: "row", alignItems: "center", gap: 8 },
+  expenseTypeLegendDot: { width: 12, height: 12, borderRadius: 6 },
+  expenseTypeLegendText: { fontSize: 17, fontWeight: "800", color: C.textSecondary },
+  expenseTypeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#F0F1F3",
+  },
+  expenseTypeLabel: { fontSize: 16, fontWeight: "800", color: C.textPrimary, width: 72 },
+  expenseTypeBars: { flex: 1, gap: 6 },
+  expenseTypeBarRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  expenseTypeBarLabel: { fontSize: 12, fontWeight: "700", color: C.textSecondary, width: 28 },
+  expenseTypeTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EEF0F2",
+    overflow: "hidden",
+  },
+  expenseTypeFill: { height: "100%", borderRadius: 4, minWidth: 4 },
+  expenseTypeFillAvg: { height: "100%", backgroundColor: C.textMuted, borderRadius: 4, minWidth: 4 },
+  expenseTypeVal: { fontSize: 13, fontWeight: "800", minWidth: 48, textAlign: "right" },
+  expenseTypeSuggestion: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEFCE8",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FEF9C3",
+  },
+  expenseTypeSuggestionText: { flex: 1, fontSize: 16, color: C.textSecondary, lineHeight: 22, fontWeight: "600" },
+  expenseTypeSuggestionHighlight: { fontWeight: "800", color: "#A16207" },
   chartCardSub: { fontSize: 15, color: C.textMuted, marginBottom: 14 },
-  perBighaHighlight: { fontSize: 18, color: C.green700, marginBottom: 14, fontWeight: "800" },
   chartEmpty: { fontSize: 18, color: C.textMuted, textAlign: "center", paddingVertical: 12, fontWeight: "600" },
   chartHint: { fontSize: 16, color: C.textMuted, textAlign: "center", marginTop: 8, fontWeight: "600" },
   barChartWrap: { gap: 14 },
@@ -608,6 +752,91 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   improvementNoteText: { flex: 1, fontSize: 17, color: C.textSecondary, lineHeight: 25, fontWeight: "700" },
+  perBighaCard: {
+    marginBottom: 20,
+    borderRadius: 18,
+    padding: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F0F1F3",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  perBighaTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 16 },
+  perBighaHeroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  perBighaHeroBox: { flex: 1, alignItems: "center" },
+  perBighaHeroBoxMine: { backgroundColor: "#F8F9FA", borderRadius: 14, paddingVertical: 12, paddingHorizontal: 8, borderWidth: 1, borderColor: "#F0F1F3" },
+  perBighaHeroLabel: { fontSize: 16, color: C.textSecondary, fontWeight: "700", marginBottom: 4 },
+  perBighaHeroValue: { fontSize: 22, fontWeight: "900", letterSpacing: 0.5 },
+  perBighaHeroValueAvg: { fontSize: 22, color: C.textSecondary },
+  perBighaVsBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F0F1F3",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 8,
+  },
+  perBighaVsText: { fontSize: 12, fontWeight: "900", color: C.textSecondary },
+  perBighaPctBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 14,
+  },
+  perBighaPctBadgeGood: { backgroundColor: "#F8F9FA", borderWidth: 1, borderColor: "#F0F1F3" },
+  perBighaPctBadgeNeutral: { backgroundColor: "#F8F9FA", borderWidth: 1, borderColor: "#F0F1F3" },
+  perBighaPctText: { fontSize: 14, fontWeight: "800" },
+  perBighaRaceWrap: { gap: 10 },
+  perBighaRaceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  perBighaRaceLabel: { fontSize: 17, fontWeight: "700", width: 60, color: C.textPrimary },
+  perBighaRaceTrack: {
+    flex: 1,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#EEF0F2",
+    overflow: "hidden",
+  },
+  perBighaRaceFill: {
+    height: "100%",
+    borderRadius: 5,
+    minWidth: 4,
+  },
+  perBighaRaceFillAvg: {
+    height: "100%",
+    backgroundColor: C.textMuted,
+    borderRadius: 5,
+    minWidth: 4,
+  },
+  perBighaRaceVal: { fontSize: 14, fontWeight: "800", minWidth: 58, textAlign: "right", color: C.textPrimary },
+  perBighaWinRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F1F3",
+  },
+  perBighaWinText: { fontSize: 15, fontWeight: "800", color: C.textPrimary },
   verticalChartWrap: { marginVertical: 8 },
   chartScrollContent: { paddingHorizontal: 4 },
   verticalChartRow: {
@@ -632,40 +861,73 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     minHeight: 2,
   },
-  verticalBarIncome: { backgroundColor: C.income },
+  verticalBarIncome: { backgroundColor: C.green700 },
   verticalBarExpense: { backgroundColor: C.expense },
   verticalBarYear: { fontSize: 15, fontWeight: "800", color: C.textMuted, marginTop: 8, textAlign: "center" },
   verticalBarValues: { flexDirection: "row", gap: 4, marginTop: 6, flexWrap: "wrap", justifyContent: "center" },
   rankingCard: {
-    backgroundColor: "#ECFDF5",
-    borderRadius: 20,
-    padding: 18,
+    backgroundColor: "#FEFCE8",
+    borderRadius: 18,
+    padding: 20,
     marginBottom: 20,
-    borderWidth: 1.5,
-    borderColor: "#86EFAC",
+    borderWidth: 1,
+    borderColor: "#FEF9C3",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  rankingTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
-  rankingHero: {
+  rankingHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#D1FAE5",
+    gap: 14,
+    marginBottom: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F1F3",
   },
-  rankingHeroText: { flex: 1, fontSize: 20, color: C.textSecondary, fontWeight: "800", lineHeight: 28 },
+  rankingTrophyWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#F8F9FA",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#F0F1F3",
+  },
+  rankingHeaderText: { flex: 1 },
+  rankingTitle: { fontSize: 22, fontWeight: "900", color: C.textPrimary },
+  rankingBadge: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: C.green700,
+    marginTop: 4,
+  },
+  rankingHeroText: {
+    fontSize: 18,
+    color: C.textSecondary,
+    fontWeight: "700",
+    lineHeight: 26,
+    marginBottom: 16,
+  },
+  rankingPoints: { gap: 4 },
   rankingPoint: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
-    paddingVertical: 10,
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#F0F1F3",
   },
-  rankingText: { fontSize: 18, color: C.textSecondary, flex: 1, lineHeight: 26, fontWeight: "700" },
+  rankingText: { flex: 1, fontSize: 16, color: C.textSecondary, lineHeight: 24, fontWeight: "600" },
   rankingHighlight: { fontWeight: "800", color: C.green700 },
-  rankingMeta: { fontSize: 16, color: C.textMuted, marginTop: 10, fontWeight: "700" },
+  rankingMeta: { fontSize: 14, color: C.textMuted, marginTop: 12, fontWeight: "600" },
   rankingCompare: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.borderLight },
   rankingCompareLabel: { fontSize: 14, color: C.textMuted, marginBottom: 2 },
   rankingCompareValue: { fontSize: 16, fontWeight: "800", marginBottom: 8 },
@@ -686,6 +948,15 @@ const styles = StyleSheet.create({
   },
   cropRowLeft: { flex: 1 },
   cropRowName: { fontSize: 21, fontWeight: "900", color: C.textPrimary },
+  vighaBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: "#F8F9FA",
+    borderWidth: 1,
+    borderColor: "#F0F1F3",
+  },
+  vighaBadgeText: { fontSize: 14, fontWeight: "800", color: C.textPrimary },
   bhagmaBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
