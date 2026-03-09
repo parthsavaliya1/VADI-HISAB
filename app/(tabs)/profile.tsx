@@ -513,6 +513,95 @@ function CardHeader({ emoji, title }: { emoji: string; title: string }) {
     );
 }
 
+type ProfilePopupAction = {
+    label: string;
+    onPress?: () => void | Promise<void>;
+    variant?: "primary" | "secondary" | "danger" | "ghost";
+    icon?: string;
+};
+
+type ProfilePopupConfig = {
+    title: string;
+    message?: string;
+    icon: string;
+    iconColor: string;
+    iconBg: string;
+    actions: ProfilePopupAction[];
+};
+
+function ProfilePopupModal({
+    visible,
+    config,
+    busy,
+    onClose,
+    onAction,
+}: {
+    visible: boolean;
+    config: ProfilePopupConfig | null;
+    busy: boolean;
+    onClose: () => void;
+    onAction: (action: ProfilePopupAction) => void;
+}) {
+    if (!visible || !config) return null;
+
+    return (
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+            <View style={styles.popupOverlay}>
+                <Pressable style={styles.popupBackdrop} onPress={busy ? undefined : onClose} />
+                <View style={styles.popupCard}>
+                    <View style={[styles.popupIconWrap, { backgroundColor: config.iconBg }]}>
+                        <Ionicons name={config.icon as any} size={28} color={config.iconColor} />
+                    </View>
+                    <Text style={styles.popupTitle}>{config.title}</Text>
+                    {config.message ? <Text style={styles.popupMessage}>{config.message}</Text> : null}
+                    <View style={styles.popupActions}>
+                        {config.actions.map((action) => (
+                            <Pressable
+                                key={action.label}
+                                onPress={() => onAction(action)}
+                                disabled={busy}
+                                style={({ pressed }) => [
+                                    styles.popupActionBtn,
+                                    action.variant === "primary" && styles.popupActionBtnPrimary,
+                                    action.variant === "secondary" && styles.popupActionBtnSecondary,
+                                    action.variant === "danger" && styles.popupActionBtnDanger,
+                                    action.variant === "ghost" && styles.popupActionBtnGhost,
+                                    (pressed || busy) && styles.popupActionBtnPressed,
+                                ]}
+                            >
+                                <View style={styles.popupActionInner}>
+                                    {action.icon ? (
+                                        <Ionicons
+                                            name={action.icon as any}
+                                            size={18}
+                                            color={
+                                                action.variant === "primary"
+                                                    ? "#FFFFFF"
+                                                    : action.variant === "danger"
+                                                        ? "#B91C1C"
+                                                        : "#1A2E1C"
+                                            }
+                                        />
+                                    ) : null}
+                                    <Text
+                                        style={[
+                                            styles.popupActionText,
+                                            action.variant === "primary" && styles.popupActionTextPrimary,
+                                            action.variant === "danger" && styles.popupActionTextDanger,
+                                        ]}
+                                    >
+                                        {action.label}
+                                    </Text>
+                                </View>
+                            </Pressable>
+                        ))}
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Screen
 // ─────────────────────────────────────────────────────────────────────────────
@@ -544,6 +633,8 @@ export default function Profile() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [loadError, setLoadError] = useState("");
+    const [profilePopup, setProfilePopup] = useState<ProfilePopupConfig | null>(null);
+    const [popupBusy, setPopupBusy] = useState(false);
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
@@ -617,11 +708,44 @@ export default function Profile() {
         }
     };
 
+    const closeProfilePopup = () => {
+        if (!popupBusy) setProfilePopup(null);
+    };
+
+    const runProfilePopupAction = async (action: ProfilePopupAction) => {
+        if (!action.onPress) {
+            closeProfilePopup();
+            return;
+        }
+        try {
+            setPopupBusy(true);
+            await action.onPress();
+            setProfilePopup(null);
+        } finally {
+            setPopupBusy(false);
+        }
+    };
+
     const handleLogout = () => {
-        Alert.alert(t("profileTab", "logoutTitle"), t("profileTab", "logoutMsg"), [
-            { text: t("profileTab", "logoutNo"), style: "cancel" },
-            { text: t("profileTab", "logoutYes"), style: "destructive", onPress: async () => { await logout(); router.replace("/(auth)/login"); } },
-        ]);
+        setProfilePopup({
+            title: t("profileTab", "logoutTitle"),
+            message: t("profileTab", "logoutMsg"),
+            icon: "log-out-outline",
+            iconColor: "#B91C1C",
+            iconBg: "#FEE2E2",
+            actions: [
+                { label: t("profileTab", "logoutNo"), variant: "ghost", icon: "close-outline", onPress: () => {} },
+                {
+                    label: t("profileTab", "logoutYes"),
+                    variant: "danger",
+                    icon: "log-out-outline",
+                    onPress: async () => {
+                        await logout();
+                        router.replace("/(auth)/login");
+                    },
+                },
+            ],
+        });
     };
 
     const buildShareMessage = () => {
@@ -703,36 +827,43 @@ export default function Profile() {
     };
 
     const handleLanguagePress = () => {
-        Alert.alert(
-            t("common", "language"),
-            "",
-            [
-                { text: t("common", "gujarati"), onPress: () => setLang("gu") },
-                { text: t("common", "english"), onPress: () => setLang("en") },
-                { text: t("common", "cancel"), style: "cancel" as const },
+        setProfilePopup({
+            title: t("common", "language"),
+            message: lang === "gu" ? t("common", "gujarati") : t("common", "english"),
+            icon: "language-outline",
+            iconColor: "#0F766E",
+            iconBg: "#CCFBF1",
+            actions: [
+                {
+                    label: t("common", "gujarati"),
+                    variant: lang === "gu" ? "primary" : "secondary",
+                    icon: lang === "gu" ? "checkmark-circle" : "text-outline",
+                    onPress: () => setLang("gu"),
+                },
+                {
+                    label: t("common", "english"),
+                    variant: lang === "en" ? "primary" : "secondary",
+                    icon: lang === "en" ? "checkmark-circle" : "globe-outline",
+                    onPress: () => setLang("en"),
+                },
+                { label: t("common", "cancel"), variant: "ghost", icon: "close-outline", onPress: () => {} },
             ],
-        );
+        });
     };
 
     const handleDataSharingPress = () => {
-        const current = !!p.analyticsConsent;
-        Alert.alert(
-            t("profileTab", "dataSharing"),
-            t("profileTab", "dataSharingEditHint"),
-            [
+        const current = !!apiProfile?.analyticsConsent;
+        setProfilePopup({
+            title: t("profileTab", "dataSharing"),
+            message: `${t("profileTab", "dataSharingNote")}\n\n${current ? t("profileTab", "on") : t("profileTab", "off")}`,
+            icon: "shield-checkmark-outline",
+            iconColor: "#0F766E",
+            iconBg: "#CCFBF1",
+            actions: [
                 {
-                    text: t("profileTab", "off"),
-                    onPress: async () => {
-                        try {
-                            const updated = await updateProfile({ dataSharing: false });
-                            setApiProfile(updated.profile);
-                        } catch (err: any) {
-                            Alert.alert(t("profileTab", "errTitle"), err.message);
-                        }
-                    },
-                },
-                {
-                    text: t("profileTab", "on"),
+                    label: t("profileTab", "on"),
+                    variant: current ? "primary" : "secondary",
+                    icon: current ? "checkmark-circle" : "shield-checkmark-outline",
                     onPress: async () => {
                         try {
                             const updated = await updateProfile({ dataSharing: true });
@@ -742,9 +873,38 @@ export default function Profile() {
                         }
                     },
                 },
-                { text: t("common", "cancel"), style: "cancel" as const },
+                {
+                    label: t("profileTab", "off"),
+                    variant: !current ? "primary" : "secondary",
+                    icon: !current ? "checkmark-circle" : "shield-outline",
+                    onPress: async () => {
+                        try {
+                            const updated = await updateProfile({ dataSharing: false });
+                            setApiProfile(updated.profile);
+                        } catch (err: any) {
+                            Alert.alert(t("profileTab", "errTitle"), err.message);
+                        }
+                    },
+                },
+                { label: t("common", "cancel"), variant: "ghost", icon: "close-outline", onPress: () => {} },
             ],
-        );
+        });
+    };
+
+    const handleAboutPress = () => {
+        setProfilePopup({
+            title: t("profileTab", "aboutUs"),
+            message:
+                t("profileTab", "aboutBody") +
+                "\n\n" +
+                t("profileTab", "udyamLabel") +
+                ": " +
+                UDYAM_REGISTRATION_NUMBER,
+            icon: "information-circle-outline",
+            iconColor: "#0F766E",
+            iconBg: "#DBEAFE",
+            actions: [{ label: t("common", "ok"), variant: "primary", icon: "checkmark-outline", onPress: () => {} }],
+        });
     };
 
     if (loading) {
@@ -863,17 +1023,7 @@ export default function Profile() {
 
                         <Pressable
                             style={styles.quickRow}
-                            onPress={() =>
-                                Alert.alert(
-                                    t("profileTab", "aboutUs"),
-                                    t("profileTab", "aboutAlertBody") +
-                                        "\n\n" +
-                                        t("profileTab", "udyamLabel") +
-                                        ": " +
-                                        UDYAM_REGISTRATION_NUMBER,
-                                    [{ text: t("common", "ok") }],
-                                )
-                            }
+                            onPress={handleAboutPress}
                         >
                             <Ionicons name="information-circle-outline" size={24} color="#0F766E" />
                             <View style={styles.quickTextWrap}>
@@ -920,6 +1070,14 @@ export default function Profile() {
                     tractorServiceOptions={TRACTOR_SERVICE_OPTIONS}
                 />
             )}
+
+            <ProfilePopupModal
+                visible={!!profilePopup}
+                config={profilePopup}
+                busy={popupBusy}
+                onClose={closeProfilePopup}
+                onAction={runProfilePopupAction}
+            />
 
             {/* Full farmer profile card modal — share / download */}
             <Modal visible={cardVisible} transparent animationType="fade">
@@ -1162,6 +1320,97 @@ const styles = StyleSheet.create({
     quickTitle: { fontSize: 20, fontWeight: "700", color: "#1A2E1C" },
     quickSub: { fontSize: 17, color: "#64748B", marginTop: 3 },
     quickDivider: { height: 1, backgroundColor: "#EEF2EC" },
+    popupOverlay: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 22,
+    },
+    popupBackdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(11, 18, 14, 0.45)",
+    },
+    popupCard: {
+        width: "100%",
+        maxWidth: 420,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 28,
+        paddingHorizontal: 22,
+        paddingTop: 24,
+        paddingBottom: 18,
+        shadowColor: "#0A0E0B",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.18,
+        shadowRadius: 24,
+        elevation: 10,
+    },
+    popupIconWrap: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        alignItems: "center",
+        justifyContent: "center",
+        alignSelf: "center",
+        marginBottom: 14,
+    },
+    popupTitle: {
+        fontSize: 24,
+        fontWeight: "900",
+        color: "#1A2E1C",
+        textAlign: "center",
+    },
+    popupMessage: {
+        fontSize: 16,
+        lineHeight: 24,
+        color: "#5C6B5E",
+        textAlign: "center",
+        marginTop: 10,
+    },
+    popupActions: {
+        gap: 10,
+        marginTop: 18,
+    },
+    popupActionBtn: {
+        borderRadius: 18,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+    },
+    popupActionBtnPrimary: {
+        backgroundColor: "#2E7D32",
+    },
+    popupActionBtnSecondary: {
+        backgroundColor: "#ECFDF3",
+        borderWidth: 1,
+        borderColor: "#C8E6C9",
+    },
+    popupActionBtnDanger: {
+        backgroundColor: "#FEF2F2",
+        borderWidth: 1,
+        borderColor: "#FECACA",
+    },
+    popupActionBtnGhost: {
+        backgroundColor: "#F6F9F4",
+    },
+    popupActionBtnPressed: {
+        opacity: 0.75,
+    },
+    popupActionInner: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+    },
+    popupActionText: {
+        fontSize: 18,
+        fontWeight: "800",
+        color: "#1A2E1C",
+    },
+    popupActionTextPrimary: {
+        color: "#FFFFFF",
+    },
+    popupActionTextDanger: {
+        color: "#B91C1C",
+    },
     contactSimple: {
         marginHorizontal: 18,
         marginBottom: 20,

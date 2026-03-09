@@ -1,23 +1,15 @@
 /**
  * Expense category pie chart — donut with leader lines to labels (name, %, value).
- * Light theme colors. Used in Report tab below income/expense summary.
+ * Uses shared AppTheme. Used in Report tab below income/expense summary.
  */
 import React from "react";
+import { AppTheme } from "@/constants/theme";
 import { formatWholeNumber } from "@/utils/format";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 const { width: SCREEN_W } = Dimensions.get("window");
-
-const C = {
-  surface: "#FFFFFF",
-  green700: "#2E7D32",
-  green50: "#E8F5E9",
-  textPrimary: "#0A0E0B",
-  textMuted: "#2D4230",
-  textSecondary: "#1A2E1C",
-  borderLight: "#EAF4EA",
-};
+const C = AppTheme;
 
 /** Light theme colors for expense categories — soft, readable */
 const EXPENSE_CATEGORY_COLORS: Record<string, string> = {
@@ -294,7 +286,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  title: { fontSize: 22, fontWeight: "800", color: C.textPrimary, marginBottom: 4 },
+  title: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 4 },
   pieWrap: {
     alignSelf: "center",
     marginBottom: 16,
@@ -311,8 +303,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  pieCenterLabel: { fontSize: 13, fontWeight: "700", color: C.textMuted, marginBottom: 2 },
-  pieCenterValue: { fontSize: 20, fontWeight: "900", color: C.green700 },
+  pieCenterLabel: { fontSize: 13, fontWeight: "700", color: C.expense, marginBottom: 2 },
+  pieCenterValue: { fontSize: 20, fontWeight: "900", color: C.expense },
   sliceLabel: {
     position: "absolute",
     backgroundColor: C.surface,

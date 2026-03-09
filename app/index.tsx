@@ -1,3 +1,4 @@
+import { AppTheme } from "@/constants/theme";
 import { TokenStore } from "@/utils/api";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -13,18 +14,7 @@ import {
 } from "react-native";
 
 const { width, height } = Dimensions.get("window");
-
-// ─── Dashboard-matching palette ─────────────────────────────────────────────
-const C = {
-  green900: "#1B5E20",
-  green700: "#2E7D32",
-  green500: "#4CAF50",
-  green100: "#C8E6C9",
-  green50: "#E8F5E9",
-  bg: "#F5F7F2",
-  textPrimary: "#1A2E1C",
-  textMuted: "#7A9B7E",
-};
+const C = AppTheme;
 
 export default function Index() {
   const logoScale = useRef(new Animated.Value(0)).current;
@@ -231,23 +221,25 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   tagline: {
-    fontSize: 17,
+    fontSize: 18,
     color: C.textPrimary,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 0.5,
     textAlign: "center",
   },
   taglineDivider: {
-    width: 40,
-    height: 1.5,
-    backgroundColor: C.green500 + "80",
-    marginVertical: 8,
+    width: 48,
+    height: 2,
+    backgroundColor: C.green500,
+    marginVertical: 10,
+    borderRadius: 1,
   },
   taglineSub: {
-    fontSize: 12,
+    fontSize: 14,
     color: C.textMuted,
     letterSpacing: 1.5,
     textAlign: "center",
+    fontWeight: "600",
   },
   pillsRow: {
     flexDirection: "row",
@@ -264,7 +256,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.green100,
   },
-  pillText: { fontSize: 12, color: C.green700, fontWeight: "600" },
+  pillText: { fontSize: 14, color: C.green700, fontWeight: "700" },
   loaderContainer: { alignItems: "center", paddingBottom: 24 },
   loaderTrack: {
     width: width * 0.55,
@@ -275,13 +267,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   loaderFill: { height: 3, backgroundColor: C.green500, borderRadius: 4 },
-  loaderText: { fontSize: 11, color: C.textMuted, letterSpacing: 1 },
+  loaderText: { fontSize: 14, color: C.textMuted, letterSpacing: 1, fontWeight: "600" },
   bottomBrand: { alignItems: "center", paddingBottom: 36 },
-  bottomBrandText: { fontSize: 10, color: C.textMuted },
+  bottomBrandText: { fontSize: 12, color: C.textMuted },
   bottomBrandName: {
-    fontSize: 12,
+    fontSize: 14,
     color: C.green700,
-    fontWeight: "600",
+    fontWeight: "700",
     marginTop: 2,
     letterSpacing: 0.5,
   },

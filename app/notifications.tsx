@@ -1,4 +1,4 @@
-import { HEADER_PADDING_TOP } from "@/constants/theme";
+import { AppTheme, HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
 import {
   getNotifications,
@@ -22,17 +22,8 @@ import {
 } from "react-native";
 
 const C = {
-  bg: "#F5F7F2",
-  surface: "#FFFFFF",
-  green700: "#2E7D32",
-  green500: "#4CAF50",
-  green100: "#C8E6C9",
-  green50: "#E8F5E9",
-  textPrimary: "#0A0E0B",
-  textSecondary: "#1A2E1C",
-  textMuted: "#5E7A61",
-  border: "#C8E6C9",
-  borderLight: "#EAF4EA",
+  ...AppTheme,
+  green500: AppTheme.green500,
   gold: "#F9A825",
 };
 
@@ -128,7 +119,7 @@ export default function NotificationsScreen() {
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Notifications</Text>
           <Text style={styles.headerSubtitle}>
-            {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+            {unreadCount > 0 ? `${unreadCount} unread` : "All read"}
           </Text>
         </View>
         <TouchableOpacity

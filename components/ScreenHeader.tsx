@@ -1,4 +1,4 @@
-import { AppTheme, HEADER_PADDING_TOP } from "@/constants/theme";
+import { AppTheme, FontSizes, HEADER_PADDING_TOP } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
@@ -92,6 +92,6 @@ const styles = StyleSheet.create({
   backBtnPlaceholder: { width: 40, height: 40, marginRight: 18 },
   noBackSpacer: { width: 0, height: 40, marginRight: 0 },
   titles: { flex: 1, minWidth: 0 },
-  title: { fontSize: 28, fontWeight: "800", letterSpacing: 0.2 },
-  subtitle: { fontSize: 14, fontWeight: "600", marginTop: 2 },
+  title: { fontSize: FontSizes.title, fontWeight: "800", letterSpacing: 0.2 },
+  subtitle: { fontSize: FontSizes.sm, fontWeight: "600", marginTop: 2 },
 });

@@ -1,12 +1,13 @@
+import { AppTheme } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleProp, StyleSheet, TouchableOpacity, ViewStyle } from "react-native";
 
 export function AppBackButton({
   onPress,
-  iconColor = "#1A2E1C",
-  backgroundColor = "#FFFFFF",
-  borderColor = "#EAF4EA",
+  iconColor = AppTheme.textPrimary,
+  backgroundColor = AppTheme.surface,
+  borderColor = AppTheme.borderLight,
   style,
 }: {
   onPress: () => void;

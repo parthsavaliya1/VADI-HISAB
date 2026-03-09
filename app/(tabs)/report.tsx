@@ -1,3 +1,4 @@
+import { AppTheme } from "@/constants/theme";
 import { ExpensePieChart } from "@/components/ExpensePieChart";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { VighaChart } from "@/components/VighaChart";
@@ -34,29 +35,7 @@ const VERTICAL_CHART_HEIGHT = 140;
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎨 Cool theme (darker, teal/slate)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const C = {
-  green900: "#0D4F3D",
-  green700: "#0F766E",
-  green500: "#14B8A6",
-  green400: "#2DD4BF",
-  green100: "#CCFBF1",
-  green50: "#F0FDFA",
-  bg: "#F0F4F3",
-  surface: "#FFFFFF",
-  surfaceGreen: "#ECFDF8",
-  textPrimary: "#0F172A",
-  textSecondary: "#334155",
-  textMuted: "#64748B",
-  income: "#0F766E",
-  incomePale: "#CCFBF1",
-  expense: "#B91C1C",
-  expensePale: "#FEE2E2",
-  border: "#99F6E4",
-  borderLight: "#E2E8F0",
-};
+const C = AppTheme;
 
 const CROP_NAME_GUJARATI: Record<string, string> = {
   Cotton: "કપાસ",
@@ -573,7 +552,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  breakdownTitle: { fontSize: 24, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
+  breakdownTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
   breakdownRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, marginBottom: 10 },
   breakdownRowIncome: { backgroundColor: "#F0FDF4" },
   breakdownRowExpense: { backgroundColor: "#FEF2F2" },
@@ -587,7 +566,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  chartCardTitle: { fontSize: 25, fontWeight: "900", color: C.textPrimary, marginBottom: 8 },
+  chartCardTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 8 },
   chartCardSub: { fontSize: 15, color: C.textMuted, marginBottom: 14 },
   perBighaHighlight: { fontSize: 18, color: C.green700, marginBottom: 14, fontWeight: "800" },
   chartEmpty: { fontSize: 18, color: C.textMuted, textAlign: "center", paddingVertical: 12, fontWeight: "600" },
@@ -665,7 +644,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#86EFAC",
   },
-  rankingTitle: { fontSize: 25, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
+  rankingTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
   rankingHero: {
     flexDirection: "row",
     alignItems: "center",
@@ -693,7 +672,7 @@ const styles = StyleSheet.create({
   compareChartValue: { fontSize: 18, marginTop: 4 },
   adviceWrap: { marginTop: 10 },
   adviceText: { fontSize: 15, color: C.textSecondary, marginBottom: 4 },
-  sectionTitle: { fontSize: 25, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
+  sectionTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
   cropRow: {
     flexDirection: "row",
     alignItems: "center",

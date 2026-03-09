@@ -17,7 +17,7 @@ import {
   getYearlyReport,
   type CropReportRow,
 } from "@/utils/api";
-import { HEADER_PADDING_TOP } from "@/constants/theme";
+import { AppTheme, HEADER_PADDING_TOP } from "@/constants/theme";
 import { getCropColors } from "@/utils/cropColors";
 import { formatWholeNumber } from "@/utils/format";
 import Toast from "react-native-toast-message";
@@ -44,30 +44,8 @@ import {
 } from "react-native";
 const { width: SCREEN_W } = Dimensions.get("window");
 
-// ─── Color system ─────────────────────────────────────────────────────────────
-// Match dashboard theme
-const C = {
-  green900: "#1B5E20",
-  green700: "#2E7D32",
-  green500: "#4CAF50",
-  green400: "#66BB6A",
-  green100: "#C8E6C9",
-  green50: "#E8F5E9",
-  bg: "#F5F7F2",
-  surface: "#FFFFFF",
-  surfaceGreen: "#F1F8F1",
-  textPrimary: "#0A0E0B",
-  textSecondary: "#1A2E1C",
-  textMuted: "#2D4230",
-  income: "#2E7D32",
-  incomePale: "#E8F5E9",
-  expense: "#B71C1C",
-  expensePale: "#FFEBEE",
-  gold: "#F9A825",
-  goldPale: "#FFFDE7",
-  border: "#C8E6C9",
-  borderLight: "#EAF4EA",
-};
+// ─── Color system (shared theme) ─────────────────────────────────────────────
+const C = { ...AppTheme, gold: "#F9A825", goldPale: "#FFFDE7" };
 
 // ─── Season & Status config (labels from translations in component) ───────────
 const SEASON_ICONS: Record<string, string> = {
@@ -156,9 +134,6 @@ function CropCard({
     if (next) requestAnimationFrame(() => onRequestMenuOpen(index));
   };
 
-  const seasonKey = item.season ?? "";
-  const seasonLabel = seasonKey === "Kharif" ? t("common", "kharif") : seasonKey === "Rabi" ? t("common", "rabi") : seasonKey === "Summer" ? t("common", "summer") : (item.season ?? "");
-  const seasonIcon = SEASON_ICONS[seasonKey] ?? "🌾";
   const statusStyle = STATUS_STYLE[item.status ?? "Active"] ?? STATUS_STYLE.Active;
   const statusLabel = item.status === "Active" ? t("common", "statusActive") : item.status === "Harvested" ? t("common", "statusHarvested") : t("common", "statusClosed");
   const [cropPale, cropColor] = getCropColors(item.cropName);
@@ -183,32 +158,18 @@ function CropCard({
             </View>
 
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.cropName}>{cropDisplayName(item.cropName, t)}</Text>
-
-              {/* subType + batchLabel — NEW fields shown here */}
-              {(item.subType || item.batchLabel) ? (
-                <Text style={styles.cropSubInfo}>
-                  {item.subType ? `🏷️ ${item.subType}` : ""}
-                  {item.subType && item.batchLabel ? "  ·  " : ""}
-                  {item.batchLabel ? `🔢 ${item.batchLabel}` : ""}
-                </Text>
-              ) : null}
+              <Text style={styles.cropName}>
+                {cropDisplayName(item.cropName, t)}
+                {item.subType ? <Text style={styles.cropSubTypeInline}> - {item.subType}</Text> : null}
+              </Text>
 
               <View style={styles.tagsRow}>
-                <View style={[styles.tag, { backgroundColor: cropPale }]}>
-                  <Text style={[styles.tagText, { color: cropColor }]}>
-                    {seasonIcon} {seasonLabel}
+                <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                  <View style={[styles.statusDot, { backgroundColor: statusStyle.dot }]} />
+                  <Text style={[styles.statusText, { color: statusStyle.text }]}>
+                    {statusLabel}
                   </Text>
                 </View>
-
-                {/* year — NEW field */}
-                {item.year ? (
-                  <View style={[styles.tag, { backgroundColor: C.green50 }]}>
-                    <Text style={[styles.tagText, { color: C.green700 }]}>
-                      {item.year}
-                    </Text>
-                  </View>
-                ) : null}
 
                 {item.landType === "bhagma" && item.bhagmaPercentage != null && (
                   <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
@@ -217,12 +178,6 @@ function CropCard({
                     </Text>
                   </View>
                 )}
-                <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                  <View style={[styles.statusDot, { backgroundColor: statusStyle.dot }]} />
-                  <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                    {statusLabel}
-                  </Text>
-                </View>
               </View>
             </View>
             <TouchableOpacity onPress={toggleMenu} style={styles.menuTrigger} activeOpacity={0.85}>
@@ -242,15 +197,18 @@ function CropCard({
               {(["Active", "Harvested", "Closed"] as CropStatus[]).map((s) => (
                 <TouchableOpacity
                   key={s}
-                  style={[styles.dropMenuItem, item.status === s && styles.dropMenuItemActive]}
+                  style={[
+                    styles.dropMenuItem,
+                    item.status === s && { backgroundColor: STATUS_STYLE[s].bg },
+                  ]}
                   onPress={() => { toggleMenu(); onStatusChange(item._id, s); }}
                 >
                   <View style={[styles.statusDot, { backgroundColor: STATUS_STYLE[s].dot }]} />
-                  <Text style={[styles.dropMenuText, item.status === s && { color: C.green700, fontWeight: "700" }]}>
+                  <Text style={[styles.dropMenuText, item.status === s && { color: STATUS_STYLE[s].text, fontWeight: "700" }]}>
                     {s === "Active" ? t("common", "statusActive") : s === "Harvested" ? t("common", "statusHarvested") : t("common", "statusClosed")}
                   </Text>
                   {item.status === s && (
-                    <Ionicons name="checkmark" size={14} color={C.green700} style={{ marginLeft: "auto" }} />
+                    <Ionicons name="checkmark" size={14} color={STATUS_STYLE[s].text} style={{ marginLeft: "auto" }} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -1014,8 +972,8 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: "row", alignItems: "flex-start", marginBottom: 10 },
   cropEmojiWrap: { width: 50, height: 50, borderRadius: 15, justifyContent: "center", alignItems: "center" },
   cropEmoji: { fontSize: 26 },
-  cropName: { fontSize: 20, fontWeight: "800", color: C.textPrimary, marginBottom: 3 },
-  cropSubInfo: { fontSize: 16, color: C.textSecondary, fontWeight: "700", marginBottom: 5 },
+  cropName: { fontSize: 22, fontWeight: "800", color: C.textPrimary, marginBottom: 3 },
+  cropSubTypeInline: { fontSize: 16, color: C.textSecondary, fontWeight: "700" },
   tagsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   tagText: { fontSize: 17, fontWeight: "700" },
@@ -1055,7 +1013,6 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 10,
     paddingHorizontal: 18, paddingVertical: 15,
   },
-  dropMenuItemActive: { backgroundColor: C.green50 },
   dropMenuText: { fontSize: 19, color: C.textSecondary, fontWeight: "800" },
   dropDivider: { height: 1, backgroundColor: C.borderLight, marginHorizontal: 14 },
 

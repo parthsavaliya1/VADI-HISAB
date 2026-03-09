@@ -1,3 +1,4 @@
+import { AppTheme } from "@/constants/theme";
 import { type Crop } from "@/utils/api";
 import { getCropColorForChart } from "@/utils/cropColors";
 import { Ionicons } from "@expo/vector-icons";
@@ -30,14 +31,14 @@ function areaForCrop(c: Crop): number {
 }
 
 const C = {
-  surface: "#FFFFFF",
-  green700: "#2E7D32",
-  green50: "#E8F5E9",
-  textPrimary: "#0A0E0B",
-  textMuted: "#2D4230",
-  textSecondary: "#1A2E1C",
-  borderLight: "#EAF4EA",
-  bg: "#F5F7F2",
+  surface: AppTheme.surface,
+  green700: AppTheme.green700,
+  green50: AppTheme.green50,
+  textPrimary: AppTheme.textPrimary,
+  textMuted: AppTheme.textMuted,
+  textSecondary: AppTheme.textSecondary,
+  borderLight: AppTheme.borderLight,
+  bg: AppTheme.bg,
 };
 
 /** Donut pie: active crops + remaining bigha. Use in Report tab. */
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  title: { fontSize: 24, fontWeight: "900", color: C.textPrimary, marginBottom: 16 },
+  title: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 16 },
   pieWrap: { alignSelf: "center", marginBottom: 24, position: "relative", alignItems: "center", justifyContent: "center" },
   pieCenter: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
   pieCenterLabel: { fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 2 },
