@@ -58,17 +58,72 @@ interface TxnItem {
   type: "income" | "expense";
   label: string;
   cropName: string;
+  cropEmoji?: string;
   amount: number;
   rawDate: string;
   displayDate: string;
   icon: string;
   category: string;
   financialYear: string;
-  isTractorIncome?: boolean;
-  isBhagyaExpense?: boolean;
+  bucket: "crop" | "bhagya" | "tractor" | "general";
 }
 
-type TxnFilter = "all" | "crop" | "income" | "expense" | "tractor" | "bhagya";
+type TxnFilter = "crop" | "tractor" | "bhagya" | "general";
+
+const SEED_TYPE_LABELS: Record<string, string> = {
+  "Company Brand": "કંપની બ્રાન્ડ",
+  "Local/Desi": "લોકલ/દેશી",
+  Hybrid: "હાઇબ્રિડ",
+};
+
+const FERTILIZER_LABELS: Record<string, string> = {
+  Urea: "યુરિયા",
+  DAP: "DAP",
+  NPK: "NPK",
+  Organic: "ઓર્ગેનિક",
+  Sulphur: "સલ્ફર",
+  Micronutrients: "માઇક્રોન્યુટ્રિએન્ટ્સ",
+};
+
+const PESTICIDE_LABELS: Record<string, string> = {
+  Insecticide: "ઇન્સેક્ટિસાઇડ",
+  Fungicide: "ફંગિસાઇડ",
+  Herbicide: "હર્બિસાઇડ",
+  "Growth Booster": "ગ્રોથ બૂસ્ટર",
+};
+
+const LABOUR_TASK_LABELS: Record<string, string> = {
+  Weeding: "નીંદામણ",
+  Sowing: "વાવેતર",
+  Spraying: "છંટકાવ",
+  Harvesting: "લણણી",
+  Irrigation: "સિંચાઈ",
+};
+
+const MACHINERY_LABELS: Record<string, string> = {
+  Rotavator: "રોટાવેટર",
+  Plough: "હળ",
+  "Sowing Machine": "સોઇંગ મશીન",
+  Thresher: "થ્રેશર",
+  "Tractor Rental": "ટ્રેક્ટર ભાડે",
+  "બલૂન (Baluun)": "બલૂન",
+  "રેપ (Rap)": "રેપ",
+};
+
+const RENTAL_ASSET_LABELS: Record<string, string> = {
+  Tractor: "ટ્રેક્ટર",
+  Rotavator: "રોટાવેટર",
+  RAP: "RAP",
+  Samar: "સમાર",
+  "Sah Nakhya": "સહ નાખ્યા",
+  Vavetar: "વાવેતર",
+  "Kyara Bandhya": "ક્યારા બાંધ્યા",
+  Thresher: "થ્રેશર",
+  Bagu: "બાગુ",
+  Fukani: "ફુકાણી",
+  "Kheti Kari": "ખેતી કરી",
+  "Other Equipment": "અન્ય સાધન",
+};
 
 function expenseAmount(e: Expense): number {
   const top = (e as any).amount;
@@ -84,14 +139,39 @@ function expenseAmount(e: Expense): number {
 }
 
 function expenseLabel(e: Expense): string {
+  const labourReasonMap: Record<string, string> = {
+    Grocery: "કરીયાણું",
+    Loan: "ઉધાર",
+    Medical: "દવા/મેડિકલ",
+    "Mobile Recharge": "મોબાઇલ રિચાર્જ",
+    Festival: "તહેવાર",
+    Other: "અન્ય",
+  };
+
+  if (e.category === "Labour") {
+    if (e.expenseSource === "generalExpense") {
+      return e.notes?.trim() || "વધારા નો ખર્ચ";
+    }
+
+    if (e.labourDaily?.task) {
+      return `મજૂરી - ${LABOUR_TASK_LABELS[e.labourDaily.task] ?? e.labourDaily.task}`;
+    }
+
+    if (e.expenseSource === "bhagyaUpad" || e.labourContract?.advanceReason) {
+      const reason = e.labourContract?.advanceReason;
+      if (reason === "Other") return e.notes?.trim() || labourReasonMap.Other;
+      if (reason) return labourReasonMap[reason] ?? reason;
+    }
+  }
+
   const m: Record<ExpenseCategory, string> = {
-    Seed: `બીજ - ${e.seed?.seedType ?? ""}`,
-    Fertilizer: `ખાતર - ${e.fertilizer?.productName ?? ""}`,
-    Pesticide: `દવા - ${e.pesticide?.category ?? ""}`,
+    Seed: `બિયારણ - ${SEED_TYPE_LABELS[e.seed?.seedType ?? ""] ?? e.seed?.seedType ?? ""}`,
+    Fertilizer: `ખાતર - ${FERTILIZER_LABELS[e.fertilizer?.productName ?? ""] ?? e.fertilizer?.productName ?? ""}`,
+    Pesticide: `જંતુનાશક - ${PESTICIDE_LABELS[e.pesticide?.category ?? ""] ?? e.pesticide?.category ?? ""}`,
     Labour: "મજૂરી",
-    Machinery: `મ. - ${e.machinery?.implement ?? ""}`,
+    Machinery: `ટ્રેક્ટર - ${MACHINERY_LABELS[e.machinery?.implement ?? ""] ?? e.machinery?.implement ?? ""}`,
     Irrigation: "સિંચાઈ",
-    Other: e.other?.description ? `અન્ય - ${e.other.description}` : "અન્ય ખર્ચ",
+    Other: e.other?.description ? `અન્ય ખર્ચ - ${e.other.description}` : "અન્ય ખર્ચ",
   };
   return m[e.category] ?? e.category;
 }
@@ -126,7 +206,7 @@ function incomeLabel(i: Income): string {
   const m: Record<IncomeCategory, string> = {
     "Crop Sale": `વેચાણ - ${i.cropSale?.marketName || "VADI"}`,
     Subsidy: `સ. - ${i.subsidy?.schemeType ?? ""}`,
-    "Rental Income": `ભાડા - ${i.rentalIncome?.assetType ?? ""}`,
+    "Rental Income": `ટ્રેક્ટર આવક - ${RENTAL_ASSET_LABELS[i.rentalIncome?.assetType ?? ""] ?? i.rentalIncome?.assetType ?? ""}`,
     Other: `અ. - ${i.otherIncome?.source ?? ""}`,
   };
   return m[i.category] ?? i.category;
@@ -147,6 +227,12 @@ function getCropName(cropId: string | { _id: string; cropName: string } | undefi
   if (typeof cropId === "object") return cropId.cropName ?? "—";
   const c = crops.find((x) => x._id === cropId);
   return c?.cropName ?? "—";
+}
+
+function getCropById(cropId: string | { _id: string; cropName: string } | undefined, crops: Crop[]): Crop | undefined {
+  if (!cropId) return undefined;
+  if (typeof cropId === "object") return crops.find((x) => x._id === cropId._id);
+  return crops.find((x) => x._id === cropId);
 }
 
 function formatDate(iso: string): string {
@@ -179,33 +265,64 @@ function buildYearWiseTxns(
     const exps = expensesByYear[fy] ?? [];
     const incs = incomesByYear[fy] ?? [];
     const list: TxnItem[] = [
-      ...exps.map((e) => ({
-        _id: e._id,
-        type: "expense" as const,
-        label: expenseLabel(e),
-        cropName: getCropName(e.cropId as any, crops),
-        amount: -expenseAmount(e),
-        rawDate: e.date,
-        displayDate: formatDate(e.date),
-        icon: expenseIcon(e.category),
-        category: e.category,
-        financialYear: fy,
-        isBhagyaExpense: !e.cropId && e.category === "Labour",
-      })),
+      ...exps.map((e) => {
+        const crop = getCropById(e.cropId as any, crops);
+        const cropName = crop?.cropName ?? getCropName(e.cropId as any, crops);
+        const isBhagmaCrop = crop?.landType === "bhagma";
+        const labourSourceTag = (e.labourContract as any)?.sourceTag;
+        const isLegacyBhagyaNoUpad =
+          !e.cropId &&
+          e.category === "Labour" &&
+          e.expenseSource == null &&
+          labourSourceTag == null &&
+          (e.labourContract as any)?.advanceReason &&
+          (e.labourContract as any)?.advanceReason !== "Other" &&
+          !e.notes?.trim();
+        let bucket: TxnItem["bucket"] = "general";
+
+        if (e.category === "Labour") {
+          if (e.expenseSource === "generalExpense" || labourSourceTag === "generalExpense") bucket = "general";
+          else if (e.expenseSource === "bhagyaUpad" || labourSourceTag === "bhagyaUpad" || isBhagmaCrop || isLegacyBhagyaNoUpad) bucket = "bhagya";
+          else if (e.cropId) bucket = "crop";
+        } else if (e.cropId) {
+          bucket = "crop";
+        }
+
+        return {
+          _id: e._id,
+          type: "expense" as const,
+          label: expenseLabel(e),
+          cropName,
+          cropEmoji: crop?.cropEmoji,
+          amount: -expenseAmount(e),
+          rawDate: e.date,
+          displayDate: formatDate(e.date),
+          icon: expenseIcon(e.category),
+          category: e.category,
+          financialYear: fy,
+          bucket,
+        };
+      }),
       ...incs.map((i) => {
         const rawDate = i.date ?? (i as any).createdAt ?? "";
+        const cropName = getCropName(i.cropId, crops);
+        let bucket: TxnItem["bucket"] = "general";
+        if (i.category === "Rental Income") bucket = "tractor";
+        else if (i.cropId) bucket = "crop";
+
         return {
           _id: i._id,
           type: "income" as const,
           label: incomeLabel(i),
-          cropName: getCropName(i.cropId, crops),
+          cropName,
+          cropEmoji: getCropById(i.cropId, crops)?.cropEmoji,
           amount: incomeAmount(i),
           rawDate,
           displayDate: formatDate(rawDate),
           icon: incomeIcon(i.category),
           category: i.category,
           financialYear: fy,
-          isTractorIncome: i.category === "Rental Income",
+          bucket,
         };
       }),
     ];
@@ -229,7 +346,11 @@ function TxnRow({ item, onPress }: { item: TxnItem; onPress: () => void }) {
     >
       <View style={[styles.txnCardBar, { backgroundColor: accent }]} />
       <View style={[styles.txnIconWrap, { backgroundColor: bg }]}>
-        <Ionicons name={item.icon as any} size={22} color={accent} />
+        {item.cropEmoji ? (
+          <Text style={styles.txnCropEmoji}>{item.cropEmoji}</Text>
+        ) : (
+          <Ionicons name={item.icon as any} size={22} color={accent} />
+        )}
       </View>
       <View style={styles.txnCardBody}>
         <Text style={styles.txnCardLabel} numberOfLines={1}>{item.label}</Text>
@@ -267,8 +388,7 @@ export default function AllTransactionsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [yearWise, setYearWise] = useState<{ year: string; txns: TxnItem[] }[]>([]);
-  const [crops, setCrops] = useState<Crop[]>([]);
-  const [activeFilter, setActiveFilter] = useState<TxnFilter>("all");
+  const [activeFilter, setActiveFilter] = useState<TxnFilter>("crop");
 
   const fetchAll = useCallback(async () => {
     try {
@@ -280,7 +400,6 @@ export default function AllTransactionsScreen() {
           getIncomes(1, 500, undefined, undefined, undefined, fy),
         ]),
       ]);
-      setCrops(cropRes.data ?? []);
 
       const expensesByYear: Record<string, Expense[]> = {};
       const incomesByYear: Record<string, Income[]> = {};
@@ -311,10 +430,9 @@ export default function AllTransactionsScreen() {
   };
 
   const filterChips: { key: TxnFilter; label: string }[] = [
-    { key: "all", label: "બધા" },
-    { key: "income", label: "આવક" },
-    { key: "expense", label: "ખર્ચ" },
-    { key: "bhagya", label: "ભાગ્યા નો ખર્ચો" },
+    { key: "crop", label: "પાક આવક/ખર્ચ" },
+    { key: "bhagya", label: "ભાગ્યા નો ઉપાડ" },
+    { key: "general", label: "વધારા નો ખર્ચ" },
     ...(profile?.tractorAvailable ? [{ key: "tractor" as const, label: "ટ્રેક્ટર આવક" }] : []),
   ];
 
@@ -322,12 +440,10 @@ export default function AllTransactionsScreen() {
     .map(({ year, txns }) => ({
       year,
       txns: txns.filter((t) => {
-        if (activeFilter === "all") return true;
-        if (activeFilter === "income") return t.type === "income" && !t.isTractorIncome;
-        if (activeFilter === "expense") return t.type === "expense" && !t.isBhagyaExpense;
-        if (activeFilter === "bhagya") return t.type === "expense" && !!t.isBhagyaExpense;
-        if (activeFilter === "tractor") return t.type === "income" && !!t.isTractorIncome;
-        if (activeFilter === "crop") return t.cropName !== "—";
+        if (activeFilter === "crop") return t.bucket === "crop";
+        if (activeFilter === "bhagya") return t.bucket === "bhagya";
+        if (activeFilter === "general") return t.bucket === "general" && t.type === "expense";
+        if (activeFilter === "tractor") return t.bucket === "tractor";
         return true;
       }),
     }))
@@ -473,6 +589,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginLeft: 8,
   },
+  txnCropEmoji: { fontSize: 22 },
   txnCardBody: { flex: 1, marginLeft: 12, minWidth: 0 },
   txnCardLabel: { fontSize: 15, fontWeight: "700", color: C.textPrimary },
   txnCardMeta: { fontSize: 12, color: C.textMuted, marginTop: 2 },

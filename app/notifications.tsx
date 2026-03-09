@@ -159,7 +159,7 @@ export default function NotificationsScreen() {
               <Ionicons name="notifications-off-outline" size={34} color={C.textMuted} />
               <Text style={styles.emptyTitle}>No notifications yet</Text>
               <Text style={styles.emptyText}>
-                Pending tractor charge alerts will appear here.
+                ટ્રેક્ટર ના પૈસા બાકી છે ની જાણ અહીં દેખાશે.
               </Text>
             </View>
           ) : (

@@ -196,6 +196,7 @@ interface Transaction {
   type: "income" | "expense";
   label: string;
   crop: string;
+  cropEmoji?: string;
   amount: number; // positive = income, negative = expense
   date: string; // Gujarati relative label
   rawDate: string; // ISO — used for sorting
@@ -203,14 +204,66 @@ interface Transaction {
   category: string;
 }
 
-function formatRelativeDate(iso: string, t: (s: string, k: string) => string): string {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (diff === 0) return t("dashboard", "today");
-  if (diff === 1) return t("dashboard", "yesterday");
-  if (diff < 7) return t("dashboard", "daysAgo").replace("{n}", String(diff));
+const SEED_TYPE_LABELS: Record<string, string> = {
+  "Company Brand": "કંપની બ્રાન્ડ",
+  "Local/Desi": "લોકલ/દેશી",
+  Hybrid: "હાઇબ્રિડ",
+};
+
+const FERTILIZER_LABELS: Record<string, string> = {
+  Urea: "યુરિયા",
+  DAP: "DAP",
+  NPK: "NPK",
+  Organic: "ઓર્ગેનિક",
+  Sulphur: "સલ્ફર",
+  Micronutrients: "માઇક્રોન્યુટ્રિએન્ટ્સ",
+};
+
+const PESTICIDE_LABELS: Record<string, string> = {
+  Insecticide: "ઇન્સેક્ટિસાઇડ",
+  Fungicide: "ફંગિસાઇડ",
+  Herbicide: "હર્બિસાઇડ",
+  "Growth Booster": "ગ્રોથ બૂસ્ટર",
+};
+
+const LABOUR_TASK_LABELS: Record<string, string> = {
+  Weeding: "નીંદામણ",
+  Sowing: "વાવેતર",
+  Spraying: "છંટકાવ",
+  Harvesting: "લણણી",
+  Irrigation: "સિંચાઈ",
+};
+
+const MACHINERY_LABELS: Record<string, string> = {
+  Rotavator: "રોટાવેટર",
+  Plough: "હળ",
+  "Sowing Machine": "સોઇંગ મશીન",
+  Thresher: "થ્રેશર",
+  "Tractor Rental": "ટ્રેક્ટર ભાડે",
+  "બલૂન (Baluun)": "બલૂન",
+  "રેપ (Rap)": "રેપ",
+};
+
+const RENTAL_ASSET_LABELS: Record<string, string> = {
+  Tractor: "ટ્રેક્ટર",
+  Rotavator: "રોટાવેટર",
+  RAP: "RAP",
+  Samar: "સમાર",
+  "Sah Nakhya": "સહ નાખ્યા",
+  Vavetar: "વાવેતર",
+  "Kyara Bandhya": "ક્યારા બાંધ્યા",
+  Thresher: "થ્રેશર",
+  Bagu: "બાગુ",
+  Fukani: "ફુકાણી",
+  "Kheti Kari": "ખેતી કરી",
+  "Other Equipment": "અન્ય સાધન",
+};
+
+function formatRelativeDate(iso: string, _t: (s: string, k: string) => string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
-    day: "2-digit",
+    day: "numeric",
     month: "short",
+    year: "numeric",
   });
 }
 
@@ -238,6 +291,17 @@ function getCropName(
   return "—";
 }
 
+function getCropEmoji(
+  cropId: string | { _id: string; cropName: string } | undefined,
+  crops: Crop[] | undefined,
+): string | undefined {
+  if (!cropId || !crops?.length) return undefined;
+  if (typeof cropId === "object") {
+    return crops.find((x) => x._id === cropId._id)?.cropEmoji;
+  }
+  return crops.find((x) => x._id === cropId)?.cropEmoji;
+}
+
 // ── Expense helpers ───────────────────────────
 function expenseAmount(e: Expense): number {
   const top = (e as any).amount;
@@ -253,22 +317,42 @@ function expenseAmount(e: Expense): number {
   return 0;
 }
 
-function expenseLabel(
-  e: Expense,
-  tParam: (s: string, k: string, p: Record<string, string | number>) => string,
-): string {
-  switch (e.category) {
-    case "Seed": return tParam("txn", "expenseSeed", { detail: e.seed?.seedType ?? "" });
-    case "Fertilizer": return tParam("txn", "expenseFertilizer", { detail: e.fertilizer?.productName ?? "" });
-    case "Pesticide": return tParam("txn", "expensePesticide", { detail: e.pesticide?.category ?? "" });
-    case "Labour": return tParam("txn", "expenseLabour", { detail: "" });
-    case "Machinery": return tParam("txn", "expenseMachinery", { detail: e.machinery?.implement ?? "" });
-    case "Irrigation": return tParam("txn", "expenseIrrigation", { detail: "" });
-    case "Other": return e.other?.description
-      ? tParam("txn", "expenseOther", { detail: e.other.description })
-      : tParam("txn", "expenseOtherPlain", { detail: "" });
-    default: return e.category;
+function expenseLabel(e: Expense): string {
+  const labourReasonMap: Record<string, string> = {
+    Grocery: "કરીયાણું",
+    Loan: "ઉધાર",
+    Medical: "દવા/મેડિકલ",
+    "Mobile Recharge": "મોબાઇલ રિચાર્જ",
+    Festival: "તહેવાર",
+    Other: "અન્ય",
+  };
+
+  if (e.category === "Labour") {
+    if (e.expenseSource === "generalExpense") {
+      return e.notes?.trim() || "વધારા નો ખર્ચ";
+    }
+
+    if (e.labourDaily?.task) {
+      return `મજૂરી - ${LABOUR_TASK_LABELS[e.labourDaily.task] ?? e.labourDaily.task}`;
+    }
+
+    if (e.expenseSource === "bhagyaUpad" || e.labourContract?.advanceReason) {
+      const reason = e.labourContract?.advanceReason;
+      if (reason === "Other") return e.notes?.trim() || labourReasonMap.Other;
+      if (reason) return labourReasonMap[reason] ?? reason;
+    }
   }
+
+  const m: Record<ExpenseCategory, string> = {
+    Seed: `બિયારણ - ${SEED_TYPE_LABELS[e.seed?.seedType ?? ""] ?? e.seed?.seedType ?? ""}`,
+    Fertilizer: `ખાતર - ${FERTILIZER_LABELS[e.fertilizer?.productName ?? ""] ?? e.fertilizer?.productName ?? ""}`,
+    Pesticide: `જંતુનાશક - ${PESTICIDE_LABELS[e.pesticide?.category ?? ""] ?? e.pesticide?.category ?? ""}`,
+    Labour: "મજૂરી",
+    Machinery: `ટ્રેક્ટર - ${MACHINERY_LABELS[e.machinery?.implement ?? ""] ?? e.machinery?.implement ?? ""}`,
+    Irrigation: "સિંચાઈ",
+    Other: e.other?.description ? `અન્ય ખર્ચ - ${e.other.description}` : "અન્ય ખર્ચ",
+  };
+  return m[e.category] ?? e.category;
 }
 
 function expenseIcon(cat: ExpenseCategory): string {
@@ -282,6 +366,17 @@ function expenseIcon(cat: ExpenseCategory): string {
     Other: "ellipsis-horizontal-outline",
   };
   return m[cat] ?? "receipt-outline";
+}
+
+function isDedicatedBhagyaUpadExpense(expense: Expense): boolean {
+  if (expense.cropId || expense.category !== "Labour") return false;
+  if (expense.expenseSource === "bhagyaUpad") return true;
+  if (expense.labourContract?.sourceTag === "bhagyaUpad") return true;
+
+  // Legacy bhagya-no-upad rows created before source tagging.
+  return !!expense.labourContract?.advanceReason
+    && expense.labourContract.advanceReason !== "Other"
+    && !expense.notes?.trim();
 }
 
 // ── Income helpers ────────────────────────────
@@ -298,17 +393,14 @@ function incomeAmount(i: Income): number {
   return 0;
 }
 
-function incomeLabel(
-  i: Income,
-  tParam: (s: string, k: string, p: Record<string, string | number>) => string,
-): string {
-  switch (i.category) {
-    case "Crop Sale": return tParam("txn", "incomeCropSale", { market: i.cropSale?.marketName || "VADI" });
-    case "Subsidy": return tParam("txn", "incomeSubsidy", { detail: i.subsidy?.schemeType ?? "" });
-    case "Rental Income": return tParam("txn", "incomeRental", { detail: i.rentalIncome?.assetType ?? "" });
-    case "Other": return tParam("txn", "incomeOther", { detail: i.otherIncome?.source ?? "" });
-    default: return i.category;
-  }
+function incomeLabel(i: Income): string {
+  const m: Record<IncomeCategory, string> = {
+    "Crop Sale": `વેચાણ - ${i.cropSale?.marketName || "VADI"}`,
+    Subsidy: `સ. - ${i.subsidy?.schemeType ?? ""}`,
+    "Rental Income": `ટ્રેક્ટર આવક - ${RENTAL_ASSET_LABELS[i.rentalIncome?.assetType ?? ""] ?? i.rentalIncome?.assetType ?? ""}`,
+    Other: `અ. - ${i.otherIncome?.source ?? ""}`,
+  };
+  return m[i.category] ?? i.category;
 }
 
 function incomeIcon(cat: IncomeCategory): string {
@@ -328,14 +420,14 @@ function buildTransactions(
   expenses: Expense[],
   incomes: Income[],
   t: (s: string, k: string) => string,
-  tParam: (s: string, k: string, p: Record<string, string | number>) => string,
   crops: Crop[] = [],
 ): Transaction[] {
   const expTxns: Transaction[] = expenses.map((e) => ({
     _id: e._id,
     type: "expense" as const,
-    label: expenseLabel(e, tParam),
+    label: expenseLabel(e),
     crop: getCropName(e.cropId as any, crops, t),
+    cropEmoji: getCropEmoji(e.cropId as any, crops),
     amount: -expenseAmount(e),
     date: formatRelativeDate(e.date, t),
     rawDate: e.date,
@@ -348,8 +440,9 @@ function buildTransactions(
     return {
       _id: i._id,
       type: "income" as const,
-      label: incomeLabel(i, tParam),
+      label: incomeLabel(i),
       crop: getCropName(i.cropId, crops, t),
+      cropEmoji: getCropEmoji(i.cropId, crops),
       amount: incomeAmount(i),
       date: formatRelativeDate(rawDate, t),
       rawDate,
@@ -859,11 +952,15 @@ function RecentTransactions({
                   },
                 ]}
               >
-                <Ionicons
-                  name={t.icon as any}
-                  size={20}
-                  color={t.type === "income" ? C.income : C.expense}
-                />
+                {t.cropEmoji ? (
+                  <Text style={styles.txnCropEmoji}>{t.cropEmoji}</Text>
+                ) : (
+                  <Ionicons
+                    name={t.icon as any}
+                    size={20}
+                    color={t.type === "income" ? C.income : C.expense}
+                  />
+                )}
               </View>
               <View style={styles.txnInfo}>
                 <Text style={styles.txnLabel}>{t.label}</Text>
@@ -907,6 +1004,7 @@ export default function Dashboard() {
   const [crops, setCrops] = useState<Crop[]>([]);
   const [summary, setSummary] = useState<{ totalIncome: number; totalExpense: number; netProfit: number }>({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
   const [bhagyaUpadTotal, setBhagyaUpadTotal] = useState(0);
+  const [tractorIncomeTotal, setTractorIncomeTotal] = useState(0);
   const [transactions, setTxns] = useState<Transaction[]>([]);
   const [selectedCrop, setSelected] = useState(0);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -938,25 +1036,29 @@ export default function Dashboard() {
       ]);
       setProfile(prof);
       setUnreadNotificationCount(notificationRes.pagination?.unreadCount ?? 0);
-      const reportCrops = (yearlyReport as any).crops ?? [];
-      const extraIncome = (yearlyReport as any).summary?.extraIncome ?? 0;
-      const extraExpense = (yearlyReport as any).summary?.extraExpense ?? 0;
-      const bhagyaUpad = (bhagyaExpRes.data ?? [])
-        .filter((e) => !e.cropId && e.category === "Labour")
-        .reduce((sum, e) => sum + (e.amount ?? 0), 0);
+      const reportCrops = yearlyReport.crops ?? [];
+      const bhagyaUpadTotal = (bhagyaExpRes.data ?? [])
+        .filter(isDedicatedBhagyaUpadExpense)
+        .reduce((sum, expense) => sum + (expense.amount ?? 0), 0);
+      const reportSummary = yearlyReport.summary ?? {
+        totalIncome: 0,
+        cropExpense: 0,
+        bhagyaUpadTotal: 0,
+        tractorIncome: 0,
+      };
       // Main summary: total income includes extra; total expense = sum of individual crop expenses only (matches what user sees on each crop card)
-      const cropIncome = reportCrops.reduce((s: number, r: any) => s + (r.income ?? 0), 0);
-      const cropExpense = reportCrops.reduce((s: number, r: any) => s + (r.expense ?? 0), 0);
-      const allIncome = cropIncome + extraIncome;
+      const cropExpense = reportSummary.cropExpense ?? reportCrops.reduce((s: number, r: any) => s + (r.expense ?? 0), 0);
+      const allIncome = reportSummary.totalIncome ?? 0;
       setSummary({
         totalIncome: allIncome,
         totalExpense: cropExpense, // કુલ ખર્ચ = crop expense only
         netProfit: allIncome - cropExpense, // ચોખ્ખો નફો = આવક - ખર્ચ
       });
-      setBhagyaUpadTotal(bhagyaUpad);
+      setBhagyaUpadTotal(bhagyaUpadTotal);
+      setTractorIncomeTotal(reportSummary.tractorIncome ?? 0);
       setCrops(
         cropRes.data.map((c: Crop) => {
-          const report = reportCrops.find((r: any) => r._id === c._id);
+          const report = reportCrops.find((r) => r._id === c._id);
           return {
             ...c,
             income: report?.income ?? 0,
@@ -969,7 +1071,7 @@ export default function Dashboard() {
       );
       const expenses = Array.isArray(expRes?.data) ? expRes.data : [];
       const incomes = Array.isArray(incRes?.data) ? incRes.data : [];
-      setTxns(buildTransactions(expenses, incomes as Income[], t, tParam, cropRes.data ?? []));
+      setTxns(buildTransactions(expenses, incomes as Income[], t, cropRes.data ?? []));
     } catch (err) {
       console.log("[Dashboard] loadData error:", (err as Error).message);
     } finally {
@@ -1346,14 +1448,6 @@ export default function Dashboard() {
                     </View>
                   ))}
                 </View>
-                {bhagyaUpadTotal > 0 && (
-                  <View style={styles.bhagyaUpadRow}>
-                    <Text style={styles.bhagyaUpadLabel}>{t("dashboard", "bhagyaUpad")}</Text>
-                    <Text style={styles.bhagyaUpadValue}>
-                      ₹{formatWholeNumber(bhagyaUpadTotal)}
-                    </Text>
-                  </View>
-                )}
                 {landBigha > 0 && (
                   <View style={styles.profitPerBighaRow}>
                     <View style={styles.profitPerBighaItem}>
@@ -1368,6 +1462,22 @@ export default function Dashboard() {
                       </Text>
                       <Text style={styles.profitPerBighaLabel}>{t("dashboard", "expensePerBighaShort")}</Text>
                     </View>
+                  </View>
+                )}
+                {bhagyaUpadTotal > 0 && (
+                  <View style={styles.bhagyaUpadRow}>
+                    <Text style={styles.bhagyaUpadLabel}>{t("dashboard", "bhagyaUpad")}</Text>
+                    <Text style={styles.bhagyaUpadValue}>
+                      ₹{formatWholeNumber(bhagyaUpadTotal)}
+                    </Text>
+                  </View>
+                )}
+                {tractorIncomeTotal > 0 && (
+                  <View style={styles.tractorIncomeRow}>
+                    <Text style={styles.tractorIncomeLabel}>ટ્રેક્ટર આવક</Text>
+                    <Text style={styles.tractorIncomeValue}>
+                      ₹{formatWholeNumber(tractorIncomeTotal)}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -1952,6 +2062,21 @@ const styles = StyleSheet.create({
   },
   bhagyaUpadLabel: { fontSize: 15, color: "#A16207", fontWeight: "700" },
   bhagyaUpadValue: { fontSize: 17, fontWeight: "800", color: "#92400E" },
+  tractorIncomeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 2,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1,
+    borderColor: "#FED7AA",
+  },
+  tractorIncomeLabel: { fontSize: 15, color: "#C2410C", fontWeight: "700" },
+  tractorIncomeValue: { fontSize: 17, fontWeight: "800", color: "#9A3412" },
 
   qaRow: { flexDirection: "row", gap: 10 },
   qaRowCompact: { flexDirection: "column" },
@@ -2276,6 +2401,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  txnCropEmoji: { fontSize: 22 },
   txnInfo: { flex: 1 },
   txnLabel: { fontSize: 18, fontWeight: "800", color: C.textPrimary },
   txnMeta: {

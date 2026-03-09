@@ -396,6 +396,10 @@ export interface YearlyReportResponse {
     extraIncome?: number;
     /** Extra expense (no crop) for this FY */
     extraExpense?: number;
+    /** Tractor/rental income included inside totalIncome */
+    tractorIncome?: number;
+    /** Bhagya no upad total kept separate from crop expense totals */
+    bhagyaUpadTotal?: number;
   };
 }
 
@@ -620,6 +624,8 @@ export type SharingOption = "25" | "33" | "50" | "custom";
 export interface LabourContractPayload {
   advanceReason: AdvanceReason;
   amountGiven: number;
+  /** Optional source marker to separate bhagya upad from general extra expense. */
+  sourceTag?: "bhagyaUpad" | "generalExpense";
   /** 25%, 33%, 50%, or "custom". When "custom", use sharingCustom for report. */
   sharingType?: SharingOption;
   /** Percentage (0–100) when sharingType is "custom". */
@@ -646,6 +652,7 @@ export interface ExpensePayload {
   /** Omit or null for general expense (સામાન્ય ખર્ચ) not linked to any crop */
   cropId?: string | null;
   category: ExpenseCategory;
+  expenseSource?: "cropExpense" | "bhagyaUpad" | "generalExpense";
   date?: string;
   notes?: string;
   seed?: SeedExpensePayload;
@@ -680,6 +687,7 @@ export interface Expense {
   userId: string;
   cropId?: string | null;
   category: ExpenseCategory;
+  expenseSource?: "cropExpense" | "bhagyaUpad" | "generalExpense" | null;
   /**
    * Top-level total cost — single source of truth for all report aggregations.
    * Always set by server pre-save hook regardless of category.

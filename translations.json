@@ -135,7 +135,7 @@
             "labourShareLabel": "મજૂર/યંત્ર ભાગ ({pct}%)",
             "weatherLoading": "લોડ થઈ રહ્યું છે...",
             "bhagyaUpad": "ભાગ્યા નો ઉપાડ",
-            "generalExpense": "સામાન્ય/અન્ય ખર્ચ",
+            "generalExpense": "વધારા નો ખર્ચ",
             "generalIncome": "સામાન્ય આવક",
             "incomePerBighaShort": "આવક/વીઘા",
             "expensePerBighaShort": "ખર્ચ/વીઘા"
@@ -519,7 +519,7 @@
             "daysAgo": "{n} days",
             "scrollHint": "Swipe",
             "bhagyaUpad": "Sharecropping expense",
-            "generalExpense": "General/Other expense",
+            "generalExpense": "Extra expense",
             "generalIncome": "General income",
             "incomePerBighaShort": "Income/bigha",
             "expensePerBighaShort": "Expense/bigha",

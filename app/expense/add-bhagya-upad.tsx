@@ -147,11 +147,13 @@ export default function AddBhagyaUpad() {
       await createExpense({
         cropId: null,
         category: "Labour",
+        expenseSource: "bhagyaUpad",
         date: new Date().toISOString(),
         notes: type === "Other" ? (note.trim() || undefined) : undefined,
         labourContract: {
           advanceReason: type,
           amountGiven: num,
+          sourceTag: "bhagyaUpad",
         },
       });
       refreshTransactions();

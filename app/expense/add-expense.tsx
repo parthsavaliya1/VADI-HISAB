@@ -590,16 +590,19 @@ export default function AddExpense() {
       const generalPayload = {
         cropId: null,
         category: "Labour" as const,
+        expenseSource: "generalExpense" as const,
         date: effectiveExpenseDate.toISOString(),
         notes: generalDescription.trim(),
         labourContract: {
           advanceReason: "Other" as const,
           amountGiven: Number(generalAmount),
+          sourceTag: "generalExpense" as const,
         },
       };
       const cropPayload = {
         cropId: cropId as string,
         category: category as ExpenseCategory,
+        expenseSource: isBhagyaUpad ? ("bhagyaUpad" as const) : ("cropExpense" as const),
         date: effectiveExpenseDate.toISOString(),
         notes: notes.trim() || undefined,
         ...(category === "Seed" && {
