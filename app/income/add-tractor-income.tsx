@@ -60,6 +60,12 @@ const PAYMENT_STATUS_OPTIONS: { value: "Pending" | "Completed"; label: string }[
   { value: "Completed", label: "ચૂકવણી થઈ (કમ્પ્લીટ)" },
 ];
 
+function normalizePhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 10) return digits;
+  return digits.slice(-10);
+}
+
 export default function AddTractorIncomeScreen() {
   const { refreshTransactions } = useRefresh();
   const [date, setDate] = useState(() => new Date());
@@ -94,7 +100,7 @@ export default function AddTractorIncomeScreen() {
       const name = contact.name ?? "";
       const phone = contact.phoneNumbers?.[0]?.number ?? "";
       setFarmerName(name);
-      setFarmerPhone(phone.replace(/\s/g, ""));
+      setFarmerPhone(normalizePhone(phone));
     } catch (e) {
       Alert.alert("ભૂલ", (e as Error).message ?? "કોન્ટેક્ટ પસંદ થઈ શક્યો નહીં.");
     }

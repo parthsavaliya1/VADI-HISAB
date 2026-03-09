@@ -260,6 +260,10 @@ export default function TransactionDetailsScreen() {
                 <DetailRow label="ઉપકરણ" value={income.rentalIncome.assetType ?? "—"} />
                 <DetailRow label="ભાડે આપ્યું" value={income.rentalIncome.rentedToName ?? "—"} />
                 <DetailRow label="રકમ" value={formatINR(income.rentalIncome.totalAmount ?? 0)} />
+                <DetailRow
+                  label="ચૂકવણી"
+                  value={income.rentalIncome.paymentStatus === "Pending" ? "બાકી" : "ચૂકવાયું"}
+                />
               </>
             )}
             {income.category === "Other" && income.otherIncome && (

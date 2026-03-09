@@ -10,7 +10,7 @@ import axios from "axios";
 // 🚀 PROD: Set EXPO_PUBLIC_API_URL=https://your-api.onrender.com/api
 const BASE_URL =
   (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ||
-  "http://192.168.1.10:8000/api";
+  "http://192.168.1.4:8000/api";
 
 // ─── Axios Instance ───────────────────────────
 export const API = axios.create({
@@ -1054,4 +1054,60 @@ export const updateIncome = async (
 /** DELETE /income/:id */
 export const deleteIncome = async (id: string): Promise<void> => {
   await API.delete(`/income/${id}`);
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🔔 NOTIFICATION TYPES + APIs
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export interface AppNotification {
+  _id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  referenceType?: string | null;
+  referenceId?: string | null;
+  meta?: Record<string, unknown>;
+  isRead: boolean;
+  readAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationListResponse {
+  success: boolean;
+  data: AppNotification[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    unreadCount: number;
+  };
+}
+
+/** GET /notifications */
+export const getNotifications = async (
+  page = 1,
+  limit = 20,
+  unreadOnly = false,
+): Promise<NotificationListResponse> => {
+  const res = await API.get<NotificationListResponse>("/notifications", {
+    params: { page, limit, unreadOnly },
+  });
+  return res.data;
+};
+
+/** PATCH /notifications/:id/read */
+export const markNotificationRead = async (id: string): Promise<AppNotification> => {
+  const res = await API.patch<{ success: boolean; data: AppNotification }>(
+    `/notifications/${id}/read`,
+  );
+  return res.data.data;
+};
+
+/** PATCH /notifications/read-all */
+export const markAllNotificationsRead = async (): Promise<void> => {
+  await API.patch("/notifications/read-all");
 };

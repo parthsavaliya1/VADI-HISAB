@@ -6,13 +6,13 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { getGujaratiLabel } from "@/data/gujarati-location";
 import {
-  API,
   getCrops,
   getCurrentFinancialYear,
   getExpenses,
   getFinancialYearOptions,
   getIncomes,
   getMyProfile,
+  getNotifications,
   getYearlyReport,
   type Crop,
   type Expense,
@@ -24,6 +24,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -949,6 +950,7 @@ export default function Dashboard() {
   const [pickerType, setPickerType] = useState<"expense" | "income">("expense");
   const [weather, setWeather] = useState<WeatherState>(() => getWeatherDefault(t));
   const [financialYear, setFinancialYear] = useState(getCurrentFinancialYear());
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -959,14 +961,16 @@ export default function Dashboard() {
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const [prof, cropRes, yearlyReport, expRes, incRes] = await Promise.all([
+      const [prof, cropRes, yearlyReport, expRes, incRes, notificationRes] = await Promise.all([
         getMyProfile(),
         getCrops(1, 100, undefined, undefined, financialYear),
         getYearlyReport(financialYear),
         getExpenses(undefined, undefined, undefined, 1, 30, financialYear),
         getIncomes(1, 30, undefined, undefined, undefined, financialYear),
+        getNotifications(1, 20),
       ]);
       setProfile(prof);
+      setUnreadNotificationCount(notificationRes.pagination?.unreadCount ?? 0);
       const reportCrops = (yearlyReport as any).crops ?? [];
       const extraIncome = (yearlyReport as any).summary?.extraIncome ?? 0;
       const extraExpense = (yearlyReport as any).summary?.extraExpense ?? 0;
@@ -1009,6 +1013,14 @@ export default function Dashboard() {
   useEffect(() => {
     loadData();
   }, [loadData, transactionsRefreshKey]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getNotifications(1, 20)
+        .then((res) => setUnreadNotificationCount(res.pagination?.unreadCount ?? 0))
+        .catch(() => {});
+    }, [])
+  );
 
   useEffect(() => {
     Animated.parallel([
@@ -1137,6 +1149,9 @@ export default function Dashboard() {
     setPickerType("income");
     setPickerVisible(true);
   };
+  const openNotifications = () => {
+    router.push("/notifications");
+  };
 
   const handleCropSelected = (crop: Crop) => {
     setPickerVisible(false);
@@ -1163,13 +1178,13 @@ export default function Dashboard() {
             </View>
             <Text style={styles.stickyName}>{farmerName || t("dashboard", "farmer")}</Text>
           </View>
-          <TouchableOpacity style={styles.notifBtn}>
+          <TouchableOpacity style={styles.notifBtn} onPress={openNotifications}>
             <Ionicons
               name="notifications-outline"
               size={28}
               color={C.green700}
             />
-            <View style={styles.notifDot} />
+            {unreadNotificationCount > 0 ? <View style={styles.notifDot} /> : null}
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -1220,13 +1235,13 @@ export default function Dashboard() {
                 )}
               </View>
               <View style={styles.headerRight}>
-                <TouchableOpacity style={styles.notifBtn}>
+                <TouchableOpacity style={styles.notifBtn} onPress={openNotifications}>
                   <Ionicons
                     name="notifications-outline"
                     size={28}
                     color={C.green700}
                   />
-                  <View style={styles.notifDot} />
+                  {unreadNotificationCount > 0 ? <View style={styles.notifDot} /> : null}
                 </TouchableOpacity>
               </View>
             </View>
