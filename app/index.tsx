@@ -222,17 +222,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   logoContainer: {
-    width: 280,
-    height: 280,
-    borderRadius: 28,
-    backgroundColor: C.green50,
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
   },
   logoImage: {
-    width: 240,
-    height: 240,
+    width: 260,
+    height: 120,
+    resizeMode: "contain",
   },
   tagline: {
     fontSize: 17,

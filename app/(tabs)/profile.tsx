@@ -17,6 +17,7 @@ import {
     Alert,
     Animated,
     Dimensions,
+    Linking,
     Platform,
     Pressable,
     ScrollView,
@@ -700,6 +701,51 @@ export default function Profile() {
         } catch (_) {}
     };
 
+    const handleLanguagePress = () => {
+        Alert.alert(
+            t("common", "language"),
+            "",
+            [
+                { text: t("common", "gujarati"), onPress: () => setLang("gu") },
+                { text: t("common", "english"), onPress: () => setLang("en") },
+                { text: t("common", "cancel"), style: "cancel" as const },
+            ],
+        );
+    };
+
+    const handleDataSharingPress = () => {
+        const current = !!p.analyticsConsent;
+        Alert.alert(
+            t("profileTab", "dataSharing"),
+            t("profileTab", "dataSharingEditHint"),
+            [
+                {
+                    text: t("profileTab", "off"),
+                    onPress: async () => {
+                        try {
+                            const updated = await updateProfile({ dataSharing: false });
+                            setApiProfile(updated.profile);
+                        } catch (err: any) {
+                            Alert.alert(t("profileTab", "errTitle"), err.message);
+                        }
+                    },
+                },
+                {
+                    text: t("profileTab", "on"),
+                    onPress: async () => {
+                        try {
+                            const updated = await updateProfile({ dataSharing: true });
+                            setApiProfile(updated.profile);
+                        } catch (err: any) {
+                            Alert.alert(t("profileTab", "errTitle"), err.message);
+                        }
+                    },
+                },
+                { text: t("common", "cancel"), style: "cancel" as const },
+            ],
+        );
+    };
+
     if (loading) {
         return <View style={styles.centerScreen}><ActivityIndicator size="large" color="#2E7D32" /><Text style={styles.loadingText}>{t("profileTab", "loading")}</Text></View>;
     }
@@ -786,71 +832,69 @@ export default function Profile() {
                         </View>
                     </Animated.View>
 
-                    {/* ══ Farmer profile card — view / share ══ */}
-                    <Pressable style={styles.farmerCardBtn} onPress={() => setCardVisible(true)}>
-                        <Ionicons name="card-outline" size={22} color="#0F766E" />
-                        <Text style={styles.farmerCardBtnText}>{t("profileTab", "farmerCard")}</Text>
-                        <Text style={styles.farmerCardBtnSub}>{t("profileTab", "farmerCardSub")}</Text>
-                    </Pressable>
+                    {/* ══ Simple quick actions under profile ══ */}
+                    <View style={styles.quickCard}>
+                        <Pressable style={styles.quickRow} onPress={handleLanguagePress}>
+                            <Ionicons name="language-outline" size={20} color="#0F766E" />
+                            <View style={styles.quickTextWrap}>
+                                <Text style={styles.quickTitle}>{t("common", "language")}</Text>
+                                <Text style={styles.quickSub}>
+                                    {lang === "gu" ? t("common", "gujarati") : t("common", "english")}
+                                </Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                        </Pressable>
 
-                    {/* ══ Settings: Language + Data sharing ══ */}
-                    <View style={styles.settingsCard}>
-                        <Text style={styles.settingsCardTitle}>⚙️ {t("profileTab", "settings")}</Text>
-                        <View style={styles.settingsRow}>
-                            <Text style={styles.settingsLabel}>{t("common", "language")}</Text>
-                            <View style={styles.langChips}>
-                                <Pressable style={[styles.langChip, lang === "gu" && styles.langChipActive]} onPress={() => setLang("gu")}>
-                                    <Text style={[styles.langChipText, lang === "gu" && styles.langChipTextActive]}>{t("common", "gujarati")}</Text>
-                                </Pressable>
-                                <Pressable style={[styles.langChip, lang === "en" && styles.langChipActive]} onPress={() => setLang("en")}>
-                                    <Text style={[styles.langChipText, lang === "en" && styles.langChipTextActive]}>{t("common", "english")}</Text>
-                                </Pressable>
+                        <View style={styles.quickDivider} />
+
+                        <Pressable style={styles.quickRow} onPress={handleDataSharingPress}>
+                            <Ionicons name="shield-checkmark-outline" size={20} color="#0F766E" />
+                            <View style={styles.quickTextWrap}>
+                                <Text style={styles.quickTitle}>{t("profileTab", "dataSharing")}</Text>
+                                <Text style={styles.quickSub}>
+                                    {p.analyticsConsent ? t("profileTab", "on") : t("profileTab", "off")}
+                                </Text>
                             </View>
-                        </View>
-                        <View style={[styles.settingsRow, { borderTopWidth: 1, borderTopColor: "#E8EDE6", paddingTop: 14, marginTop: 6 }]}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.settingsLabel}>{t("profileTab", "dataSharing")}</Text>
-                                <Text style={styles.settingsSub}>{(p.analyticsConsent ? t("profileTab", "on") : t("profileTab", "off")) + " — " + t("profileTab", "dataSharingEditHint")}</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                        </Pressable>
+
+                        <View style={styles.quickDivider} />
+
+                        <Pressable
+                            style={styles.quickRow}
+                            onPress={() =>
+                                Alert.alert(
+                                    t("profileTab", "aboutUs"),
+                                    t("profileTab", "aboutAlertBody") +
+                                        "\n\n" +
+                                        t("profileTab", "udyamLabel") +
+                                        ": " +
+                                        UDYAM_REGISTRATION_NUMBER,
+                                    [{ text: t("common", "ok") }],
+                                )
+                            }
+                        >
+                            <Ionicons name="information-circle-outline" size={20} color="#0F766E" />
+                            <View style={styles.quickTextWrap}>
+                                <Text style={styles.quickTitle}>{t("profileTab", "aboutUs")}</Text>
+                                <Text style={styles.quickSub}>{t("profileTab", "moreInfo")}</Text>
                             </View>
-                        </View>
+                            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                        </Pressable>
                     </View>
 
-                    {/* Contact us — big menu */}
-                    <Pressable style={styles.contactCard} onPress={() => Alert.alert(t("profileTab", "contactUs"), t("profileTab", "contactAlertBody"), [{ text: t("common", "ok") }])}>
-                        <View style={styles.contactCardInner}>
-                            <View style={styles.contactIconWrap}>
-                                <Ionicons name="call" size={32} color="#fff" />
-                            </View>
-                            <View style={styles.contactTextWrap}>
-                                <Text style={styles.contactCardTitle}>{t("profileTab", "contactUs")}</Text>
-                                <Text style={styles.contactCardSub}>{t("profileTab", "contactSub")}</Text>
-                                <View style={styles.contactRow}>
-                                    <Ionicons name="mail-outline" size={18} color="#0F766E" />
-                                    <Text style={styles.contactDetail}>support@vadihisaab.com</Text>
-                                </View>
-                                <View style={styles.contactRow}>
-                                    <Ionicons name="call-outline" size={18} color="#0F766E" />
-                                    <Text style={styles.contactDetail}>+91 XXXXX XXXXX</Text>
-                                </View>
-                            </View>
+                    {/* Contact details */}
+                    <View style={styles.contactSimple}>
+                        <Text style={styles.contactSimpleTitle}>{t("profileTab", "contactUs")}</Text>
+                        <View style={styles.contactRow}>
+                            <Ionicons name="mail-outline" size={18} color="#0F766E" />
+                            <Text style={styles.contactDetail}>vadi.farmfresh@gmail.com</Text>
                         </View>
-                    </Pressable>
-
-                    {/* About us — short 2–3 line description + Udyam registration */}
-                    <View style={styles.aboutSection}>
-                        <Text style={styles.aboutSectionTitle}>{t("profileTab", "aboutUs")}</Text>
-                        <Text style={styles.aboutSectionBody}>
-                            {t("profileTab", "aboutBody")}
-                        </Text>
-                        <View style={styles.udyamRow}>
-                            <Text style={styles.udyamLabel}>{t("profileTab", "udyamLabel")}</Text>
-                            <Text style={styles.udyamNumber}>{UDYAM_REGISTRATION_NUMBER}</Text>
+                        <View style={styles.contactRow}>
+                            <Ionicons name="call-outline" size={18} color="#0F766E" />
+                            <Text style={styles.contactDetail}>966208938X</Text>
                         </View>
                     </View>
-                    <Pressable style={styles.aboutLink} onPress={() => Alert.alert(t("profileTab", "aboutUs"), t("profileTab", "aboutAlertBody") + "\n\n" + t("profileTab", "udyamLabel") + ": " + UDYAM_REGISTRATION_NUMBER + "\n\n" + t("profileTab", "version"), [{ text: t("common", "ok") }])}>
-                        <Ionicons name="information-circle-outline" size={20} color="#64748B" />
-                        <Text style={styles.aboutLinkText}>{t("profileTab", "moreInfo")}</Text>
-                    </Pressable>
 
                     <Pressable onPress={handleLogout} style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}>
                         <Ionicons name="log-out-outline" size={18} color="#DC2626" />
@@ -1094,6 +1138,41 @@ const styles = StyleSheet.create({
     logoutBtnPressed: { opacity: 0.7 },
     logoutBtnText: { fontSize: 18, fontWeight: "800", color: "#B71C1C" },
     versionText: { textAlign: "center", fontSize: 14, color: "#2D4230", marginBottom: 4 },
+    quickCard: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 20,
+        marginHorizontal: 18,
+        marginBottom: 16,
+        paddingHorizontal: 18,
+        paddingVertical: 6,
+        shadowColor: "#0A0E0B",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    quickRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 12,
+        gap: 12,
+    },
+    quickTextWrap: { flex: 1 },
+    quickTitle: { fontSize: 17, fontWeight: "700", color: "#1A2E1C" },
+    quickSub: { fontSize: 14, color: "#64748B", marginTop: 2 },
+    quickDivider: { height: 1, backgroundColor: "#EEF2EC" },
+    contactSimple: {
+        marginHorizontal: 18,
+        marginBottom: 18,
+        paddingHorizontal: 4,
+        paddingVertical: 4,
+    },
+    contactSimpleTitle: {
+        fontSize: 16,
+        fontWeight: "800",
+        color: "#1A2E1C",
+        marginBottom: 6,
+    },
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

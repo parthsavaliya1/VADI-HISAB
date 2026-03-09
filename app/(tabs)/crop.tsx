@@ -9,8 +9,14 @@ import {
   getMyProfile,
   markCropHarvested,
   updateCropStatus,
+  getIncomes,
+  getExpenseSummary,
   type Crop,
   type CropStatus,
+  type Income,
+  type ExpenseCategory,
+  getYearlyReport,
+  type CropReportRow,
 } from "@/utils/api";
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { getCropColors } from "@/utils/cropColors";
@@ -27,7 +33,9 @@ import {
   FlatList,
   PanResponder,
   Platform,
+  Pressable,
   RefreshControl,
+  Modal,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -83,6 +91,21 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = 
   Closed: { bg: C.expensePale, text: C.expense, dot: "#EF4444" },
 };
 
+const EXPENSE_CATEGORY_LABELS: Partial<Record<ExpenseCategory, string>> = {
+  Seed: "બિયારણ",
+  Fertilizer: "ખાતર",
+  Pesticide: "દવા",
+  Labour: "મજૂરી",
+  Machinery: "મશીનરી",
+};
+const EXPENSE_CATEGORY_ORDER: ExpenseCategory[] = [
+  "Seed",
+  "Fertilizer",
+  "Pesticide",
+  "Labour",
+  "Machinery",
+];
+
 function getFilterTabs(t: (s: string, k: string) => string) {
   return [
     { key: "all", label: t("common", "all") },
@@ -105,6 +128,7 @@ function CropCard({
   onDelete,
   onStatusChange,
   onHarvest,
+  onOpenDetails,
 }: {
   item: Crop;
   index: number;
@@ -113,6 +137,7 @@ function CropCard({
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: CropStatus) => void;
   onHarvest: (id: string) => void;
+  onOpenDetails: (crop: Crop) => void;
 }) {
   const translateX = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.95)).current;
@@ -223,7 +248,8 @@ function CropCard({
         {/* Top accent bar — same crop color as dashboard/chart */}
         <View style={[styles.cardAccentBar, { backgroundColor: cropColor }]} />
 
-        <View style={styles.cardInner}>
+        <TouchableOpacity activeOpacity={0.9} onPress={() => onOpenDetails(item)}>
+          <View style={styles.cardInner}>
           {/* Top row */}
           <View style={styles.cardTop}>
             <View style={[styles.cropEmojiWrap, { backgroundColor: cropPale }]}>
@@ -273,7 +299,6 @@ function CropCard({
                 </View>
               </View>
             </View>
-
             <TouchableOpacity onPress={toggleMenu} style={styles.menuTrigger}>
               <Ionicons name="ellipsis-vertical" size={18} color={C.textMuted} />
             </TouchableOpacity>
@@ -380,7 +405,8 @@ function CropCard({
               </View>
             )}
           </View>
-        </View>
+          </View>
+        </TouchableOpacity>
       </Animated.View>
     </Animated.View>
   );
@@ -634,6 +660,12 @@ export default function CropScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState("Active");
   const [selectedYear, setSelectedYear] = useState(getCurrentFinancialYear());
+  const [summaryCrop, setSummaryCrop] = useState<Crop | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryIncomes, setSummaryIncomes] = useState<Income[]>([]);
+  const [summaryByCategory, setSummaryByCategory] =
+    useState<Partial<Record<ExpenseCategory, number>>>({});
+  const [summaryRow, setSummaryRow] = useState<CropReportRow | null>(null);
 
   const totalLandBigha =
     profile?.totalLand?.unit === "bigha" ? Number(profile.totalLand?.value) || 0 : 0;
@@ -718,6 +750,55 @@ export default function CropScreen() {
     Closed: crops.filter((c) => c.status === "Closed").length,
   };
 
+  const openSummary = async (crop: Crop) => {
+    setSummaryCrop(crop);
+    setSummaryLoading(true);
+    try {
+      const [iRes, expSummary, yearly] = await Promise.all([
+        getIncomes(1, 200, crop._id, undefined, undefined, selectedYear),
+        getExpenseSummary(undefined, crop._id, selectedYear),
+        getYearlyReport(selectedYear),
+      ]);
+      setSummaryIncomes(iRes.data ?? []);
+      const byCat: Partial<Record<ExpenseCategory, number>> = {};
+      (expSummary.summary ?? []).forEach((item) => {
+        const cat = item._id as ExpenseCategory;
+        byCat[cat] = item.total;
+      });
+      setSummaryByCategory(byCat);
+      const rows = (yearly?.crops ?? []) as CropReportRow[];
+      const row = rows.find((r) => r._id === crop._id) ?? null;
+      setSummaryRow(row);
+    } catch (err) {
+      console.warn("[CropSummary] load error:", (err as Error).message);
+      setSummaryIncomes([]);
+      setSummaryByCategory({});
+      setSummaryRow(null);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const closeSummary = () => {
+    setSummaryCrop(null);
+    setSummaryIncomes([]);
+    setSummaryByCategory({});
+    setSummaryRow(null);
+  };
+
+  const fallbackIncome = summaryIncomes.reduce(
+    (sum: number, i: Income) => sum + (i.amount || 0),
+    0,
+  );
+  const fallbackExpense = (Object.values(summaryByCategory) as number[]).reduce(
+    (sum, v) => sum + (v || 0),
+    0,
+  );
+  const totalIncome = summaryRow?.income ?? fallbackIncome;
+  const totalExpense = summaryRow?.expense ?? fallbackExpense;
+  const netProfit = summaryRow?.profit ?? totalIncome - totalExpense;
+  const byCategory = summaryByCategory;
+
   if (loading) {
     return (
       <View style={styles.loaderWrap}>
@@ -759,6 +840,7 @@ export default function CropScreen() {
                   onDelete={handleDelete}
                   onStatusChange={handleStatusChange}
                   onHarvest={handleHarvest}
+                  onOpenDetails={openSummary}
                 />
               )}
               contentContainerStyle={styles.listContent}
@@ -773,6 +855,122 @@ export default function CropScreen() {
               }
             />
           )}
+
+      {/* Center summary popup */}
+      <Modal
+        visible={!!summaryCrop}
+        transparent
+        animationType="fade"
+        onRequestClose={closeSummary}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={closeSummary}>
+          <Pressable style={styles.modalCard}>
+            {summaryCrop && (
+              <>
+                <View style={styles.modalHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalTitle}>
+                      {summaryCrop.cropEmoji ?? "🌱"} {summaryCrop.cropName}
+                    </Text>
+                    <Text style={styles.modalArea}>
+                      {Math.round(summaryCrop.area)} {summaryCrop.areaUnit ?? "વીઘા"}
+                    </Text>
+                  </View>
+                  <View style={styles.modalHeaderRight}>
+                    <Text style={styles.modalDate}>
+                      {new Date(
+                        summaryCrop.sowingDate ?? summaryCrop.createdAt,
+                      ).toLocaleDateString("gu-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </Text>
+                    <TouchableOpacity onPress={closeSummary} style={styles.modalCloseBtn}>
+                      <Ionicons name="close" size={20} color={C.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <Text style={styles.modalSectionTitle}>કેટેગરી પ્રમાણે ખર્ચ</Text>
+                {summaryLoading ? (
+                  <View style={styles.modalLoadingRow}>
+                    <ActivityIndicator size="small" color={C.green700} />
+                    <Text style={styles.modalLoadingText}>લોડ થઈ રહ્યું છે...</Text>
+                  </View>
+                ) : (
+                  <>
+                    {EXPENSE_CATEGORY_ORDER.map((cat) => (
+                      <View key={cat} style={styles.modalCatRow}>
+                        <Text style={styles.modalCatLabel}>
+                          {EXPENSE_CATEGORY_LABELS[cat] ?? cat}
+                        </Text>
+                        <Text style={styles.modalCatValue}>
+                          ₹ {Math.round(byCategory[cat] || 0).toLocaleString("en-IN")}
+                        </Text>
+                      </View>
+                    ))}
+
+                    {/* Total expense & income summary */}
+                    <Text style={styles.modalTotalLine}>
+                      કુલ ખર્ચ:{" "}
+                      <Text style={styles.modalTotalAmount}>
+                        ₹ {totalExpense.toLocaleString("en-IN")}
+                      </Text>
+                    </Text>
+                    <Text style={styles.modalTotalLine}>
+                      કુલ આવક:{" "}
+                      <Text style={styles.modalTotalAmount}>
+                        ₹ {totalIncome.toLocaleString("en-IN")}
+                      </Text>
+                    </Text>
+                    {summaryCrop.landType === "bhagma" &&
+                      summaryCrop.bhagmaPercentage != null && (
+                        <>
+                          <Text style={styles.modalTotalLine}>
+                            ભાગ્યાદારને આપવાનો ભાગ (
+                            {summaryCrop.bhagmaPercentage}%):{" "}
+                            <Text style={styles.modalTotalAmount}>
+                              ₹{" "}
+                              {Math.round(
+                                (totalIncome * summaryCrop.bhagmaPercentage) / 100,
+                              ).toLocaleString("en-IN")}
+                            </Text>
+                          </Text>
+                          <Text style={styles.modalTotalLine}>
+                            તમારી આવક (ભાગ પછી):{" "}
+                            <Text style={styles.modalTotalAmount}>
+                              ₹{" "}
+                              {Math.round(
+                                totalIncome *
+                                  (1 - summaryCrop.bhagmaPercentage / 100),
+                              ).toLocaleString("en-IN")}
+                            </Text>
+                          </Text>
+                        </>
+                      )}
+                    <Text style={styles.modalTotalLine}>
+                      ચોખ્ખો નફો:{" "}
+                      <Text
+                        style={[
+                          styles.modalTotalAmount,
+                          { color: netProfit >= 0 ? C.income : C.expense },
+                        ]}
+                      >
+                        ₹ {netProfit.toLocaleString("en-IN")}
+                      </Text>
+                    </Text>
+                  </>
+                )}
+
+                <TouchableOpacity style={styles.modalBigClose} onPress={closeSummary}>
+                  <Text style={styles.modalBigCloseText}>બંધ કરો</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
     </View>
   );
@@ -980,5 +1178,158 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: "#FFE082",
   },
   emptyBtnText: { fontSize: 18, fontWeight: "800", color: "#5D4037" },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 480,
+    borderRadius: 18,
+    backgroundColor: C.surface,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  modalHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: C.textPrimary,
+  },
+  modalArea: {
+    marginTop: 2,
+    fontSize: 18,
+    fontWeight: "800",
+    color: C.textSecondary,
+  },
+  modalDate: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: C.textSecondary,
+  },
+  modalCloseBtn: {
+    padding: 6,
+  },
+  modalSub: {
+    fontSize: 15,
+    color: C.textSecondary,
+    marginTop: 2,
+  },
+  modalSubSmall: {
+    fontSize: 14,
+    color: C.textMuted,
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  modalSummaryRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 6,
+  },
+  modalPill: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  modalPillValue: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  modalPillLabel: {
+    fontSize: 11,
+    color: C.textMuted,
+    marginTop: 2,
+  },
+  modalNetBox: {
+    marginTop: 8,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    alignItems: "center",
+  },
+  modalNetValue: {
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  modalNetLabel: {
+    fontSize: 12,
+    color: C.textMuted,
+    marginTop: 2,
+  },
+  modalSectionTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: C.textSecondary,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  modalCatRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 3,
+  },
+  modalCatLabel: {
+    fontSize: 15,
+    color: C.textSecondary,
+  },
+  modalCatValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: C.expense,
+  },
+  modalEmptyText: {
+    fontSize: 12,
+    color: C.textMuted,
+    marginTop: 2,
+  },
+  modalLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  modalLoadingText: {
+    fontSize: 12,
+    color: C.textMuted,
+  },
+  modalTotalLine: {
+    marginTop: 8,
+    fontSize: 16,
+    color: C.textSecondary,
+  },
+  modalTotalAmount: {
+    fontSize: 19,
+    fontWeight: "800",
+    color: C.textPrimary,
+  },
+  modalBigClose: {
+    marginTop: 10,
+    borderRadius: 12,
+    backgroundColor: C.green700,
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  modalBigCloseText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#fff",
+  },
 
 });
