@@ -863,7 +863,7 @@ function QuickActions({
                 <MaterialCommunityIcons name="tractor-variant" size={20} color={C.tractorOrange} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.qaLabel, { color: C.tractorOrange }]}>ટ્રેક્ટર ની આવક</Text>
+                <Text style={[styles.qaLabel, { color: C.tractorOrange }]}>ટ્રેક્ટર આવક</Text>
               </View>
             </View>
           </PressableCard>
@@ -1387,7 +1387,7 @@ export default function Dashboard() {
           ))}
         </View>
 
-        {/* ── Net Profit Card (કુલ ચોખ્ખો નફો) — extra spacing for readability ── */}
+        {/* ── Net Profit Card (કુલ ચોખ્ખો નફો) — compact, tight layout ── */}
         <Animated.View
           style={[
             styles.section,
@@ -2015,24 +2015,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 2,
-    marginTop: 6,
-    marginBottom: 20,
+    marginTop: 2,
+    marginBottom: 10,
   },
   profitSign: { fontSize: 28, fontWeight: "700", marginBottom: 4 },
   netProfitAmount: {
-    fontSize: 44,
+    fontSize: 36,
     fontWeight: "700",
-    letterSpacing: -1.5,
+    letterSpacing: 0,
     color: "#374151",
   },
-  profitSubRow: { flexDirection: "row", gap: 8 },
+  profitSubRow: { flexDirection: "row", gap: 6 },
   profitSubItem: {
     flex: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     backgroundColor: "#F8FAF8",
     borderWidth: 1,
     borderColor: C.borderLight,
@@ -2062,34 +2063,34 @@ const styles = StyleSheet.create({
   profitPerBighaLabel: { fontSize: 14, color: C.textMuted, fontWeight: "600" },
 
   bhagyaUpadRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "column",
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 2,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    justifyContent: "center",
+    marginTop: 8,
+    marginBottom: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
     backgroundColor: "#FFFBE6",
     borderWidth: 1,
     borderColor: "#FDE68A",
   },
-  bhagyaUpadLabel: { fontSize: 15, color: "#A16207", fontWeight: "700" },
+  bhagyaUpadLabel: { fontSize: 15, color: "#A16207", fontWeight: "700", marginBottom: 2 },
   bhagyaUpadValue: { fontSize: 17, fontWeight: "800", color: "#92400E" },
   tractorIncomeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "column",
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 2,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    justifyContent: "center",
+    marginTop: 6,
+    marginBottom: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
     backgroundColor: "#FFF7ED",
     borderWidth: 1,
     borderColor: "#FED7AA",
   },
-  tractorIncomeLabel: { fontSize: 15, color: "#C2410C", fontWeight: "700" },
+  tractorIncomeLabel: { fontSize: 15, color: "#C2410C", fontWeight: "700", marginBottom: 2 },
   tractorIncomeValue: { fontSize: 17, fontWeight: "800", color: "#9A3412" },
 
   qaRow: { flexDirection: "row", gap: 10 },

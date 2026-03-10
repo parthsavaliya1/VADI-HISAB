@@ -112,39 +112,16 @@ export default function Consent() {
             <View style={styles.circle3} />
 
             <View style={styles.inner}>
-                {/* Hero */}
-                <Animated.View style={{ opacity: fadeIn, transform: [{ translateY: slideUp }], alignItems: "center", marginBottom: 24 }}>
-                    <Animated.Text style={[styles.heroEmoji, { transform: [{ translateY: floatAnim }] }]}>🏘️</Animated.Text>
+                {/* Hero (simple, minimal) */}
+                <Animated.View style={{ opacity: fadeIn, transform: [{ translateY: slideUp }], alignItems: "center", marginBottom: 20 }}>
                     <Text style={styles.heading}>{t.heading}</Text>
                     <Text style={styles.question}>{t.question}</Text>
                 </Animated.View>
 
-                {/* Card */}
+                {/* Card – only short explainer + Yes/No */}
                 <Animated.View style={[styles.card, { opacity: cardFade, transform: [{ translateY: cardSlide }] }]}>
                     <Text style={styles.whyLabel}>{t.whatIs}</Text>
-
-                    {features.map((f, idx) => (
-                        <Animated.View
-                            key={idx}
-                            style={[
-                                styles.featureRow,
-                                {
-                                    opacity: f.anim,
-                                    transform: [{ translateX: f.anim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
-                                },
-                            ]}
-                        >
-                            <View style={styles.featureIcon}>
-                                <Text style={{ fontSize: 22 }}>{f.icon}</Text>
-                            </View>
-                            <View style={styles.featureText}>
-                                <Text style={styles.featureTitle}>{f.title}</Text>
-                                <Text style={styles.featureDesc}>{f.desc}</Text>
-                            </View>
-                        </Animated.View>
-                    ))}
-
-                    <View style={styles.divider} />
+                    <Text style={styles.featureDesc}>{t.f3desc}</Text>
 
                     {/* Yes / No */}
                     <View style={styles.choiceRow}>
@@ -213,19 +190,6 @@ export default function Consent() {
                         </Pressable>
                     </Animated.View>
                 </Animated.View>
-
-                {/* Step dots */}
-                <Animated.View style={[styles.stepsRow, { opacity: fadeIn }]}>
-                    {[1, 2, 3, 4].map(s => (
-                        <View
-                            key={s}
-                            style={[
-                                styles.stepDot,
-                                s === 2 ? styles.stepDotActive : s < 2 ? styles.stepDotDone : styles.stepDotPending,
-                            ]}
-                        />
-                    ))}
-                </Animated.View>
             </View>
         </LinearGradient>
     );
@@ -234,20 +198,25 @@ export default function Consent() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     inner: { flex: 1, justifyContent: "center", paddingHorizontal: 22, paddingBottom: 20, paddingTop: HEADER_PADDING_TOP },
-    circle1: { position: "absolute", width: 280, height: 280, borderRadius: 140, backgroundColor: "rgba(200,230,201,0.5)", top: -80, right: -80 },
-    circle2: { position: "absolute", width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(200,230,201,0.35)", bottom: 100, left: -50 },
-    circle3: { position: "absolute", width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(200,230,201,0.4)", top: 200, left: 30 },
-    heroEmoji: { fontSize: 70, marginBottom: 10 },
-    heading: { fontSize: 24, fontWeight: "900", color: "#1A2E1C", letterSpacing: 0.3 },
-    question: { fontSize: 14, color: "#3D5C40", marginTop: 8, textAlign: "center", lineHeight: 22 },
-    card: { backgroundColor: "white", borderRadius: 28, padding: 22, elevation: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 20 },
-    whyLabel: { fontSize: 12, fontWeight: "700", color: "#9E9E9E", letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 },
-    featureRow: { flexDirection: "row", alignItems: "center", marginBottom: 14, gap: 14 },
-    featureIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center" },
-    featureText: { flex: 1 },
-    featureTitle: { fontSize: 14, fontWeight: "700", color: "#212121" },
-    featureDesc: { fontSize: 12, color: "#757575", marginTop: 2 },
-    divider: { height: 1, backgroundColor: "#F0F0F0", marginVertical: 16 },
+    circle1: { position: "absolute", width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(200,230,201,0.35)", top: -70, right: -60 },
+    circle2: { position: "absolute", width: 140, height: 140, borderRadius: 70, backgroundColor: "rgba(200,230,201,0.25)", bottom: 110, left: -40 },
+    circle3: { position: "absolute", width: 70, height: 70, borderRadius: 35, backgroundColor: "rgba(232,245,233,0.4)", top: 210, left: 36 },
+    heading: { fontSize: 22, fontWeight: "900", color: "#1A2E1C", letterSpacing: 0.3, textAlign: "center" },
+    question: { fontSize: 15, color: "#3D5C40", marginTop: 10, textAlign: "center", lineHeight: 22 },
+    card: {
+        backgroundColor: "white",
+        borderRadius: 22,
+        padding: 18,
+        elevation: 6,
+        shadowColor: "#1A2E1C",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        borderWidth: 1,
+        borderColor: "#E0E0E0",
+    },
+    whyLabel: { fontSize: 12, fontWeight: "700", color: "#9E9E9E", letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 },
+    featureDesc: { fontSize: 13, color: "#4B5563", marginBottom: 14, lineHeight: 19 },
     choiceRow: { flexDirection: "row", gap: 12 },
     choiceBtn: { borderWidth: 2, borderColor: "#E0E0E0", borderRadius: 16, paddingVertical: 16, alignItems: "center", backgroundColor: "#FAFAFA", position: "relative" },
     choiceBtnYesSelected: { borderColor: "#2E7D32", backgroundColor: "#E8F5E9" },
