@@ -1,6 +1,7 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
+  getCurrentFinancialYear,
   getFinancialYearOptionsExtended,
   getIncomes,
   type Income,
@@ -50,7 +51,20 @@ function formatDate(iso: string): string {
 function getRentalAmount(i: Income): number {
   const top = (i as any).amount;
   if (typeof top === "number" && !Number.isNaN(top)) return top;
-  return i.rentalIncome?.totalAmount ?? 0;
+  const r = i.rentalIncome;
+  if (r?.totalAmount != null && !Number.isNaN(r.totalAmount)) {
+    return r.totalAmount;
+  }
+  if (
+    r &&
+    typeof r.hoursOrDays === "number" &&
+    typeof r.ratePerUnit === "number" &&
+    !Number.isNaN(r.hoursOrDays) &&
+    !Number.isNaN(r.ratePerUnit)
+  ) {
+    return r.hoursOrDays * r.ratePerUnit;
+  }
+  return 0;
 }
 
 function TractorIncomeRow({ item }: { item: Income }) {
@@ -129,8 +143,10 @@ export default function TractorIncomeListScreen() {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string | undefined>(undefined);
-  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Completed">("all");
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
+    getCurrentFinancialYear(),
+  );
+  const [statusFilter, setStatusFilter] = useState<"Pending" | "Completed">("Pending");
 
   const fetchAll = useCallback(async () => {
     try {
@@ -164,10 +180,9 @@ export default function TractorIncomeListScreen() {
     .filter((i) => i.rentalIncome?.paymentStatus === "Completed")
     .reduce((s, i) => s + getRentalAmount(i), 0);
 
-  const filtered =
-    statusFilter === "all"
-      ? incomes
-      : incomes.filter((i) => i.rentalIncome?.paymentStatus === statusFilter);
+  const filtered = incomes.filter(
+    (i) => i.rentalIncome?.paymentStatus === statusFilter,
+  );
 
   return (
     <View style={styles.container}>
@@ -176,32 +191,14 @@ export default function TractorIncomeListScreen() {
       <View style={styles.headerWrap}>
         <ScreenHeader
           title="🚜 ટ્રેક્ટર આવક"
-          subtitle="બધા ભાડા · બાકી અને આપી દીધા"
           style={{ marginBottom: 0, backgroundColor: C.bg }}
         />
       </View>
 
       <View style={styles.toolbar}>
         <View style={styles.yearRow}>
-          <Text style={styles.yearLabel}>વિત્તીય વર્ષ:</Text>
           <View style={styles.yearChips}>
-            <TouchableOpacity
-              style={[
-                styles.yearChip,
-                selectedFinancialYear === undefined && styles.yearChipActive,
-              ]}
-              onPress={() => setSelectedFinancialYear(undefined)}
-            >
-              <Text
-                style={[
-                  styles.yearChipText,
-                  selectedFinancialYear === undefined && styles.yearChipTextActive,
-                ]}
-              >
-                બધા
-              </Text>
-            </TouchableOpacity>
-            {getFinancialYearOptionsExtended().map((fy) => {
+            {getFinancialYearOptionsExtended().slice(1).map((fy) => {
               const active = selectedFinancialYear === fy;
               return (
                 <TouchableOpacity
@@ -223,31 +220,7 @@ export default function TractorIncomeListScreen() {
           </View>
         </View>
 
-        <View style={styles.statusRow}>
-          {[
-            { key: "all" as const, label: "બધા" },
-            { key: "Pending" as const, label: "બાકી" },
-            { key: "Completed" as const, label: "આપી દીધા" },
-          ].map((opt) => {
-            const active = statusFilter === opt.key;
-            return (
-              <TouchableOpacity
-                key={opt.key}
-                style={[styles.statusChip, active && styles.statusChipActive]}
-                onPress={() => setStatusFilter(opt.key)}
-              >
-                <Text
-                  style={[
-                    styles.statusChipText,
-                    active && styles.statusChipTextActive,
-                  ]}
-                >
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+       
       </View>
 
       {loading ? (
@@ -271,13 +244,32 @@ export default function TractorIncomeListScreen() {
               <Text style={styles.summarySmallLabel}>આપી દીધા</Text>
               <Text style={styles.summarySmallValue}>₹ {formatINR(paidTotal)}</Text>
             </View>
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => router.push("/income/add-tractor-income" as any)}
-            >
-              <Ionicons name="add" size={22} color="#fff" />
-            </TouchableOpacity>
           </View>
+
+           <View style={styles.statusRow}>
+          {[
+            { key: "Pending" as const, label: "બાકી" },
+            { key: "Completed" as const, label: "આપી લીધા" },
+          ].map((opt) => {
+            const active = statusFilter === opt.key;
+            return (
+              <TouchableOpacity
+                key={opt.key}
+                style={[styles.statusChip, active && styles.statusChipActive]}
+                onPress={() => setStatusFilter(opt.key)}
+              >
+                <Text
+                  style={[
+                    styles.statusChipText,
+                    active && styles.statusChipTextActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
           <FlatList
             data={filtered}
@@ -301,13 +293,22 @@ export default function TractorIncomeListScreen() {
                 <Text style={styles.emptyEmoji}>🚜</Text>
                 <Text style={styles.emptyText}>કોઈ ટ્રેક્ટર આવક નથી</Text>
                 <Text style={styles.emptySub}>
-                  નીચે + બટનથી પ્રથમ એન્ટ્રી ઉમેરો.
+                  નીચે બટનથી પ્રથમ એન્ટ્રી ઉમેરો.
                 </Text>
               </View>
             }
           />
         </>
       )}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          style={styles.bottomBtn}
+          activeOpacity={0.9}
+          onPress={() => router.push("/income/add-tractor-income" as any)}
+        >
+          <Text style={styles.bottomBtnText}>ભાડું ઉમેરો</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -329,10 +330,11 @@ const styles = StyleSheet.create({
   },
   yearChips: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 8,
   },
   yearChip: {
+    flex: 1,
+    alignItems: "center",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
@@ -355,20 +357,22 @@ const styles = StyleSheet.create({
   statusRow: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 6,
+    marginTop: 8,
+    marginBottom: 6,
+    marginHorizontal: 16,
   },
   statusChip: {
     flex: 1,
     paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: C.border,
     backgroundColor: C.surface,
     alignItems: "center",
   },
   statusChipActive: {
-    backgroundColor: C.orange100,
     borderColor: C.orange700,
+    backgroundColor: C.orange100,
   },
   statusChipText: {
     fontSize: 14,
@@ -389,6 +393,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
+    marginTop: 4,
     marginBottom: 10,
     padding: 14,
     borderRadius: 16,
@@ -435,7 +440,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginLeft: 6,
   },
-  listContent: { paddingHorizontal: 16, paddingBottom: 32 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 80 },
   card: {
     flexDirection: "row",
     backgroundColor: C.surface,
@@ -543,6 +548,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: C.textMuted,
     textAlign: "center",
+  },
+  bottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 18,
+    paddingTop: 8,
+    backgroundColor: "rgba(255,247,237,0.96)",
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  bottomBtn: {
+    borderRadius: 16,
+    backgroundColor: C.orange700,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bottomBtnText: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#fff",
   },
 });
 

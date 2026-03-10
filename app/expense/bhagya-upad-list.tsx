@@ -1,6 +1,7 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
+  getCurrentFinancialYear,
   getExpenses,
   getFinancialYearOptionsExtended,
   type Expense,
@@ -117,8 +118,8 @@ export default function BhagyaUpadListScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string | undefined>(
-    undefined,
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
+    getCurrentFinancialYear(),
   );
 
   const fetchAll = useCallback(async () => {
@@ -155,31 +156,13 @@ export default function BhagyaUpadListScreen() {
       <View style={styles.headerWrap}>
         <ScreenHeader
           title="ભાગ્યા નો ઉપાડ"
-          subtitle="કરિયાણું, ઉધાર, મેડિકલ વગેરે"
           style={{ marginBottom: 0, backgroundColor: C.bg }}
         />
       </View>
 
       <View style={styles.toolbar}>
-        <Text style={styles.yearLabel}>વિત્તીય વર્ષ:</Text>
         <View style={styles.yearChips}>
-          <TouchableOpacity
-            style={[
-              styles.yearChip,
-              selectedFinancialYear === undefined && styles.yearChipActive,
-            ]}
-            onPress={() => setSelectedFinancialYear(undefined)}
-          >
-            <Text
-              style={[
-                styles.yearChipText,
-                selectedFinancialYear === undefined && styles.yearChipTextActive,
-              ]}
-            >
-              બધા
-            </Text>
-          </TouchableOpacity>
-          {getFinancialYearOptionsExtended().map((fy) => {
+          {getFinancialYearOptionsExtended().slice(1).map((fy) => {
             const active = selectedFinancialYear === fy;
             return (
               <TouchableOpacity
@@ -213,12 +196,6 @@ export default function BhagyaUpadListScreen() {
               <Text style={styles.summaryLabel}>કુલ ભાગ્યા નો ઉપાડ</Text>
               <Text style={styles.summaryValue}>₹ {formatINR(total)}</Text>
             </View>
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => router.push("/expense/add-bhagya-upad" as any)}
-            >
-              <Ionicons name="add" size={22} color="#fff" />
-            </TouchableOpacity>
           </View>
 
           <FlatList
@@ -243,13 +220,23 @@ export default function BhagyaUpadListScreen() {
                 <Text style={styles.emptyEmoji}>💸</Text>
                 <Text style={styles.emptyText}>હજુ સુધી ભાગ્યા નો ઉપાડ નથી</Text>
                 <Text style={styles.emptySub}>
-                  + બટનથી પ્રથમ એન્ટ્રી ઉમેરો.
+                  નીચે બટનથી પ્રથમ એન્ટ્રી ઉમેરો.
                 </Text>
               </View>
             }
           />
         </>
       )}
+
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          style={styles.bottomBtn}
+          activeOpacity={0.9}
+          onPress={() => router.push("/expense/add-bhagya-upad" as any)}
+        >
+          <Text style={styles.bottomBtnText}>ઉપાડ ઉમેરો</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -274,10 +261,12 @@ const styles = StyleSheet.create({
   },
   yearChips: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    justifyContent: "space-between",
     gap: 8,
   },
   yearChip: {
+    flex: 1,
+    alignItems: "center",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
@@ -340,7 +329,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 32,
+    paddingBottom: 80,
   },
   card: {
     flexDirection: "row",
@@ -413,6 +402,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: C.textMuted,
     textAlign: "center",
+  },
+  bottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 18,
+    paddingTop: 8,
+    backgroundColor: "rgba(245,247,242,0.96)",
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  bottomBtn: {
+    borderRadius: 16,
+    backgroundColor: C.blue700,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bottomBtnText: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#fff",
   },
 });
 
