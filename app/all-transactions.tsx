@@ -226,7 +226,7 @@ function incomeIcon(cat: IncomeCategory): string {
   const m: Record<IncomeCategory, string> = {
     "Crop Sale": "cash",
     Subsidy: "ribbon-outline",
-    "Rental Income": "construct-outline",
+    "Rental Income": "car-outline",
     Other: "wallet-outline",
   };
   return m[cat] ?? "cash";

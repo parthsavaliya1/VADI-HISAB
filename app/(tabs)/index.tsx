@@ -417,8 +417,8 @@ function incomeIcon(cat: IncomeCategory): string {
   const m: Record<IncomeCategory, string> = {
     "Crop Sale": "cash",
     Subsidy: "ribbon-outline",
-    // Tractor-style tool icon for rental income
-    "Rental Income": "construct-outline",
+    // Use car-outline as tractor-style icon for rental income
+    "Rental Income": "car-outline",
     Other: "wallet-outline",
   };
   return m[cat] ?? "cash";
@@ -1016,6 +1016,8 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<{ totalIncome: number; totalExpense: number; netProfit: number }>({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
   const [bhagyaUpadTotal, setBhagyaUpadTotal] = useState(0);
   const [tractorIncomeTotal, setTractorIncomeTotal] = useState(0);
+  const [tractorPendingTotal, setTractorPendingTotal] = useState(0);
+  const [tractorPaidTotal, setTractorPaidTotal] = useState(0);
   const [transactions, setTxns] = useState<Transaction[]>([]);
   const [selectedCrop, setSelected] = useState(0);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -1082,6 +1084,20 @@ export default function Dashboard() {
       );
       const expenses = Array.isArray(expRes?.data) ? expRes.data : [];
       const incomes = Array.isArray(incRes?.data) ? incRes.data : [];
+
+      // Tractor income: split total by payment status (Pending vs Completed)
+      const rentalIncomes = incomes.filter((i: any) => i.category === "Rental Income");
+      let pendingTotal = 0;
+      let paidTotal = 0;
+      for (const inc of rentalIncomes) {
+        const r: any = inc.rentalIncome ?? {};
+        const amt = Number(r.totalAmount ?? 0);
+        if (!Number.isFinite(amt) || amt <= 0) continue;
+        if (r.paymentStatus === "Pending") pendingTotal += amt;
+        if (r.paymentStatus === "Completed") paidTotal += amt;
+      }
+      setTractorPendingTotal(pendingTotal);
+      setTractorPaidTotal(paidTotal);
       setTxns(buildTransactions(expenses, incomes as Income[], t, cropRes.data ?? []));
     } catch (err) {
       console.log("[Dashboard] loadData error:", (err as Error).message);
@@ -1405,24 +1421,26 @@ export default function Dashboard() {
                 ]}
               />
               <View style={{ flex: 1 }}>
-                <View style={styles.profitTopRow}>
-                  <Text style={styles.profitLabel}>⚖️ {t("dashboard", "netProfit")}</Text>
+                <View style={styles.profitAmountRow}>
+                  <View style={{ flexDirection: "row", alignItems: "flex-end", flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.profitSign,
+                        { color: totalProfit >= 0 ? C.income : C.expense },
+                      ]}
+                    >
+                      {totalProfit >= 0 ? "+" : "-"}
+                    </Text>
+                    <AnimatedNumber value={Math.abs(totalProfit)} />
+                    <Text style={styles.profitStatusLabel}>
+                      {totalProfit >= 0 ? "કુલ નફો" : "કુલ ખર્ચો"}
+                    </Text>
+                  </View>
                   <View style={styles.profitPakBadge}>
                     <Ionicons name="leaf-outline" size={18} color={C.textSecondary} />
                     <Text style={styles.profitPakValue}>{crops.length}</Text>
                     <Text style={styles.profitPakLabel}>{t("dashboard", "crops")}</Text>
                   </View>
-                </View>
-                <View style={styles.profitAmountRow}>
-                  <Text
-                    style={[
-                      styles.profitSign,
-                      { color: totalProfit >= 0 ? C.income : C.expense },
-                    ]}
-                  >
-                    {totalProfit >= 0 ? "+" : "-"}
-                  </Text>
-                  <AnimatedNumber value={Math.abs(totalProfit)} />
                 </View>
                 <View style={styles.profitSubRow}>
                   {(
@@ -1489,6 +1507,22 @@ export default function Dashboard() {
                     <Text style={styles.tractorIncomeValue}>
                       ₹{formatWholeNumber(tractorIncomeTotal)}
                     </Text>
+                  </View>
+                )}
+                {(tractorPendingTotal > 0 || tractorPaidTotal > 0) && (
+                  <View style={styles.tractorPaymentRow}>
+                    <View style={styles.tractorPaymentCol}>
+                      <Text style={styles.tractorPaymentLabel}>બાકી ભાડા</Text>
+                      <Text style={styles.tractorPaymentValue}>
+                        ₹{formatWholeNumber(tractorPendingTotal)}
+                      </Text>
+                    </View>
+                    <View style={styles.tractorPaymentCol}>
+                      <Text style={styles.tractorPaymentLabel}>આપી દીધા</Text>
+                      <Text style={styles.tractorPaymentValue}>
+                        ₹{formatWholeNumber(tractorPaidTotal)}
+                      </Text>
+                    </View>
                   </View>
                 )}
               </View>
@@ -1974,7 +2008,7 @@ const styles = StyleSheet.create({
   profitCard: {
     backgroundColor: C.surface,
     borderRadius: 18,
-    padding: 22,
+    padding: 18,
     flexDirection: "row",
     alignItems: "stretch",
     borderWidth: 1,
@@ -1991,7 +2025,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: 0,
   },
   profitLabel: {
     fontSize: 18,
@@ -2013,9 +2047,9 @@ const styles = StyleSheet.create({
   profitPakLabel: { fontSize: 15, color: C.textMuted, fontWeight: "600" },
   profitAmountRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 2,
-    marginTop: 2,
+    alignItems: "center",
+    gap: 8,
+    marginTop: 0,
     marginBottom: 10,
   },
   profitSign: { fontSize: 28, fontWeight: "700", marginBottom: 4 },
@@ -2024,6 +2058,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0,
     color: "#374151",
+  },
+  profitStatusLabel: {
+    fontSize: 18,
+    fontWeight: "500",
+    marginLeft: 10,
+    color: "#4B5563",
   },
   profitSubRow: { flexDirection: "row", gap: 6 },
   profitSubItem: {
@@ -2078,20 +2118,38 @@ const styles = StyleSheet.create({
   bhagyaUpadLabel: { fontSize: 15, color: "#A16207", fontWeight: "700", marginBottom: 2 },
   bhagyaUpadValue: { fontSize: 17, fontWeight: "800", color: "#92400E" },
   tractorIncomeRow: {
-    flexDirection: "column",
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: 6,
-    marginBottom: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    marginTop: 10,
+    marginBottom: 2,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     backgroundColor: "#FFF7ED",
     borderWidth: 1,
     borderColor: "#FED7AA",
   },
-  tractorIncomeLabel: { fontSize: 15, color: "#C2410C", fontWeight: "700", marginBottom: 2 },
+  tractorIncomeLabel: { fontSize: 15, color: "#C2410C", fontWeight: "700" },
   tractorIncomeValue: { fontSize: 17, fontWeight: "800", color: "#9A3412" },
+
+  tractorPaymentRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 6,
+  },
+  tractorPaymentCol: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1,
+    borderColor: "#FED7AA",
+    alignItems: "center",
+  },
+  tractorPaymentLabel: { fontSize: 13, color: "#9A3412", fontWeight: "600" },
+  tractorPaymentValue: { fontSize: 16, fontWeight: "700", color: "#9A3412", marginTop: 2 },
 
   qaRow: { flexDirection: "row", gap: 10 },
   qaRowCompact: { flexDirection: "column" },
