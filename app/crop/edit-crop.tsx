@@ -112,7 +112,6 @@ export default function EditCropScreen() {
   const [subType, setSubType] = useState("");
   const [selectedFarm, setSelectedFarm] = useState<ProfileFarm | null>(null);
   const [area, setArea] = useState("");
-  const [notes, setNotes] = useState("");
 
   const [bhagmaOption, setBhagmaOption] = useState<"ha" | "na">("na");
   const [bhagmaPercentage, setBhagmaPercentage] = useState<string>("");
@@ -142,7 +141,6 @@ export default function EditCropScreen() {
         setCropEmoji(matchedCrop ? matchedCrop.emoji : (cr.cropEmoji ?? "🌱"));
         setSubType(cr.subType ?? "");
         setArea(String(cr.area ?? ""));
-        setNotes(cr.notes ?? "");
         setBhagmaOption(cr.landType === "bhagma" ? "ha" : "na");
         setBhagmaPercentage((() => {
           const pct = cr.bhagmaPercentage;
@@ -218,7 +216,6 @@ export default function EditCropScreen() {
       area: Number(area),
       areaUnit: "Bigha",
       status: "Active",
-      notes: notes.trim() || undefined,
       subType: subType.trim() || undefined,
       year,
       farmName: selectedFarm?.name,
@@ -458,20 +455,6 @@ export default function EditCropScreen() {
               ))}
             </View>
           )}
-        </View>
-
-        <View style={styles.card}>
-          <SectionLabel text={`📝 ${t("editCrop", "notesLabelOptional")}`} />
-          <TextInput
-            style={[styles.input, styles.notesInput]}
-            value={notes}
-            onChangeText={setNotes}
-            placeholder={t("editCrop", "notesPlaceholderExample")}
-            placeholderTextColor={C.textMuted}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-          />
         </View>
 
         <TouchableOpacity

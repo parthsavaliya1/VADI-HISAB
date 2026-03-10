@@ -184,7 +184,6 @@ interface FormState {
   area: string;
   bhagmaOption: "" | "ha" | "na";
   bhagmaPercentage: string;
-  notes: string;
 }
 
 const EMPTY: FormState = {
@@ -199,7 +198,6 @@ const EMPTY: FormState = {
   area: "",
   bhagmaOption: "na",
   bhagmaPercentage: "",
-  notes: "",
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -621,7 +619,6 @@ export default function AddCrop() {
       area: Number(form.area),
       areaUnit: "Bigha",
       status: "Active",
-      notes: form.notes.trim() || undefined,
       subType: finalSubType || undefined,
       year: form.year,
       farmName: selectedFarm?.name,
@@ -1142,7 +1139,7 @@ export default function AddCrop() {
           {/* ══ STEP 3 — Confirm ══ */}
           {step === 3 && (
             <View>
-              <Text style={styles.stepTitle}>નોંધ અને પુષ્ટિ</Text>
+              <Text style={styles.stepTitle}>પુષ્ટિ</Text>
               <Text style={styles.stepDesc}>બધી વિગત ચકાસો અને સાચવો</Text>
 
               {/* Summary card — light green */}
@@ -1182,28 +1179,6 @@ export default function AddCrop() {
                   }
                 />
                 <SummaryRow icon="✅" title="સ્ટેટ" value="સક્રિય (Active)" />
-              </View>
-
-              {/* Notes */}
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Ionicons
-                    name="document-text-outline"
-                    size={16}
-                    color={C.green700}
-                  />
-                  <Text style={styles.cardTitle}>નોંધ (વૈકલ્પિક)</Text>
-                </View>
-                <TextInput
-                  style={styles.notesInput}
-                  value={form.notes}
-                  onChangeText={(v) => set("notes", v)}
-                  placeholder="બિયારણની જાત, ખેતર નંબર, સિંચાઈ પ્રકાર..."
-                  placeholderTextColor="#9CA3AF"
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
               </View>
 
               <View style={styles.statusNote}>

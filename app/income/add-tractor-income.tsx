@@ -81,7 +81,6 @@ export default function AddTractorIncomeScreen() {
   const [hoursOrDays, setHoursOrDays] = useState("");
   const [ratePerUnit, setRatePerUnit] = useState("");
   const [paymentStatus, setPaymentStatus] = useState<"Pending" | "Completed">("Pending");
-  const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
   const total =
@@ -130,7 +129,6 @@ export default function AddTractorIncomeScreen() {
       await createIncome({
         category: "Rental Income",
         date: date.toISOString(),
-        notes: notes.trim() || undefined,
         rentalIncome: {
           assetType: assetType as RentalAssetType,
           rentedToName: farmerName.trim(),
@@ -304,19 +302,6 @@ export default function AddTractorIncomeScreen() {
             </TouchableOpacity>
           ))}
         </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>📝 નોંધ</Text>
-        <TextInput
-          style={[styles.input, styles.notesInput]}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="વૈકલ્પિક"
-          placeholderTextColor={C.textMuted}
-          multiline
-          onFocus={scrollToForm}
-        />
       </View>
 
       <TouchableOpacity

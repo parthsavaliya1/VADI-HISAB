@@ -129,7 +129,6 @@ export default function AddBhagyaUpad() {
   }, [keyboardHeight]);
   const [type, setType] = useState<AdvanceReason | "">("");
   const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -149,7 +148,6 @@ export default function AddBhagyaUpad() {
         category: "Labour",
         expenseSource: "bhagyaUpad",
         date: new Date().toISOString(),
-        notes: type === "Other" ? (note.trim() || undefined) : undefined,
         labourContract: {
           advanceReason: type,
           amountGiven: num,
@@ -209,22 +207,6 @@ export default function AddBhagyaUpad() {
               onFocus={scrollToForm}
             />
           </View>
-          {type === "Other" && (
-            <>
-              <SectionLabel text="નોંધ (ઐચ્છિક)" />
-              <TextInput
-                style={styles.notesInput}
-                value={note}
-                onChangeText={setNote}
-                placeholder="વધારાની માહિતી..."
-                placeholderTextColor="#5B6570"
-                multiline
-                numberOfLines={2}
-                textAlignVertical="top"
-                onFocus={scrollToForm}
-              />
-            </>
-          )}
           <TouchableOpacity
             style={styles.saveBtn}
             onPress={handleSave}

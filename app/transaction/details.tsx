@@ -11,6 +11,7 @@ import {
   deleteIncome,
   getExpenseById,
   getIncomeById,
+  getCropById,
   type Expense,
   type ExpenseCategory,
   type Income,
@@ -18,7 +19,6 @@ import {
 } from "@/utils/api";
 import { formatWholeNumber } from "@/utils/format";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -102,6 +102,7 @@ export default function TransactionDetailsScreen() {
   const [income, setIncome] = useState<Income | null>(null);
   const [expense, setExpense] = useState<Expense | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cropName, setCropName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id || !type) {
@@ -121,6 +122,43 @@ export default function TransactionDetailsScreen() {
         .finally(() => setLoading(false));
     }
   }, [id, type]);
+
+  // Load linked crop name (for display) when a crop is actually attached
+  useEffect(() => {
+    const loadCropName = async () => {
+      try {
+        if (type === "income" && income) {
+          if (!income.cropId) {
+            setCropName(null);
+            return;
+          }
+          if (typeof income.cropId === "object") {
+            setCropName((income.cropId as any).cropName ?? null);
+            return;
+          }
+          const crop = await getCropById(income.cropId);
+          setCropName(crop.cropName ?? null);
+          return;
+        }
+
+        if (type === "expense" && expense) {
+          if (!expense.cropId) {
+            setCropName(null);
+            return;
+          }
+          const crop = await getCropById(expense.cropId as string);
+          setCropName(crop.cropName ?? null);
+          return;
+        }
+
+        setCropName(null);
+      } catch {
+        setCropName(null);
+      }
+    };
+
+    loadCropName();
+  }, [type, income, expense]);
 
   const onEdit = () => {
     if (!id || !type) return;
@@ -155,11 +193,6 @@ export default function TransactionDetailsScreen() {
             if (type === "income") await deleteIncome(id);
             else await deleteExpense(id);
             refreshTransactions();
-            Toast.show({
-              type: "success",
-              text1: "સફળ!",
-              text2: type === "income" ? "આવક કાઢી નાખી." : "ખર્ચ કાઢી નાખ્યો.",
-            });
             router.back();
           } catch (e) {
             Alert.alert("ભૂલ", (e as Error).message ?? "કાઢવામાં ભૂલ.");
@@ -192,6 +225,20 @@ export default function TransactionDetailsScreen() {
   const accentColor = isIncome ? C.income : C.expense;
   const accentPale = isIncome ? C.incomePale : C.expensePale;
 
+  // Show crop row only when truly crop-linked:
+  // - Income: Crop Sale / Subsidy with a cropId
+  // - Expense: cropId present and not general/bhagya/other extra
+  const showIncomeCrop =
+    isIncome &&
+    !!income?.cropId &&
+    (income.category === "Crop Sale" || income.category === "Subsidy");
+  const showExpenseCrop =
+    !isIncome &&
+    !!expense?.cropId &&
+    expense.category !== "Other" &&
+    expense.expenseSource !== "bhagyaUpad" &&
+    expense.expenseSource !== "generalExpense";
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
@@ -219,20 +266,11 @@ export default function TransactionDetailsScreen() {
             value={isIncome ? INCOME_CAT_LABELS[income!.category] : (EXPENSE_CAT_LABELS[expense!.category] ?? expense!.category)}
           />
           <DetailRow label="તારીખ" value={formatDate(isIncome ? income!.date : expense!.date)} />
-          {!isIncome && (
-            <DetailRow label="પાક" value={expense!.cropId ? "જોડાયેલ પાક" : "સામાન્ય ખર્ચ (કોઈ પાક નહીં)"} />
+          {showExpenseCrop && (
+            <DetailRow label="પાક" value={cropName ?? "—"} />
           )}
-          {isIncome && (
-            <DetailRow
-              label="પાક"
-              value={
-                income!.cropId
-                  ? typeof income!.cropId === "object"
-                    ? (income!.cropId as any).cropName ?? "—"
-                    : "જોડાયેલ પાક"
-                  : "સામાન્ય આવક (કોઈ પાક નહીં)"
-              }
-            />
+          {showIncomeCrop && (
+            <DetailRow label="પાક" value={cropName ?? "—"} />
           )}
         </View>
 
