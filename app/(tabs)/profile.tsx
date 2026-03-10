@@ -309,11 +309,11 @@ function EditModal({
             <View style={editStyles.modalOverlay}>
                 <Pressable style={editStyles.modalBackdrop} onPress={onClose} />
                 <Animated.View style={[editStyles.modalSheet, { transform: [{ translateY: slideAnim }] }]}>
-
+                    <View style={editStyles.sheetTopBar} />
                     {/* Header */}
                     <View style={editStyles.sheetHeader}>
                         <Pressable onPress={onClose} style={editStyles.sheetCloseBtn}>
-                            <Ionicons name="close" size={24} color="#6B7280" />
+                            <Ionicons name="close" size={24} color="#2E7D32" />
                         </Pressable>
                         <Text style={editStyles.sheetTitle}>{t("profileTab", "editProfile")}</Text>
                         <Pressable onPress={onSave} disabled={saving} style={editStyles.sheetSaveBtn}>
@@ -1425,52 +1425,64 @@ const styles = StyleSheet.create({
     },
 });
 
+// ─── Profile-setup matching theme (edit modal) ───────────────────────────────
+const EC = {
+    green700: "#2E7D32",
+    green50: "#E8F5E9",
+    surface: "#FFFFFF",
+    surfaceGreen: "#F1F8F1",
+    textPrimary: "#1A2E1C",
+    textSecondary: "#3D5C40",
+    textMuted: "#7A9B7E",
+    borderLight: "#EAF4EA",
+    border: "#C8E6C9",
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Edit Modal Styles
+// Edit Modal Styles (same graphical theme as profile-setup)
 // ─────────────────────────────────────────────────────────────────────────────
 const editStyles = StyleSheet.create({
     modalOverlay: { flex: 1, justifyContent: "flex-end" },
     modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
-    modalSheet: { height: SCREEN_H * 0.92, backgroundColor: "#F5F7F2", borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
-    sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#fff", paddingHorizontal: 18, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#E5E7EB", borderTopLeftRadius: 28, borderTopRightRadius: 28 },
-    sheetCloseBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#F3F4F6", justifyContent: "center", alignItems: "center" },
-    sheetTitle: { fontSize: 21, fontWeight: "800", color: "#1F2937" },
-    sheetSaveBtn: { backgroundColor: "#2E7D32", paddingHorizontal: 22, paddingVertical: 10, borderRadius: 22, minWidth: 72, alignItems: "center" },
+    modalSheet: { height: SCREEN_H * 0.92, backgroundColor: EC.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
+    sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: EC.surface, paddingHorizontal: 18, paddingVertical: 16, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderBottomWidth: 1, borderBottomColor: EC.borderLight },
+    sheetTopBar: { height: 5, backgroundColor: EC.green700, marginHorizontal: -18, marginBottom: 0 },
+    sheetCloseBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: EC.surfaceGreen, borderWidth: 2, borderColor: EC.borderLight, justifyContent: "center", alignItems: "center" },
+    sheetTitle: { fontSize: 21, fontWeight: "800", color: EC.textPrimary },
+    sheetSaveBtn: { backgroundColor: EC.green700, paddingHorizontal: 22, paddingVertical: 10, borderRadius: 22, minWidth: 72, alignItems: "center" },
     sheetSaveBtnText: { fontSize: 18, fontWeight: "800", color: "#fff" },
-    sheetScroll: { padding: 20 },
-    groupLabel: { fontSize: 17, fontWeight: "800", color: "#2E7D32", letterSpacing: 0.8, marginBottom: 12, marginTop: 10, textTransform: "uppercase" },
-    inputGroup: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: "#0D4A1F", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-    inputLabel: { fontSize: 18, fontWeight: "700", color: "#6B7280", marginBottom: 10 },
-    inputSub: { fontSize: 16, color: "#9CA3AF", marginTop: 3 },
-    textInput: { fontSize: 20, fontWeight: "600", color: "#1F2937", borderBottomWidth: 2, borderBottomColor: "#C8E6C9", paddingVertical: 8, paddingHorizontal: 2 },
+    sheetScroll: { padding: 20, paddingTop: 12, backgroundColor: "#F5F7F2" },
+    groupLabel: { fontSize: 17, fontWeight: "800", color: EC.green700, letterSpacing: 0.5, marginBottom: 10, marginTop: 14 },
+    inputGroup: { backgroundColor: EC.surface, borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 2, borderColor: EC.borderLight },
+    inputLabel: { fontSize: 17, fontWeight: "700", color: EC.textSecondary, marginBottom: 8 },
+    inputSub: { fontSize: 16, color: EC.textMuted, marginTop: 3 },
+    textInput: { fontSize: 19, fontWeight: "600", color: EC.textPrimary, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderRadius: 14, borderColor: EC.borderLight, backgroundColor: EC.surfaceGreen },
     landRow: { flexDirection: "row", alignItems: "center" },
-    unitToggle: { flexDirection: "row", borderWidth: 1.5, borderColor: "#C8E6C9", borderRadius: 12, overflow: "hidden" },
-    unitBtn: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#F9FAFB" },
-    unitBtnActive: { backgroundColor: "#2E7D32" },
-    unitBtnText: { fontSize: 17, fontWeight: "700", color: "#9CA3AF" },
+    unitToggle: { flexDirection: "row", borderWidth: 2, borderColor: EC.borderLight, borderRadius: 12, overflow: "hidden" },
+    unitBtn: { paddingHorizontal: 14, paddingVertical: 12, backgroundColor: EC.surfaceGreen },
+    unitBtnActive: { backgroundColor: EC.green700 },
+    unitBtnText: { fontSize: 15, fontWeight: "700", color: EC.textMuted },
     unitBtnTextActive: { color: "#fff" },
-    chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-    chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 22, borderWidth: 1.5, borderColor: "#C8E6C9", backgroundColor: "#F9FAFB" },
-    chipActive: { borderColor: "#2E7D32", backgroundColor: "#E8F5E9" },
-    chipText: { fontSize: 17, fontWeight: "600", color: "#6B7280" },
-    chipTextActive: { color: "#1B5E20", fontWeight: "800" },
-    switchRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: "#0D4A1F", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-    // Location dropdown in edit mode
-    locationBtn: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1.5, borderRadius: 12, borderColor: "#E5E7EB", backgroundColor: "#F9FAFB", paddingHorizontal: 14, paddingVertical: 13, marginBottom: 8 },
-    locationBtnFilled: { borderColor: "#66BB6A" },
+    chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    chip: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, borderWidth: 2, borderColor: EC.borderLight, backgroundColor: EC.surfaceGreen },
+    chipActive: { borderColor: EC.green700, backgroundColor: EC.green50 },
+    chipText: { fontSize: 16, fontWeight: "600", color: EC.textMuted },
+    chipTextActive: { color: EC.textPrimary, fontWeight: "800" },
+    switchRow: { flexDirection: "row", alignItems: "center", backgroundColor: EC.surface, borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 2, borderColor: EC.borderLight },
+    locationBtn: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 2, borderRadius: 14, borderColor: EC.borderLight, backgroundColor: EC.surfaceGreen, paddingHorizontal: 14, paddingVertical: 14, marginBottom: 8 },
+    locationBtnFilled: { borderColor: EC.green700 },
     locationBtnDisabled: { opacity: 0.4 },
-    locationBtnText: { fontSize: 18, color: "#1F2937", fontWeight: "600", flex: 1 },
-    locationBtnPlaceholder: { color: "#9CA3AF", fontWeight: "400", fontSize: 18 },
-    locationBtnArrow: { fontSize: 18, color: "#2E7D32", marginLeft: 6, fontWeight: "700" },
-    // Location sub-modal
+    locationBtnText: { fontSize: 19, color: EC.textPrimary, fontWeight: "600", flex: 1 },
+    locationBtnPlaceholder: { color: EC.textMuted, fontWeight: "400" },
+    locationBtnArrow: { fontSize: 20, color: EC.green700, marginLeft: 8, fontWeight: "700" },
     locModalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-    locModalSheet: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: Platform.OS === "ios" ? 36 : 24, maxHeight: "60%" },
-    locModalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "#E0E0E0", alignSelf: "center", marginTop: 12, marginBottom: 6 },
-    locModalTitle: { fontSize: 21, fontWeight: "800", color: "#1F2937", textAlign: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F3F4F6", marginBottom: 4 },
-    locItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F9FAFB" },
-    locItemSelected: { backgroundColor: "#F0FDF4", borderRadius: 10, paddingHorizontal: 8 },
-    locItemLabel: { fontSize: 19, color: "#1F2937", fontWeight: "600" },
-    locItemLabelSel: { color: "#2E7D32", fontWeight: "800" },
-    locItemSub: { fontSize: 16, color: "#9CA3AF", marginTop: 2 },
-    locItemCheck: { fontSize: 20, color: "#2E7D32", fontWeight: "900", marginLeft: 8 },
+    locModalSheet: { backgroundColor: EC.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingBottom: Platform.OS === "ios" ? 36 : 24, maxHeight: "60%", borderWidth: 1, borderColor: EC.borderLight },
+    locModalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: EC.border, alignSelf: "center", marginTop: 12, marginBottom: 6 },
+    locModalTitle: { fontSize: 21, fontWeight: "800", color: EC.textPrimary, textAlign: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: EC.borderLight, marginBottom: 4 },
+    locItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: EC.borderLight },
+    locItemSelected: { backgroundColor: EC.surfaceGreen, borderRadius: 10, paddingHorizontal: 8 },
+    locItemLabel: { fontSize: 19, color: EC.textPrimary, fontWeight: "600" },
+    locItemLabelSel: { color: EC.green700, fontWeight: "800" },
+    locItemSub: { fontSize: 16, color: EC.textMuted, marginTop: 2 },
+    locItemCheck: { fontSize: 20, color: EC.green700, fontWeight: "900", marginLeft: 8 },
 });

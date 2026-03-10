@@ -452,7 +452,7 @@ function CropSaleForm({
   return (
     <>
       <View style={styles.fieldWrap}>
-        <FieldLabel text="જથ્થો *" />
+        <FieldLabel text="જથ્થો" />
         <View style={styles.qtyUnitRow}>
           <View style={{ flex: 1 }}>
             <View style={styles.inputRow}>
@@ -488,7 +488,7 @@ function CropSaleForm({
       </View>
 
       <View style={styles.fieldWrap}>
-        <FieldLabel text={qtyUnitMal ? "ભાવ (પ્રતિ મણ) *" : "ભાવ (પ્રતિ કિ.ગ્રા.) *"} />
+        <FieldLabel text={qtyUnitMal ? "ભાવ (પ્રતિ મણ)" : "ભાવ (પ્રતિ કિ.ગ્રા.)"} />
         <View style={styles.inputRow}>
           <TextInput
             style={[styles.input, styles.inputBig]}
@@ -510,7 +510,7 @@ function CropSaleForm({
       )}
 
       <View style={styles.fieldWrap}>
-        <FieldLabel text="બજાર / યાર્ડ *" />
+        <FieldLabel text="બજાર / યાર્ડ" />
         <View style={styles.chipRow}>
           {BAJAR_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -543,7 +543,7 @@ function SubsidyForm({
     onChange({ ...data, [k]: v });
   return (
     <NumField
-      label="રકમ *"
+      label="રકમ"
       value={data.amount}
       onChange={(v) => set("amount", v)}
       suffix=""
@@ -570,7 +570,7 @@ function RentalIncomeForm({
   return (
     <>
       <View style={styles.fieldWrap}>
-        <FieldLabel text="ઉપકરણનો પ્રકાર *" />
+        <FieldLabel text="ઉપકરણનો પ્રકાર" />
         <ChipPicker
           options={ASSET_TYPES}
           value={data.assetType}
@@ -587,7 +587,7 @@ function RentalIncomeForm({
       <View style={styles.row2}>
         <View style={{ flex: 1 }}>
           <NumField
-            label="કલાક / દિવસ *"
+            label="કલાક / દિવસ"
             value={data.hoursOrDays}
             onChange={(v) => set("hoursOrDays", v)}
             onFocus={onInputFocus}
@@ -595,7 +595,7 @@ function RentalIncomeForm({
         </View>
         <View style={{ flex: 1 }}>
           <NumField
-            label="દર *"
+            label="દર"
             value={data.ratePerUnit}
             onChange={(v) => set("ratePerUnit", v)}
             suffix=""
@@ -627,7 +627,7 @@ function OtherIncomeForm({
   return (
     <>
       <View style={styles.fieldWrap}>
-        <FieldLabel text="સ્રોત *" />
+        <FieldLabel text="સ્રોત" />
         <ChipPicker
           options={OTHER_SOURCES}
           value={data.source}
@@ -635,7 +635,7 @@ function OtherIncomeForm({
         />
       </View>
       <NumField
-        label="રકમ *"
+        label="રકમ"
         value={data.amount}
         onChange={(v) => set("amount", v)}
         suffix=""
@@ -1055,7 +1055,7 @@ export default function AddIncomeScreen() {
       {/* ── Crop select (same as expense): when adding income linked to a crop ── */}
       {!isGeneralIncome && !isEdit && (
         <View style={styles.cropSelectCard}>
-          <SectionLabel text="પાક પસંદ કરો *" />
+          <SectionLabel text="પાક પસંદ કરો" />
           {crops.length > 0 ? (
             <SelectPicker
               options={crops.map((c) => ({ value: c._id, label: getCropDropdownLabel(c) }))}
@@ -1158,7 +1158,7 @@ export default function AddIncomeScreen() {
         )}
         {category === "Other" && hasCropSelected && (
           <NumField
-            label="રકમ *"
+            label="રકમ"
             value={(subData as OtherIncomeData).amount}
             onChange={(v) => setSubData({ ...(subData as OtherIncomeData), amount: v })}
             suffix=""
@@ -1167,7 +1167,7 @@ export default function AddIncomeScreen() {
         )}
         {category === "Other" && isGeneralIncome && generalIncomeType && generalIncomeType !== "other" && (
           <NumField
-            label="રકમ *"
+            label="રકમ"
             value={(subData as OtherIncomeData).amount}
             onChange={(v) => setSubData({ ...(subData as OtherIncomeData), amount: v })}
             suffix=""
@@ -1177,14 +1177,14 @@ export default function AddIncomeScreen() {
         {category === "Other" && isGeneralIncome && generalIncomeType === "other" && (
           <>
             <TxtField
-              label="આવકનો પ્રકાર (ટાઈપ કરો) *"
+              label="આવકનો પ્રકાર (ટાઈપ કરો)"
               value={(subData as OtherIncomeData).source}
               onChange={(v) => setSubData({ ...(subData as OtherIncomeData), source: v })}
               placeholder="દા.ત. મજૂરી, લોન, વ્યાપાર..."
               onFocus={scrollToForm}
             />
             <NumField
-              label="રકમ *"
+              label="રકમ"
               value={(subData as OtherIncomeData).amount}
               onChange={(v) => setSubData({ ...(subData as OtherIncomeData), amount: v })}
               suffix=""

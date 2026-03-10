@@ -2,10 +2,12 @@
  * FILE: app/(auth)/login.tsx
  *
  * Design aligned with main app (index.tsx) — light green palette, consistent cards & inputs.
+ * Logo: gradient circle, decorative rings, scale/rotate animations.
  */
 
 import translations from "@/translations.json";
 import { sendOtp } from "@/utils/api";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -15,18 +17,20 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
+  TouchableWithoutFeedback,
   View,
-  StatusBar,
-  Image,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get("window");
 const LANG = "gu" as const;
@@ -248,10 +252,21 @@ export default function Login() {
       useNativeDriver: true,
     }).start();
 
+  // Trial bypass: use this number to skip real OTP and go to profile (OTP screen will accept 123456)
+  const TRIAL_PHONE = "9999999999";
+
   const handleSendOtp = async () => {
     if (!isValid) return;
     setLoading(true);
     try {
+      if (phone === TRIAL_PHONE) {
+        router.push({
+          pathname: "/(auth)/otp",
+          params: { phone, sessionId: "trial" },
+        });
+        setLoading(false);
+        return;
+      }
       const data = await sendOtp(phone);
       router.push({
         pathname: "/(auth)/otp",
@@ -274,68 +289,68 @@ export default function Login() {
   });
 
   return (
-    <LinearGradient
-      colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
-      <View style={styles.circle1} />
-      <View style={styles.circle2} />
-      <View style={styles.circle3} />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.kav}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <LinearGradient
+          colors={["#FAFDFA", "#F5F9F5", "#FAFDFA"]}
+          style={styles.container}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
-        <View style={styles.inner}>
-          {/* ── Hero ── */}
-          <Animated.View
-            style={[
-              styles.heroBlock,
-              { opacity: heroFade, transform: [{ translateY: heroSlide }] },
-            ]}
+          <StatusBar barStyle="dark-content" backgroundColor="#FAFDFA" />
+          <View style={styles.circle1} pointerEvents="none" />
+          <View style={styles.circle2} pointerEvents="none" />
+          <View style={styles.circle3} pointerEvents="none" />
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.kav}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
           >
-            <View style={styles.logoCircle}>
-              <Image
-                source={require("../../assets/vadi-logo.png")}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-            <Text style={styles.appName}>{t.appName}</Text>
-            <Text style={styles.tagline}>{t.tagline}</Text>
-            <View style={styles.wheatRow}>
-              {["🌾", "🌱", "🌾", "🌱", "🌾"].map((e, i) => (
-                <Animated.Text
-                  key={i}
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.inner}>
+                {/* ── Side decorations (left & right) ── */}
+                <View style={styles.sideDecoLeft} pointerEvents="none">
+                  <View style={styles.sideDecoCircle} />
+                  <View style={[styles.sideDecoCircle, styles.sideDecoCircleSmall]} />
+                  <View style={[styles.sideDecoCircle, styles.sideDecoCircleDot]} />
+                </View>
+                <View style={styles.sideDecoRight} pointerEvents="none">
+                  <View style={styles.sideDecoCircle} />
+                  <View style={[styles.sideDecoCircle, styles.sideDecoCircleSmall, styles.sideDecoRightIndent]} />
+                  <View style={[styles.sideDecoCircle, styles.sideDecoCircleDot, styles.sideDecoRightIndentDot]} />
+                </View>
+
+                {/* ── Logo Section ── */}
+                <Animated.View
                   style={[
-                    styles.wheatEmoji,
+                    styles.logoContainer,
                     {
-                      transform: [
-                        {
-                          rotate: wheatAnims[i].interpolate({
-                            inputRange: [-1, 0, 1],
-                            outputRange: ["-14deg", "0deg", "14deg"],
-                          }),
-                        },
-                      ],
+                      opacity: heroFade,
+                      transform: [{ translateY: heroSlide }],
                     },
                   ]}
                 >
-                  {e}
-                </Animated.Text>
-              ))}
-            </View>
-          </Animated.View>
+                  <Image
+                    source={require("../../assets/vadi-logo.png")}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                  />
+                </Animated.View>
+
+                <Animated.View
+                  style={[
+                    styles.taglineContainer,
+                    { opacity: heroFade, transform: [{ translateY: heroSlide }] },
+                  ]}
+                >
+                  <Text style={styles.brandText}>🌾 {t.tagline} 🌾</Text>
+                </Animated.View>
 
           {/* ── Card ── */}
           <Animated.View
@@ -351,42 +366,54 @@ export default function Login() {
               style={styles.cardBar}
             />
 
-            <Text style={styles.cardTitle}>{t.label}</Text>
-            <Text style={styles.cardSub}>
-              તમારો ૧૦ અંકનો મોબાઈલ નંબર દાખલ કરો
-            </Text>
+            <Text style={styles.cardTitle}>મોબાઈલ નંબર દાખલ કરો</Text>
 
             {/* Scale wrapper — native driver ✅ */}
             <Animated.View style={{ transform: [{ scale: inputScale }] }}>
               {/* Border wrapper — non-native driver ✅  (separate Animated.View) */}
-              <Animated.View style={[styles.inputWrapper, { borderColor }]}>
-                <View style={styles.prefix}>
-                  <Text style={styles.flag}>🇮🇳</Text>
-                  <Text style={styles.prefixTxt}>+91</Text>
-                  <View style={styles.prefixDiv} />
+              <Animated.View
+                style={[
+                  styles.inputWrapper,
+                  styles.inputContainer,
+                  { borderColor },
+                  phone && styles.inputActive,
+                ]}
+              >
+                <View style={styles.iconCircle}>
+                  <Ionicons name="call" size={18} color="#4CAF50" />
                 </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder={t.placeholder}
-                  placeholderTextColor={C.textMuted}
-                  keyboardType="numeric"
-                  maxLength={10}
-                  value={phone}
-                  onChangeText={handleChangeText}
-                  onFocus={onFocusInput}
-                  onBlur={onBlurInput}
-                  selectionColor={C.green700}
-                />
-                <Animated.Text
-                  style={[
-                    styles.check,
-                    {
-                      transform: [{ scale: checkScale }, { rotate: checkSpin }],
-                    },
-                  ]}
-                >
-                  ✓
-                </Animated.Text>
+                <View style={styles.inputContent}>
+                  <View style={styles.inputRow}>
+                    <Text style={styles.prefixTxt}>+91</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder={t.placeholder}
+                      placeholderTextColor={C.textMuted}
+                      keyboardType="numeric"
+                      maxLength={10}
+                      value={phone}
+                      onChangeText={handleChangeText}
+                      onFocus={onFocusInput}
+                      onBlur={onBlurInput}
+                      selectionColor={C.green700}
+                    />
+                  </View>
+                </View>
+                {isValid && (
+                  <Animated.View
+                    style={[
+                      styles.checkCircle,
+                      {
+                        transform: [
+                          { scale: checkScale },
+                          { rotate: checkSpin },
+                        ],
+                      },
+                    ]}
+                  >
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                  </Animated.View>
+                )}
               </Animated.View>
             </Animated.View>
 
@@ -460,33 +487,128 @@ export default function Login() {
               <Text style={styles.hintTxt}>🔒 {t.hint}</Text>
             </View>
           </Animated.View>
-
-          <Animated.Text style={[styles.bottomTag, { opacity: heroFade }]}>
-            🌾 ખેડૂત · ઉત્પાદક · સમૃદ્ધ 🌾
-          </Animated.Text>
         </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+          <Animated.View style={[styles.bottomTagWrap, { opacity: heroFade }]}>
+            <Text style={styles.brandTextBottom}>🌾 ખેતી · હિસાબ · સમૃદ્ધ 🌾</Text>
+          </Animated.View>
+        </LinearGradient>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: "#FAFDFA" },
   container: { flex: 1 },
   kav: { flex: 1 },
   inner: {
     flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 22,
+    justifyContent: "flex-start",
+    paddingHorizontal: 24,
+    paddingTop: 0,
     paddingBottom: 24,
   },
 
+  // Logo (minimal space below)
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 0,
+  },
+  logoImage: {
+    width: 300,
+    height: 300,
+    backgroundColor: "transparent",
+  },
+  taglineContainer: {
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  brandText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: C.green900,
+    letterSpacing: 0.6,
+  },
+  sideDecoLeft: {
+    position: "absolute",
+    left: 0,
+    top: height * 0.12,
+    width: 60,
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  sideDecoRight: {
+    position: "absolute",
+    right: 0,
+    top: height * 0.12,
+    width: 60,
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  sideDecoCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(46,125,50,0.12)",
+  },
+  sideDecoCircleSmall: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginLeft: 12,
+    backgroundColor: "rgba(46,125,50,0.18)",
+  },
+  sideDecoCircleDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginLeft: 20,
+    backgroundColor: "rgba(46,125,50,0.2)",
+  },
+  sideDecoRightIndent: { marginLeft: 0, marginRight: 12 },
+  sideDecoRightIndentDot: { marginLeft: 0, marginRight: 20 },
+  bottomTagWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 24,
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  brandTextBottom: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: C.green900,
+    letterSpacing: 0.6,
+    textAlign: "center",
+  },
+
+  titleContainer: {
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  appName: {
+    fontSize: 34,
+    fontWeight: "800",
+    color: C.textPrimary,
+    marginBottom: 8,
+  },
+  subtitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  tagline: { fontSize: 17, color: C.textSecondary },
+  emoji: { fontSize: 16 },
   circle1: {
     position: "absolute",
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: C.green100 + "80",
+    backgroundColor: "rgba(200,230,201,0.25)",
     top: -80,
     right: -70,
   },
@@ -495,7 +617,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: C.green100 + "50",
+    backgroundColor: "rgba(200,230,201,0.15)",
     bottom: 40,
     left: -50,
   },
@@ -504,107 +626,111 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: C.green50 + "CC",
+    backgroundColor: "rgba(232,245,233,0.5)",
     top: height * 0.42,
     left: 24,
   },
 
   scrollView: { flex: 1 },
-  scrollContent: { flexGrow: 1, justifyContent: "center", paddingVertical: 24 },
-  heroBlock: { alignItems: "center", marginBottom: 26 },
-  logoCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 22,
-    backgroundColor: C.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 14,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "flex-start",
+    paddingTop: 0,
+    paddingBottom: 24,
   },
-  logoImage: { width: 64, height: 64 },
-  appName: {
-    fontSize: 34,
-    fontWeight: "900",
-    color: C.textPrimary,
-    letterSpacing: 0.8,
-  },
-  tagline: {
-    fontSize: 14,
-    color: C.textSecondary,
-    marginTop: 5,
-    fontWeight: "500",
-  },
-  wheatRow: { flexDirection: "row", marginTop: 14, gap: 8 },
-  wheatEmoji: { fontSize: 22 },
-
   card: {
     backgroundColor: C.surface,
-    borderRadius: 20,
-    paddingHorizontal: 22,
-    paddingBottom: 22,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
     paddingTop: 0,
     overflow: "hidden",
     borderWidth: 1.5,
     borderColor: C.borderLight,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: "#1A2E1C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  cardBar: { height: 5, marginHorizontal: -22, marginBottom: 22 },
+  cardBar: { height: 5, marginHorizontal: -24, marginBottom: 22 },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "900",
     color: C.textPrimary,
-    marginBottom: 4,
+    marginBottom: 16,
   },
   cardSub: {
-    fontSize: 13,
+    fontSize: 15,
     color: C.textSecondary,
     marginBottom: 18,
     fontWeight: "500",
   },
 
-  inputWrapper: {
+  inputWrapper: { width: "100%", marginBottom: 14 },
+  inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 2,
-    borderRadius: 16,
-    backgroundColor: C.surfaceGreen,
-    marginBottom: 14,
-  },
-  prefix: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
+    backgroundColor: C.surface,
+    borderRadius: 18,
+    paddingHorizontal: 16,
     paddingVertical: 16,
-    gap: 7,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: "transparent",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+      },
+      android: { elevation: 3 },
+    }),
   },
-  flag: { fontSize: 20 },
-  prefixTxt: { fontSize: 16, fontWeight: "800", color: C.textPrimary },
-  prefixDiv: {
-    width: 1.5,
-    height: 24,
-    backgroundColor: C.border,
-    marginLeft: 10,
+  inputActive: {
+    borderColor: "#4CAF50",
+    backgroundColor: C.surfaceGreen,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: C.green50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  inputContent: { flex: 1, gap: 2 },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: C.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  inputRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  prefixTxt: {
+    fontSize: 19,
+    fontWeight: "600",
+    color: C.textPrimary,
+    letterSpacing: 1.5,
   },
   input: {
     flex: 1,
-    fontSize: 22,
-    fontWeight: "700",
+    fontSize: 19,
     color: C.textPrimary,
-    paddingVertical: 16,
-    paddingRight: 8,
-    letterSpacing: 3,
+    paddingVertical: 0,
+    letterSpacing: 1.5,
+    fontWeight: "600",
   },
-  check: { fontSize: 22, color: C.income, paddingRight: 16, fontWeight: "900" },
+  checkCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#4CAF50",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
   dotsRow: {
     flexDirection: "row",
@@ -616,7 +742,7 @@ const styles = StyleSheet.create({
   dotOn: { backgroundColor: C.green700 },
   dotOff: { backgroundColor: C.green100 },
   dotHint: {
-    fontSize: 12,
+    fontSize: 13,
     color: C.textMuted,
     textAlign: "right",
     marginBottom: 20,
@@ -641,20 +767,13 @@ const styles = StyleSheet.create({
   btnRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   btnTxt: {
     color: C.white,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
-  btnArrow: { color: C.goldPale, fontSize: 22, fontWeight: "900" },
+  btnArrow: { color: C.goldPale, fontSize: 24, fontWeight: "900" },
   btnTxtOff: { color: C.textMuted },
 
   hintRow: { alignItems: "center" },
-  hintTxt: { color: C.textMuted, fontSize: 12, fontWeight: "500" },
-  bottomTag: {
-    textAlign: "center",
-    color: C.textMuted,
-    fontSize: 12,
-    marginTop: 20,
-    letterSpacing: 1,
-  },
+  hintTxt: { color: C.textMuted, fontSize: 13, fontWeight: "500" },
 });

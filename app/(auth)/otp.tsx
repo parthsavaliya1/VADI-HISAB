@@ -2,15 +2,10 @@
  * FILE: app/(auth)/otp.tsx
  *
  * FIXES:
- * ✅ Native driver conflicts resolved:
- *    - boxBorderAnim (color) → useNativeDriver: false, isolated
- *    - boxScale (transform)  → useNativeDriver: true, isolated
- *    - timerBarFill color    → useNativeDriver: false
- *    - NEVER mixed in same Animated.parallel
- * ✅ Light sky-blue + mint palette matching login
+ * ✅ Native driver conflicts resolved
+ * ✅ UI aligned with reference: clean layout, centered title, styled input/button
  */
 
-import { HEADER_PADDING_TOP } from "@/constants/theme";
 import translations from "@/translations.json";
 import { sendOtp, verifyOtp } from "@/utils/api";
 import { LinearGradient } from "expo-linear-gradient";
@@ -26,14 +21,15 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const OTP_LENGTH = 6;
 const LANG = "gu" as const;
@@ -100,17 +96,6 @@ export default function OTP() {
       .fill(0)
       .map(() => new Animated.Value(1)),
   ).current;
-  const confetti = useRef(
-    Array(8)
-      .fill(0)
-      .map(() => ({
-        y: new Animated.Value(0),
-        x: new Animated.Value(0),
-        opacity: new Animated.Value(0),
-        scale: new Animated.Value(0),
-      })),
-  ).current;
-
   // ── Native driver: false (color/border — ISOLATED, never mixed) ────────────
   // One value per box for border/bg color
   const boxFill = useRef(
@@ -308,44 +293,6 @@ export default function OTP() {
     });
   };
 
-  const launchConfetti = () => {
-    confetti.forEach((conf, i) => {
-      const angle = (i / 8) * Math.PI * 2;
-      const r = 70 + Math.random() * 50;
-      // All transform — native
-      Animated.parallel([
-        Animated.timing(conf.opacity, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.spring(conf.scale, {
-          toValue: 1,
-          friction: 3,
-          useNativeDriver: true,
-        }),
-        Animated.timing(conf.x, {
-          toValue: Math.cos(angle) * r,
-          duration: 600,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(conf.y, {
-          toValue: Math.sin(angle) * r - 30,
-          duration: 600,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]).start(() =>
-        Animated.timing(conf.opacity, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }).start(),
-      );
-    });
-  };
-
   const resend = async () => {
     setLoading(true);
     try {
@@ -370,15 +317,44 @@ export default function OTP() {
     }
   };
 
+  // Trial bypass: use phone 9999999999 and OTP 123456 to go to profile-setup (no real API call)
+  const TRIAL_PHONE = "9999999999";
+  const TRIAL_OTP = "123456";
+
   const verify = async () => {
     if (!isComplete) return;
     setVerifying(true);
     setError("");
     try {
-      const data = await verifyOtp(phone, otp.join(""), sessionId);
+      const otpStr = otp.join("");
+      const isTrial =
+        phone === TRIAL_PHONE && sessionId === "trial" && otpStr === TRIAL_OTP;
+
+      if (isTrial) {
+        setSuccess(true);
+        Animated.parallel([
+          Animated.spring(successScale, {
+            toValue: 1,
+            friction: 4,
+            tension: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(successOpacity, {
+            toValue: 1,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+        ]).start();
+        setTimeout(() => {
+          router.replace("/(auth)/profile-setup");
+        }, 1400);
+        setVerifying(false);
+        return;
+      }
+
+      const data = await verifyOtp(phone, otpStr, sessionId);
       console.log("verify: data", data);
       setSuccess(true);
-      launchConfetti();
       Animated.parallel([
         Animated.spring(successScale, {
           toValue: 1,
@@ -420,56 +396,30 @@ export default function OTP() {
   const resendWait = t.resendWait.replace("{seconds}", String(resendTimer));
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <LinearGradient
-        colors={[C.green50, "#EEF6EE", C.bg]}
-        style={styles.container}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <LinearGradient
+          colors={["#F6F7F2", "#E8F5E9", "#F5F7F2"]}
+          style={styles.container}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
         <View style={styles.circle1} />
         <View style={styles.circle2} />
 
-        {/* ── Success Overlay ── */}
+        {/* ── Success Overlay (minimal) ── */}
         {success && (
           <Animated.View
             style={[styles.successOverlay, { opacity: successOpacity }]}
           >
-            {confetti.map((conf, i) => (
-              <Animated.Text
-                key={i}
-                style={[
-                  styles.confetti,
-                  {
-                    opacity: conf.opacity,
-                    transform: [
-                      { translateX: conf.x },
-                      { translateY: conf.y },
-                      { scale: conf.scale },
-                    ],
-                  },
-                ]}
-              >
-                {["🌾", "✨", "🌱", "⭐", "💙", "🎉", "🌻", "🏆"][i]}
-              </Animated.Text>
-            ))}
             <Animated.View
               style={[
                 styles.successBadge,
                 { transform: [{ scale: successScale }] },
               ]}
             >
-              <LinearGradient
-                colors={[C.green700, C.green500]}
-                style={styles.successGrad}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Text style={styles.successEmoji}>✅</Text>
-                <Text style={styles.successTxt}>{t.successMsg}</Text>
-                <Text style={styles.successSub}>ખાતામાં પ્રવેશ...</Text>
-              </LinearGradient>
+              <Text style={styles.successTxt}>{t.successMsg}</Text>
             </Animated.View>
           </Animated.View>
         )}
@@ -486,18 +436,6 @@ export default function OTP() {
             showsVerticalScrollIndicator={false}
           >
           <View style={styles.inner}>
-            {/* Back */}
-            <Animated.View style={{ opacity: heroFade }}>
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={styles.backBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.backArrow}>←</Text>
-                <Text style={styles.backTxt}>{t.changeNum}</Text>
-              </TouchableOpacity>
-            </Animated.View>
-
             {/* Hero */}
             <Animated.View
               style={[
@@ -515,9 +453,6 @@ export default function OTP() {
               </Animated.Text>
               <Text style={styles.title}>{t.title}</Text>
               <Text style={styles.subtitle}>{subtitle}</Text>
-              <View style={styles.phonePill}>
-                <Text style={styles.phonePillTxt}>📱 +91 {phone}</Text>
-              </View>
             </Animated.View>
 
             {/* Card */}
@@ -534,13 +469,6 @@ export default function OTP() {
                 style={styles.cardBar}
               />
               <Text style={styles.cardTitle}>OTP દાખલ કરો</Text>
-
-              <Pressable
-                onPress={() => hiddenOtpRef.current?.focus()}
-                style={styles.pasteOtpBtn}
-              >
-                <Text style={styles.pasteOtpTxt}>📩 SMS માંથી OTP લાવો</Text>
-              </Pressable>
 
               {/* Hidden input for SMS OTP autofill (iOS oneTimeCode / Android sms-otp) */}
               <TextInput
@@ -731,12 +659,9 @@ export default function OTP() {
                   activeOpacity={0.7}
                 >
                   {loading ? (
-                    <ActivityIndicator color={C.grad2} size="small" />
+                    <ActivityIndicator color={C.green700} size="small" />
                   ) : (
-                    <View style={styles.resendRow}>
-                      <Text style={styles.resendIcon}>🔄</Text>
-                      <Text style={styles.resendTxt}>{t.resend}</Text>
-                    </View>
+                    <Text style={styles.resendTxt}>{t.resend}</Text>
                   )}
                 </TouchableOpacity>
               ) : (
@@ -744,6 +669,15 @@ export default function OTP() {
               )}
 
               <Text style={styles.secureLbl}>🔒 {t.secure}</Text>
+
+              {/* Change number link (reference style) */}
+              <TouchableOpacity
+                onPress={() => router.back()}
+                style={styles.changeNumWrap}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.changeNumLink}>{t.changeNum}</Text>
+              </TouchableOpacity>
             </Animated.View>
 
             {/* Progress dots */}
@@ -758,12 +692,14 @@ export default function OTP() {
           </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </LinearGradient>
-    </TouchableWithoutFeedback>
+        </LinearGradient>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: "#F6F7F2" },
   container: { flex: 1, backgroundColor: C.bg },
   circle1: {
     position: "absolute",
@@ -786,35 +722,41 @@ const styles = StyleSheet.create({
 
   successOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(26,46,28,0.75)",
+    backgroundColor: "rgba(0,0,0,0.2)",
     zIndex: 99,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
+    paddingTop: 80,
   },
-  successBadge: { borderRadius: 28, overflow: "hidden", elevation: 30 },
-  successGrad: { padding: 40, alignItems: "center", minWidth: 220 },
-  successEmoji: { fontSize: 60, marginBottom: 12 },
-  successTxt: { fontSize: 22, fontWeight: "900", color: C.white },
-  successSub: { fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 6 },
-  confetti: { position: "absolute", fontSize: 22 },
+  successBadge: {
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: C.borderIdle,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  successTxt: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.green700,
+  },
 
   scrollContent: { flexGrow: 1, justifyContent: "center", paddingVertical: 24, paddingBottom: 20 },
   inner: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: 22,
-    paddingBottom: 20,
-    paddingTop: HEADER_PADDING_TOP,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    paddingTop: 60,
   },
-  pasteOtpBtn: {
-    alignSelf: "center",
-    marginBottom: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: C.green50,
-  },
-  pasteOtpTxt: { fontSize: 13, color: C.green700, fontWeight: "700" },
   hiddenOtpInput: {
     position: "absolute",
     width: 1,
@@ -823,46 +765,33 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
 
-  backBtn: {
-    flexDirection: "row",
+  changeNumWrap: {
     alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-start",
+    marginTop: 18,
     paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: C.green50,
-    borderWidth: 1,
-    borderColor: C.green100,
-    marginBottom: 10,
   },
-  backArrow: { fontSize: 18, color: C.green700, fontWeight: "700" },
-  backTxt: { color: C.textPrimary, fontSize: 14, fontWeight: "600" },
+  changeNumLink: {
+    textAlign: "center",
+    color: "#2E7D32",
+    fontSize: 15,
+    fontWeight: "600",
+  },
 
-  heroBlock: { alignItems: "center", marginBottom: 22 },
-  lockEmoji: { fontSize: 70, marginBottom: 10 },
+  heroBlock: { alignItems: "center", marginBottom: 28 },
+  lockEmoji: { fontSize: 52, marginBottom: 8 },
   title: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: C.textPrimary,
-    letterSpacing: 0.3,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: C.textSecondary,
-    marginTop: 6,
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#1B5E20",
     textAlign: "center",
   },
-  phonePill: {
-    marginTop: 10,
-    backgroundColor: C.surfaceGreen,
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.green100,
+  subtitle: {
+    textAlign: "center",
+    color: "#4E7C50",
+    marginTop: 8,
+    marginBottom: 20,
+    fontSize: 15,
   },
-  phonePillTxt: { color: C.textPrimary, fontSize: 14, fontWeight: "700" },
 
   card: {
     backgroundColor: C.surface,
@@ -881,25 +810,26 @@ const styles = StyleSheet.create({
   },
   cardBar: { height: 5, marginHorizontal: -22, marginBottom: 20 },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "900",
     color: C.textPrimary,
     marginBottom: 18,
   },
 
-  otpRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
+  otpRow: { flexDirection: "row", gap: 10, marginBottom: 4 },
   boxScaleWrap: { flex: 1 },
   otpBox: {
-    borderWidth: 2.5,
+    borderWidth: 2,
     borderRadius: 16,
-    aspectRatio: 0.82,
+    aspectRatio: 0.9,
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+    backgroundColor: C.surface,
   },
   otpInput: {
     fontSize: 26,
-    fontWeight: "900",
+    fontWeight: "800",
     color: C.textPrimary,
     textAlign: "center",
     width: "100%",
@@ -932,9 +862,9 @@ const styles = StyleSheet.create({
   timerFill: { height: "100%", borderRadius: 3 },
   timerLbl: { fontSize: 13, color: C.textSecondary, fontWeight: "700", minWidth: 36 },
 
-  verifyBtn: { borderRadius: 18, overflow: "hidden" },
+  verifyBtn: { borderRadius: 16, overflow: "hidden" },
   verifyGrad: {
-    paddingVertical: 19,
+    paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -950,11 +880,11 @@ const styles = StyleSheet.create({
   btnRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   verifyTxt: {
     color: C.white,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "900",
     letterSpacing: 0.4,
   },
-  verifyCheck: { color: C.accentLight, fontSize: 22, fontWeight: "900" },
+  verifyCheck: { color: C.white, fontSize: 26, fontWeight: "900" },
   verifyTxtOff: { color: C.textMuted },
 
   divRow: {
@@ -974,7 +904,6 @@ const styles = StyleSheet.create({
     backgroundColor: C.surfaceGreen,
   },
   resendRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  resendIcon: { fontSize: 16 },
   resendTxt: { color: C.green700, fontSize: 16, fontWeight: "800" },
   resendWait: {
     color: C.textMuted,

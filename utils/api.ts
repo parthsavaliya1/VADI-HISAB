@@ -10,7 +10,7 @@ import axios from "axios";
 // 🚀 PROD: Set EXPO_PUBLIC_API_URL=https://your-api.onrender.com/api
 const BASE_URL =
   (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ||
-  "http://192.168.1.4:8000/api";
+  "http://192.168.1.8:8000/api";
 
 // ─── Axios Instance ───────────────────────────
 export const API = axios.create({
@@ -106,6 +106,8 @@ export type WaterSource = "Rain" | "Borewell" | "Canal";
 export type LabourType = "Family" | "Hired" | "Mixed";
 /** Tractor services when tractor is available: Rotavator, RAP, Bagi, Savda, etc. */
 export type TractorService = "Rotavator" | "RAP" | "Bagi" | "Savda";
+/** Ordered list of tractor service options (single source of truth). */
+export const TRACTOR_SERVICES: TractorService[] = ["Rotavator", "RAP", "Bagi", "Savda"];
 export type District =
   | "Rajkot"
   | "Jamnagar"

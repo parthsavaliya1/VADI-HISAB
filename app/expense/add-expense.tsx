@@ -839,7 +839,7 @@ export default function AddExpense() {
                 આ ખર્ચ કોઈ પાક સાથે લિંક નથી. વાર્ષિક ફાર્મ વિકાસ, સાધન ખરીદી વગેરે — અહેવાલમાં કુલ ખર્ચમાં ગણાશે.
               </Text>
             </View>
-            <SectionLabel text="ખર્ચનો પ્રકાર / વિવરણ *" />
+            <SectionLabel text="ખર્ચનો પ્રકાર / વિવરણ" />
             <TextInput
               style={styles.notesInput}
               value={generalDescription}
@@ -848,7 +848,7 @@ export default function AddExpense() {
               placeholderTextColor="#5B6570"
               multiline
             />
-            <SectionLabel text="ખર્ચ રકમ *" />
+            <SectionLabel text="ખર્ચ રકમ" />
             <NumericInput
               value={generalAmount}
               onChange={setGeneralAmount}
@@ -882,7 +882,7 @@ export default function AddExpense() {
         {/* ── Crop dropdown: hidden in edit mode (only change data entry: bags, amount, etc.) ── */}
         {!isEdit && (
           <View style={styles.cropSelectCard}>
-            <SectionLabel text={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો *" : "પાક પસંદ કરો *"} />
+            <SectionLabel text={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો" : "પાક પસંદ કરો"} />
             {(isBhagyaUpad ? crops.filter((c) => c.landType === "bhagma") : crops).length > 0 ? (
               <SelectPicker
                 options={(isBhagyaUpad ? crops.filter((c) => c.landType === "bhagma") : crops).map((c) => ({ value: c._id, label: getCropDropdownLabel(c) }))}
@@ -961,7 +961,7 @@ export default function AddExpense() {
             <View style={[styles.cardTitleRow, { borderLeftColor: "#16A34A" }]}>
               <Text style={styles.cardTitle}>🌱 બિયારણ ખર્ચ</Text>
             </View>
-            <SectionLabel text="બિયારણ પ્રકાર *" />
+            <SectionLabel text="બિયારણ પ્રકાર" />
             <SelectPicker
               options={SEED_TYPES}
               selected={seedType}
@@ -994,7 +994,7 @@ export default function AddExpense() {
                 </TouchableOpacity>
               </View>
             </View>
-            <SectionLabel text={`દર (પ્રતિ ${seedQtyUnit === "man" ? "મણ" : "કિ.ગ્રા."}) *`} />
+            <SectionLabel text={`દર (પ્રતિ ${seedQtyUnit === "man" ? "મણ" : "કિ.ગ્રા."})`} />
             <NumericInput
               value={seedUnitRate}
               onChange={setSeedUnitRate}
@@ -1019,7 +1019,7 @@ export default function AddExpense() {
             <View style={[styles.cardTitleRow, { borderLeftColor: "#0891B2" }]}>
               <Text style={styles.cardTitle}>🧪 ખાતર ખર્ચ</Text>
             </View>
-            <SectionLabel text="ઉત્પાદન *" />
+            <SectionLabel text="ઉત્પાદન" />
             <SelectPicker
               options={FERTILIZER_PRODUCTS}
               selected={fertProduct}
@@ -1027,7 +1027,7 @@ export default function AddExpense() {
               placeholder="ખાતર પસંદ કરો..."
               onOpen={scrollToForm}
             />
-            <SectionLabel text="બૅગ સંખ્યા *" />
+            <SectionLabel text="બૅગ સંખ્યા" />
             <NumericInput
               value={fertBags}
               onChange={setFertBags}
@@ -1035,7 +1035,7 @@ export default function AddExpense() {
               suffix="બૅગ"
               onFocus={scrollToForm}
             />
-            <SectionLabel text="દર દર બૅગ *" />
+            <SectionLabel text="દર દર બૅગ" />
             <NumericInput
               value={fertUnitCost}
               onChange={setFertUnitCost}
@@ -1066,7 +1066,7 @@ export default function AddExpense() {
                 અહીં ફક્ત આર્થિક માહિતી નોંધો.
               </Text>
             </View>
-            <SectionLabel text="પ્રકાર *" />
+            <SectionLabel text="પ્રકાર" />
             <SelectPicker
               options={PESTICIDE_CATEGORIES}
               selected={pestCategory}
@@ -1082,7 +1082,7 @@ export default function AddExpense() {
               suffix="ml"
               onFocus={scrollToForm}
             />
-            <SectionLabel text="ખર્ચ *" />
+            <SectionLabel text="ખર્ચ" />
             <NumericInput
               value={pestCost}
               onChange={setPestCost}
@@ -1128,7 +1128,7 @@ export default function AddExpense() {
                     આ રકમ ખેત ખર્ચ નથી — ભવિષ્યની જવાબદારી સામે ડેબિટ છે.
                   </Text>
                 </View>
-                <SectionLabel text="ઍડ્વાન્સ કારણ *" />
+                <SectionLabel text="ઍડ્વાન્સ કારણ" />
                 <SelectPicker
                   options={ADVANCE_REASONS}
                   selected={advanceReason}
@@ -1136,7 +1136,7 @@ export default function AddExpense() {
                   placeholder="કારણ પસંદ કરો..."
                   onOpen={scrollToForm}
                 />
-                <SectionLabel text="આપેલ રકમ *" />
+                <SectionLabel text="આપેલ રકમ" />
                 <NumericInput
                   value={advanceAmount}
                   onChange={setAdvanceAmount}
@@ -1147,7 +1147,7 @@ export default function AddExpense() {
               </>
             ) : (
               <>
-                <SectionLabel text="કામ પ્રકાર *" />
+                <SectionLabel text="કામ પ્રકાર" />
                 <SelectPicker
                   options={LABOUR_TASKS}
                   selected={labourTask}
@@ -1202,7 +1202,7 @@ export default function AddExpense() {
             <View style={[styles.cardTitleRow, { borderLeftColor: "#7C3AED" }]}>
               <Text style={styles.cardTitle}>🚜 ટ્રેક્ટર ભાડું</Text>
             </View>
-            <SectionLabel text="ઓજાર / હળ *" />
+            <SectionLabel text="ઓજાર / હળ" />
             <SelectPicker
               options={MACHINERY_IMPLEMENTS}
               selected={machineImpl}
@@ -1247,7 +1247,7 @@ export default function AddExpense() {
                 </Text>
               </TouchableOpacity>
             </View>
-            <SectionLabel text={machineUnitType === "vigha" ? "વીઘા *" : "કલાક *"} />
+            <SectionLabel text={machineUnitType === "vigha" ? "વીઘા" : "કલાક"} />
             <NumericInput
               value={machineQty}
               onChange={setMachineQty}
@@ -1255,7 +1255,7 @@ export default function AddExpense() {
               suffix={machineUnitType === "vigha" ? "વીઘા" : "કલાક"}
               onFocus={scrollToForm}
             />
-            <SectionLabel text="દર *" />
+            <SectionLabel text="દર" />
             <NumericInput
               value={machineRate}
               onChange={setMachineRate}
@@ -1282,7 +1282,7 @@ export default function AddExpense() {
             <View style={[styles.cardTitleRow, { borderLeftColor: "#0284C7" }]}>
               <Text style={styles.cardTitle}>💧 સિંચાઈ ખર્ચ</Text>
             </View>
-            <SectionLabel text="રકમ *" />
+            <SectionLabel text="રકમ" />
             <NumericInput
               value={irrigationAmount}
               onChange={setIrrigationAmount}
@@ -1299,7 +1299,7 @@ export default function AddExpense() {
             <View style={[styles.cardTitleRow, { borderLeftColor: "#64748B" }]}>
               <Text style={styles.cardTitle}>📦 અન્ય ખર્ચ</Text>
             </View>
-            <SectionLabel text="રકમ *" />
+            <SectionLabel text="રકમ" />
             <NumericInput
               value={otherAmount}
               onChange={setOtherAmount}

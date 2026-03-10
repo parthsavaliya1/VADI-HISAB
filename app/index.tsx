@@ -138,18 +138,10 @@ export default function Index() {
         <Animated.View
           style={{ opacity: taglineOpacity, alignItems: "center", marginTop: 24 }}
         >
-          <Text style={styles.tagline}>ખર્ચા ઘટાડો આવક વધારો</Text>
-          <View style={styles.taglineDivider} />
-          <Text style={styles.taglineSub}>નફો જાણો · ઉગો · ફળો</Text>
+          <Text style={styles.tagline}>📊 એનાલિસિસ કરો</Text>
+          <Text style={styles.taglineSub}>💰 આવક વધારો</Text>
         </Animated.View>
 
-        <Animated.View style={[styles.pillsRow, { opacity: taglineOpacity }]}>
-          {["📊 નફો ટ્રેક", "🌱 પાક નોંધ", "📋 અહેવાલ"].map((p, i) => (
-            <View key={i} style={styles.pill}>
-              <Text style={styles.pillText}>{p}</Text>
-            </View>
-          ))}
-        </Animated.View>
       </View>
 
       <Animated.View style={[styles.loaderContainer, { opacity: loaderOpacity }]}>
@@ -216,8 +208,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   logoImage: {
-    width: 260,
-    height: 120,
+    width: 300,
+    height: 300,
     resizeMode: "contain",
   },
   tagline: {
