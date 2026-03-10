@@ -1311,26 +1311,7 @@ export default function Dashboard() {
                     {farmerName || t("dashboard", "farmer")}
                   </Text>
                 )}
-                {loadingProfile ? (
-                  <SkeletonLine
-                    width={130}
-                    height={13}
-                    style={{ marginTop: 5 }}
-                  />
-                ) : (
-                  <View style={styles.locationRow}>
-                    <Ionicons
-                      name="location-sharp"
-                      size={13}
-                      color={C.green500}
-                    />
-                    <Text style={styles.locationText}>
-                      {[villageGujarati, farmerLand]
-                        .filter(Boolean)
-                        .join(" · ") || "—"}
-                    </Text>
-                  </View>
-                )}
+                
               </View>
               <View style={styles.headerRight}>
                 <TouchableOpacity style={styles.notifBtn} onPress={openNotifications}>
@@ -1493,12 +1474,17 @@ export default function Dashboard() {
                   </View>
                 )}
                 {tractorIncomeTotal > 0 && (
-                  <View style={styles.tractorIncomeRow}>
+                  <PressableCard
+                    onPress={() =>
+                      router.push("/income/tractor-income-list" as any)
+                    }
+                    style={styles.tractorIncomeRow}
+                  >
                     <Text style={styles.tractorIncomeLabel}>ટ્રેક્ટર આવક</Text>
                     <Text style={styles.tractorIncomeValue}>
                       ₹{formatWholeNumber(tractorIncomeTotal)}
                     </Text>
-                  </View>
+                  </PressableCard>
                 )}
                 {bhagyaUpadTotal > 0 && (
                   <PressableCard
@@ -2115,12 +2101,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 12,
-    backgroundColor: "#FFFBE6",
+    backgroundColor: "#F0F9FF",
     borderWidth: 1,
-    borderColor: "#FDE68A",
+    borderColor: "#BAE6FD",
   },
-  bhagyaUpadLabel: { fontSize: 15, color: "#A16207", fontWeight: "700", marginBottom: 2 },
-  bhagyaUpadValue: { fontSize: 17, fontWeight: "800", color: "#92400E" },
+  bhagyaUpadLabel: { fontSize: 15, color: "#0369A1", fontWeight: "700", marginBottom: 2 },
+  bhagyaUpadValue: { fontSize: 17, fontWeight: "800", color: "#0369A1" },
   tractorIncomeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
