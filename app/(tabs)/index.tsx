@@ -153,7 +153,7 @@ function cropAreaBigha(area: number | undefined, areaUnit: string | undefined): 
   return a;
 }
 
-const HEADER_MAX = 200;
+const HEADER_MAX = 160;
 const HEADER_MIN = 72;
 const STICKY_THRESHOLD = HEADER_MAX - HEADER_MIN;
 
