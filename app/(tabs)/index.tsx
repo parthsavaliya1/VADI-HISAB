@@ -846,18 +846,7 @@ function QuickActions({
 
       {showTractor ? (
         <View style={[styles.qaRow, { marginTop: 10 }]}>
-          <PressableCard onPress={onAddBhagyaUpad} style={styles.qaHalf}>
-            <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: "#F0F9FF", borderColor: "#BAE6FD" }]}>
-              <View style={[styles.qaIcon, { backgroundColor: "#E0F2FE" }]}>
-                <Ionicons name="wallet-outline" size={20} color="#0369A1" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.qaLabel, { color: "#0369A1" }]}>{t("dashboard", "bhagyaUpad")}</Text>
-              </View>
-            </View>
-          </PressableCard>
-
-          <PressableCard onPress={() => router.push("/income/add-tractor-income" as any)} style={styles.qaHalf}>
+          <PressableCard onPress={() => router.push("/income/tractor-income-list" as any)} style={styles.qaHalf}>
             <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: C.tractorOrangePale, borderColor: C.tractorOrangeBorder }]}>
               <View style={[styles.qaIcon, { backgroundColor: "#FFE0B2" }]}>
                 <MaterialCommunityIcons name="tractor-variant" size={20} color={C.tractorOrange} />
@@ -867,9 +856,20 @@ function QuickActions({
               </View>
             </View>
           </PressableCard>
+
+          <PressableCard onPress={() => router.push("/expense/bhagya-upad-list" as any)} style={styles.qaHalf}>
+            <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: "#F0F9FF", borderColor: "#BAE6FD" }]}>
+              <View style={[styles.qaIcon, { backgroundColor: "#E0F2FE" }]}>
+                <Ionicons name="wallet-outline" size={20} color="#0369A1" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.qaLabel, { color: "#0369A1" }]}>{t("dashboard", "bhagyaUpad")}</Text>
+              </View>
+            </View>
+          </PressableCard>
         </View>
       ) : (
-        <PressableCard onPress={onAddBhagyaUpad} style={{ marginTop: 10 }}>
+        <PressableCard onPress={() => router.push("/expense/bhagya-upad-list" as any)} style={{ marginTop: 10 }}>
           <View style={[styles.qaCardFull, styles.qaCommonCard, { backgroundColor: "#F0F9FF", borderColor: "#BAE6FD" }]}>
             <View style={[styles.qaIcon, { backgroundColor: "#E0F2FE" }]}>
               <Ionicons name="wallet-outline" size={20} color="#0369A1" />
@@ -1052,7 +1052,7 @@ export default function Dashboard() {
       const reportCrops = yearlyReport.crops ?? [];
       const bhagyaUpadTotal = (bhagyaExpRes.data ?? [])
         .filter(isDedicatedBhagyaUpadExpense)
-        .reduce((sum, expense) => sum + (expense.amount ?? 0), 0);
+        .reduce((sum, expense) => sum + expenseAmount(expense as any), 0);
       const reportSummary = yearlyReport.summary ?? {
         totalIncome: 0,
         cropExpense: 0,
@@ -1501,12 +1501,17 @@ export default function Dashboard() {
                   </View>
                 )}
                 {bhagyaUpadTotal > 0 && (
-                  <View style={styles.bhagyaUpadRow}>
+                  <PressableCard
+                    onPress={() =>
+                      router.push("/expense/bhagya-upad-list" as any)
+                    }
+                    style={styles.bhagyaUpadRow}
+                  >
                     <Text style={styles.bhagyaUpadLabel}>{t("dashboard", "bhagyaUpad")}</Text>
                     <Text style={styles.bhagyaUpadValue}>
                       ₹{formatWholeNumber(bhagyaUpadTotal)}
                     </Text>
-                  </View>
+                  </PressableCard>
                 )}
                 {(tractorPendingTotal > 0 || tractorPaidTotal > 0) && (
                   <View style={styles.tractorPaymentRow}>
