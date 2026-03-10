@@ -1640,7 +1640,7 @@ export default function Dashboard() {
                           }}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="chevron-back" size={36} color="#9E9E9E" />
+                          <Ionicons name="chevron-back" size={24} color="#000000" />
                         </TouchableOpacity>
                       )}
                       {selectedCrop < activeCrops.length - 1 && (
@@ -1653,7 +1653,7 @@ export default function Dashboard() {
                           }}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="chevron-forward" size={36} color="#9E9E9E" />
+                          <Ionicons name="chevron-forward" size={24} color="#000000" />
                         </TouchableOpacity>
                       )}
                     </>
@@ -2264,8 +2264,10 @@ const styles = StyleSheet.create({
     left: 4,
     top: "50%",
     marginTop: -24,
-    width: 48,
-    height: 48,
+    width: 32,
+    height: 32,
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2274,8 +2276,10 @@ const styles = StyleSheet.create({
     right: 4,
     top: "50%",
     marginTop: -24,
-    width: 48,
-    height: 48,
+    width: 32,
+    height: 32,
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
