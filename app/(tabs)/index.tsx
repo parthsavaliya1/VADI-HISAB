@@ -399,7 +399,7 @@ function incomeLabel(i: Income): string {
     Subsidy: `સ. - ${i.subsidy?.schemeType ?? ""}`,
     // Tractor / rental income: work type + farmer name (no emoji)
     "Rental Income": (() => {
-      const r = i.rentalIncome;
+      const r = i.rentalIncome as any;
       if (!r) return "ભાડા";
       const work =
         RENTAL_ASSET_LABELS[r.assetType ?? ""] ??
@@ -1437,7 +1437,6 @@ export default function Dashboard() {
                     </Text>
                   </View>
                   <View style={styles.profitPakBadge}>
-                    <Ionicons name="leaf-outline" size={18} color={C.textSecondary} />
                     <Text style={styles.profitPakValue}>{crops.length}</Text>
                     <Text style={styles.profitPakLabel}>{t("dashboard", "crops")}</Text>
                   </View>
@@ -1493,19 +1492,19 @@ export default function Dashboard() {
                     </View>
                   </View>
                 )}
-                {bhagyaUpadTotal > 0 && (
-                  <View style={styles.bhagyaUpadRow}>
-                    <Text style={styles.bhagyaUpadLabel}>{t("dashboard", "bhagyaUpad")}</Text>
-                    <Text style={styles.bhagyaUpadValue}>
-                      ₹{formatWholeNumber(bhagyaUpadTotal)}
-                    </Text>
-                  </View>
-                )}
                 {tractorIncomeTotal > 0 && (
                   <View style={styles.tractorIncomeRow}>
                     <Text style={styles.tractorIncomeLabel}>ટ્રેક્ટર આવક</Text>
                     <Text style={styles.tractorIncomeValue}>
                       ₹{formatWholeNumber(tractorIncomeTotal)}
+                    </Text>
+                  </View>
+                )}
+                {bhagyaUpadTotal > 0 && (
+                  <View style={styles.bhagyaUpadRow}>
+                    <Text style={styles.bhagyaUpadLabel}>{t("dashboard", "bhagyaUpad")}</Text>
+                    <Text style={styles.bhagyaUpadValue}>
+                      ₹{formatWholeNumber(bhagyaUpadTotal)}
                     </Text>
                   </View>
                 )}
@@ -2050,7 +2049,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginTop: 0,
-    marginBottom: 10,
+    marginBottom: 24,
   },
   profitSign: { fontSize: 28, fontWeight: "700", marginBottom: 4 },
   netProfitAmount: {
@@ -2103,9 +2102,9 @@ const styles = StyleSheet.create({
   profitPerBighaLabel: { fontSize: 14, color: C.textMuted, fontWeight: "600" },
 
   bhagyaUpadRow: {
-    flexDirection: "column",
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     marginTop: 8,
     marginBottom: 4,
     paddingVertical: 8,
