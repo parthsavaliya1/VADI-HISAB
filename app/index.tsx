@@ -99,24 +99,24 @@ export default function Index() {
         end={{ x: 1, y: 1 }}
       />
 
-      <View style={styles.bgCircle1} />
-      <View style={styles.bgCircle2} />
-      <View style={styles.bgCircle3} />
-
+      {/* Soft floating farm icons (very light, behind logo) */}
       <Animated.Text
-        style={[styles.floatLeaf, styles.leaf1, { transform: [{ translateY: leafFloat }] }]}
+        style={[
+          styles.floatIcon,
+          styles.floatIconLeft,
+          { transform: [{ translateY: leafFloat }] },
+        ]}
       >
         🌿
       </Animated.Text>
       <Animated.Text
-        style={[styles.floatLeaf, styles.leaf2, { transform: [{ translateY: leafFloat }] }]}
+        style={[
+          styles.floatIcon,
+          styles.floatIconRight,
+          { transform: [{ translateY: leafFloat }] },
+        ]}
       >
         🌾
-      </Animated.Text>
-      <Animated.Text
-        style={[styles.floatLeaf, styles.leaf3, { transform: [{ translateY: leafFloat }] }]}
-      >
-        🍃
       </Animated.Text>
 
       <View style={styles.center}>
@@ -135,21 +135,7 @@ export default function Index() {
           </View>
         </Animated.View>
 
-        <Animated.View
-          style={{ opacity: taglineOpacity, alignItems: "center", marginTop: 24 }}
-        >
-          <Text style={styles.tagline}>📊 એનાલિસિસ કરો</Text>
-          <Text style={styles.taglineSub}>💰 આવક વધારો</Text>
-        </Animated.View>
-
       </View>
-
-      <Animated.View style={[styles.loaderContainer, { opacity: loaderOpacity }]}>
-        <View style={styles.loaderTrack}>
-          <Animated.View style={[styles.loaderFill, { width: loaderWidth }]} />
-        </View>
-        <Text style={styles.loaderText}>લોડ થઈ રહ્યું છે...</Text>
-      </Animated.View>
 
       <View style={styles.bottomBrand}>
         <Text style={styles.bottomBrandText}>Powered by</Text>
@@ -162,37 +148,19 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   bg: { ...StyleSheet.absoluteFillObject },
-  bgCircle1: {
+  floatIcon: {
     position: "absolute",
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: C.green100 + "80",
-    top: -80,
-    right: -80,
+    fontSize: 26,
+    opacity: 0.25,
   },
-  bgCircle2: {
-    position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: C.green100 + "50",
-    bottom: 120,
-    left: -60,
+  floatIconLeft: {
+    top: height * 0.2,
+    left: 26,
   },
-  bgCircle3: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: C.green50 + "CC",
-    top: height * 0.35,
+  floatIconRight: {
+    top: height * 0.65,
     right: 30,
   },
-  floatLeaf: { position: "absolute", fontSize: 28 },
-  leaf1: { top: height * 0.15, left: 30 },
-  leaf2: { top: height * 0.25, right: 40 },
-  leaf3: { top: height * 0.65, left: 50 },
   center: {
     flex: 1,
     justifyContent: "center",
@@ -208,58 +176,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   logoImage: {
-    width: 300,
-    height: 300,
+    width: 320,
+    height: 320,
     resizeMode: "contain",
   },
-  tagline: {
-    fontSize: 18,
-    color: C.textPrimary,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-    textAlign: "center",
-  },
-  taglineDivider: {
-    width: 48,
-    height: 2,
-    backgroundColor: C.green500,
-    marginVertical: 10,
-    borderRadius: 1,
-  },
-  taglineSub: {
-    fontSize: 14,
-    color: C.textMuted,
-    letterSpacing: 1.5,
-    textAlign: "center",
-    fontWeight: "600",
-  },
-  pillsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 28,
-    flexWrap: "wrap",
-    justifyContent: "center",
-  },
-  pill: {
-    backgroundColor: C.green50,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: C.green100,
-  },
-  pillText: { fontSize: 14, color: C.green700, fontWeight: "700" },
-  loaderContainer: { alignItems: "center", paddingBottom: 24 },
-  loaderTrack: {
-    width: width * 0.55,
-    height: 3,
-    backgroundColor: C.green100,
-    borderRadius: 4,
-    overflow: "hidden",
-    marginBottom: 10,
-  },
-  loaderFill: { height: 3, backgroundColor: C.green500, borderRadius: 4 },
-  loaderText: { fontSize: 14, color: C.textMuted, letterSpacing: 1, fontWeight: "600" },
   bottomBrand: { alignItems: "center", paddingBottom: 36 },
   bottomBrandText: { fontSize: 12, color: C.textMuted },
   bottomBrandName: {

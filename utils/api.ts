@@ -3,7 +3,7 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 // ─── Base URL ─────────────────────────────────
 // 🔧 Use EXPO_PUBLIC_API_URL from .env (e.g. http://192.168.1.5:8000/api for local)
@@ -74,16 +74,12 @@ API.interceptors.response.use(
       );
     }
     if (error.code === "ECONNABORTED") {
-      return Promise.reject(
-        new Error("Request timed out — server took too long to respond"),
-      );
+      // Let UI decide how to show timeout vs. other network errors
+      return Promise.reject(error);
     }
     if (!error.response) {
-      return Promise.reject(
-        new Error(
-          "Network error — make sure phone and PC are on same WiFi, and usesCleartextTraffic is enabled in app.json",
-        ),
-      );
+      // Generic network error — UI will map this to a friendly Gujarati line
+      return Promise.reject(error);
     }
 
     const message =
@@ -95,6 +91,22 @@ API.interceptors.response.use(
     return Promise.reject(new Error(message));
   },
 );
+
+// ─── Simple, user‑friendly error mapper for UI ──────────────────────────────
+export const getFriendlyErrorMessage = (err: unknown): string => {
+  const e = err as AxiosError | Error | any;
+
+  // No response / classic axios network error / timeout
+  if (e.code === "ECONNABORTED" || e.message === "Network Error" || !e.response) {
+    return "ઇન્ટરનેટ કનેક્શન ચેક કરો (મોબાઇલ ડેટા / Wi‑Fi) અને ફરી પ્રયત્ન કરો.";
+  }
+
+  if (typeof e.message === "string" && e.message.trim()) {
+    return e.message;
+  }
+
+  return "કંઈક ખોટું થયું. થોડી વારમાં ફરી પ્રયત્ન કરો.";
+};
 
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

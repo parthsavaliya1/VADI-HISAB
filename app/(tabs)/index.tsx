@@ -397,7 +397,17 @@ function incomeLabel(i: Income): string {
   const m: Record<IncomeCategory, string> = {
     "Crop Sale": `વેચાણ - ${i.cropSale?.marketName || "VADI"}`,
     Subsidy: `સ. - ${i.subsidy?.schemeType ?? ""}`,
-    "Rental Income": `ટ્રેક્ટર આવક - ${RENTAL_ASSET_LABELS[i.rentalIncome?.assetType ?? ""] ?? i.rentalIncome?.assetType ?? ""}`,
+    // Tractor / rental income: work type + farmer name (no emoji)
+    "Rental Income": (() => {
+      const r = i.rentalIncome;
+      if (!r) return "ભાડા";
+      const work =
+        RENTAL_ASSET_LABELS[r.assetType ?? ""] ??
+        r.assetType ??
+        "ભાડા";
+      const name = r.rentedToName?.trim();
+      return name ? `${work} - ${name}` : `${work}`;
+    })(),
     Other: `અ. - ${i.otherIncome?.source ?? ""}`,
   };
   return m[i.category] ?? i.category;
@@ -407,7 +417,8 @@ function incomeIcon(cat: IncomeCategory): string {
   const m: Record<IncomeCategory, string> = {
     "Crop Sale": "cash",
     Subsidy: "ribbon-outline",
-    "Rental Income": "car-outline",
+    // Tractor-style tool icon for rental income
+    "Rental Income": "construct-outline",
     Other: "wallet-outline",
   };
   return m[cat] ?? "cash";

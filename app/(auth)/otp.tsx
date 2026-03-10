@@ -7,7 +7,7 @@
  */
 
 import translations from "@/translations.json";
-import { sendOtp, verifyOtp } from "@/utils/api";
+import { getFriendlyErrorMessage, sendOtp, verifyOtp } from "@/utils/api";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -311,7 +311,7 @@ export default function OTP() {
       }).start();
       inputRefs.current[0]?.focus();
     } catch (err: any) {
-      Alert.alert(t.errTitle, err.message);
+      Alert.alert(t.errTitle, getFriendlyErrorMessage(err));
     } finally {
       setLoading(false);
     }

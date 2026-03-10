@@ -42,7 +42,7 @@ const C = {
 const CATEGORY_CONFIG: Record<IncomeCategory, { label: string; icon: string }> = {
   "Crop Sale": { label: "પાક વેચાણ", icon: "cash-outline" },
   Subsidy: { label: "સબસિડી", icon: "ribbon-outline" },
-  "Rental Income": { label: "ભાડા", icon: "car-outline" },
+  "Rental Income": { label: "ભાડા", icon: "construct-outline" },
   Other: { label: "અન્ય", icon: "wallet-outline" },
 };
 
@@ -89,7 +89,14 @@ function incomeLabel(i: Income): string {
   const m: Record<IncomeCategory, string> = {
     "Crop Sale": i.cropSale?.marketName ? `વેચાણ - ${i.cropSale.marketName}` : "પાક વેચાણ",
     Subsidy: `સ. - ${i.subsidy?.schemeType ?? ""}`,
-    "Rental Income": `ભાડા - ${i.rentalIncome?.assetType ?? ""}`,
+    // Tractor income: work category + farmer name (no emoji)
+    "Rental Income": (() => {
+      const r = i.rentalIncome;
+      if (!r) return "ભાડા";
+      const work = r.assetType ?? "ભાડા";
+      const name = r.rentedToName?.trim();
+      return name ? `${work} - ${name}` : `${work}`;
+    })(),
     Other: i.otherIncome?.source ? `અ. - ${i.otherIncome.source}` : "અન્ય આવક",
   };
   return m[i.category] ?? i.category;

@@ -6,7 +6,7 @@
  */
 
 import translations from "@/translations.json";
-import { sendOtp } from "@/utils/api";
+import { getFriendlyErrorMessage, sendOtp } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -273,7 +273,7 @@ export default function Login() {
         params: { phone, sessionId: data.sessionId },
       });
     } catch (err: any) {
-      Alert.alert(t.errTitle, err.message);
+      Alert.alert(t.errTitle, getFriendlyErrorMessage(err));
     } finally {
       setLoading(false);
     }
