@@ -1640,7 +1640,7 @@ export default function Dashboard() {
                           }}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="chevron-back" size={24} color="#000000" />
+                          <Ionicons name="arrow-back" size={24} color="#000000" />
                         </TouchableOpacity>
                       )}
                       {selectedCrop < activeCrops.length - 1 && (
@@ -1653,7 +1653,7 @@ export default function Dashboard() {
                           }}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="chevron-forward" size={24} color="#000000" />
+                          <Ionicons name="arrow-forward" size={24} color="#000000" />
                         </TouchableOpacity>
                       )}
                     </>
