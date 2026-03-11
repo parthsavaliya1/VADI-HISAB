@@ -1,5 +1,4 @@
 import { useLanguage } from "@/contexts/LanguageContext";
-import { UDYAM_REGISTRATION_NUMBER } from "@/constants/app";
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import {
     getDistrictItems,
@@ -7,8 +6,8 @@ import {
     getVillageItems,
 } from "@/data/gujarati-location";
 import { FarmerProfileCard } from "@/components/FarmerProfileCard";
-import type { FarmerProfile as APIFarmerProfile } from "@/utils/api";
-import { getMyProfile, logout, updateProfile } from "@/utils/api";
+import type { FarmerProfile as APIFarmerProfile, VadiScoreResponse } from "@/utils/api";
+import { getMyProfile, logout, updateProfile, getVadiScore } from "@/utils/api";
 import { formatArea, formatWholeNumber } from "@/utils/format";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
@@ -635,6 +634,7 @@ export default function Profile() {
     const [loadError, setLoadError] = useState("");
     const [profilePopup, setProfilePopup] = useState<ProfilePopupConfig | null>(null);
     const [popupBusy, setPopupBusy] = useState(false);
+    const [vadiScore, setVadiScore] = useState<VadiScoreResponse | null>(null);
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
@@ -647,6 +647,10 @@ export default function Profile() {
             const data = await getMyProfile();
             setApiProfile(data);
             setPhone((data as any).phone ?? (data as any).user?.phone ?? "");
+            // Load VADI score once profile is available
+            getVadiScore()
+                .then((score) => setVadiScore(score))
+                .catch(() => {});
         } catch (err: any) {
             setLoadError(err.message ?? t("profileTab", "loadErr"));
         } finally {
@@ -671,8 +675,8 @@ export default function Profile() {
             Animated.timing(headerPulse, { toValue: 0.97, duration: 100, useNativeDriver: true }),
             Animated.spring(headerPulse, { toValue: 1, friction: 5, useNativeDriver: true }),
         ]).start();
-        setDraft(apiToDraft(apiProfile));
-        setEditVisible(true);
+        // Navigate to the same profile setup flow used after OTP
+        router.push("/(auth)/profile-setup");
     };
 
     const handleSave = async () => {
@@ -681,15 +685,15 @@ export default function Profile() {
         if (!draft.totalLand.trim() || isNaN(Number(draft.totalLand))) { Alert.alert(t("profileTab", "errTitle"), t("profileTab", "errLand")); return; }
         setSaving(true);
         try {
-            const updated = await updateProfile({
-                name: draft.name,
-                district: draft.district,
-                taluka: draft.taluka,
-                village: draft.village,
+                const updated = await updateProfile({
+                    name: draft.name,
+                    district: draft.district as any,
+                    taluka: draft.taluka,
+                    village: draft.village,
                 totalLand: { value: parseFloat(draft.totalLand), unit: draft.totalLandUnit },
                 waterSources: draft.waterSources as any,
                 tractorAvailable: draft.tractorAvailable,
-                implementsAvailable: draft.implementsAvailable,
+                implementsAvailable: draft.tractorAvailable ? (draft.implementsAvailable as any) : [],
                 labourTypes: draft.labourTypes as any,
                 dataSharing: draft.dataSharing,
             });
@@ -891,22 +895,6 @@ export default function Profile() {
         });
     };
 
-    const handleAboutPress = () => {
-        setProfilePopup({
-            title: t("profileTab", "aboutUs"),
-            message:
-                t("profileTab", "aboutBody") +
-                "\n\n" +
-                t("profileTab", "udyamLabel") +
-                ": " +
-                UDYAM_REGISTRATION_NUMBER,
-            icon: "information-circle-outline",
-            iconColor: "#0F766E",
-            iconBg: "#DBEAFE",
-            actions: [{ label: t("common", "ok"), variant: "primary", icon: "checkmark-outline", onPress: () => {} }],
-        });
-    };
-
     if (loading) {
         return <View style={styles.centerScreen}><ActivityIndicator size="large" color="#2E7D32" /><Text style={styles.loadingText}>{t("profileTab", "loading")}</Text></View>;
     }
@@ -949,17 +937,10 @@ export default function Profile() {
             <Animated.ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
-                    {/* ══ Light header: title + edit ══ */}
+                    {/* ══ Light header: title + actions ══ */}
                     <Animated.View style={[styles.topBar, { transform: [{ scale: headerPulse }] }]}>
                         <Text style={styles.topBarTitle}>{t("profileTab", "title")}</Text>
                         <View style={styles.topBarActions}>
-                            <Pressable
-                                onPress={() => setCardVisible(true)}
-                                style={({ pressed }) => [styles.cardMiniBtn, pressed && styles.cardMiniBtnPressed]}
-                            >
-                                <Ionicons name="download-outline" size={18} color="#0F766E" />
-                                <Text style={styles.cardMiniBtnText}>{t("profileTab", "downloadCard")}</Text>
-                            </Pressable>
                             <Pressable
                                 onPress={handleEditOpen}
                                 style={({ pressed }) => [styles.editFAB, pressed && styles.editFABPressed]}
@@ -1005,6 +986,37 @@ export default function Profile() {
                         </View>
                     </Animated.View>
 
+                    {/* ══ VADI score summary (above language) ══ */}
+                    {vadiScore && (
+                        <View style={styles.vadiScoreCard}>
+                            <Text style={styles.vadiScoreTitle}>Your VADI Score</Text>
+                            <Text style={styles.vadiScoreMainValue}>
+                                {vadiScore.farmer_vadi_score != null ? vadiScore.farmer_vadi_score : "--"}
+                            </Text>
+                            {vadiScore.village_rank != null && vadiScore.village_total_farmers > 0 && (
+                                <Text style={styles.vadiScoreRank}>
+                                    Village Rank: {vadiScore.village_rank} / {vadiScore.village_total_farmers} farmers
+                                </Text>
+                            )}
+                            <View style={{ marginTop: 10 }}>
+                                <Text style={styles.vadiScoreSubtitle}>Top Strength</Text>
+                                <Text style={styles.vadiInsightText}>
+                                    {vadiScore.farmer_insights && vadiScore.farmer_insights.length > 0
+                                        ? vadiScore.farmer_insights[0]
+                                        : "—"}
+                                </Text>
+                            </View>
+                            <View style={{ marginTop: 10 }}>
+                                <Text style={styles.vadiScoreSubtitle}>Improvement Opportunity</Text>
+                                <Text style={styles.vadiInsightText}>
+                                    {vadiScore.farmer_insights && vadiScore.farmer_insights.length > 1
+                                        ? vadiScore.farmer_insights[1]
+                                        : "—"}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+
                     {/* ══ Simple quick actions under profile ══ */}
                     <View style={styles.quickCard}>
                         <Pressable style={styles.quickRow} onPress={handleLanguagePress}>
@@ -1031,19 +1043,6 @@ export default function Profile() {
                             <Ionicons name="chevron-forward" size={22} color="#9CA3AF" />
                         </Pressable>
 
-                        <View style={styles.quickDivider} />
-
-                        <Pressable
-                            style={styles.quickRow}
-                            onPress={handleAboutPress}
-                        >
-                            <Ionicons name="information-circle-outline" size={24} color="#0F766E" />
-                            <View style={styles.quickTextWrap}>
-                                <Text style={styles.quickTitle}>{t("profileTab", "aboutUs")}</Text>
-                                <Text style={styles.quickSub}>{t("profileTab", "moreInfo")}</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={22} color="#9CA3AF" />
-                        </Pressable>
                     </View>
 
                     {/* Contact details */}
@@ -1170,17 +1169,71 @@ const styles = StyleSheet.create({
     editFAB: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fff", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, borderWidth: 1.5, borderColor: "#C8E6C9", shadowColor: "#0A0E0B", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
     editFABPressed: { opacity: 0.85 },
     editFABText: { fontSize: 18, fontWeight: "800", color: "#2E7D32" },
-    cardMiniBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#E0F2FE", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: "#BFDBFE" },
-    cardMiniBtnPressed: { opacity: 0.85 },
-    cardMiniBtnText: { fontSize: 13, fontWeight: "700", color: "#0F766E" },
     farmerCard: { backgroundColor: "#fff", borderRadius: 24, marginHorizontal: 18, marginBottom: 18, paddingVertical: 28, paddingHorizontal: 22, alignItems: "center", shadowColor: "#1A2E1C", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
-    farmerCardInner: { alignItems: "center" },
+    farmerCardInner: { alignItems: "center", width: "100%", position: "relative" },
     farmerPhotoWrap: { width: 112, height: 112, borderRadius: 56, marginBottom: 16, overflow: "hidden" },
     farmerPhoto: { width: "100%", height: "100%", borderRadius: 56 },
     farmerPhotoPlaceholder: { width: "100%", height: "100%", borderRadius: 56, backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center" },
     farmerInitials: { fontSize: 38, fontWeight: "900", color: "#2E7D32" },
     farmerName: { fontSize: 30, fontWeight: "800", color: "#1A2E1C", marginBottom: 6, textAlign: "center" },
     farmerRole: { fontSize: 20, color: "#6B7B6E", marginBottom: 14 },
+    profileScoreCorner: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 16,
+        backgroundColor: "#ECFDF3",
+        borderWidth: 2,
+        borderColor: "#22C55E",
+        alignItems: "flex-end",
+        shadowColor: "#16A34A",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 5,
+        elevation: 3,
+    },
+    profileScoreCornerLabel: { fontSize: 11, fontWeight: "700", color: "#166534" },
+    profileScoreCornerValue: { fontSize: 22, fontWeight: "900", color: "#166534" },
+    vadiScoreCard: {
+        marginHorizontal: 18,
+        marginBottom: 18,
+        padding: 16,
+        borderRadius: 18,
+        backgroundColor: "#F1F5F9",
+        borderWidth: 1,
+        borderColor: "#DBEAFE",
+    },
+    vadiScoreMainValue: {
+        fontSize: 28,
+        fontWeight: "900",
+        color: "#1D4ED8",
+        marginTop: 4,
+    },
+    vadiScoreHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 8,
+    },
+    vadiScoreTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A" },
+    vadiScoreSubtitle: { fontSize: 13, fontWeight: "600", color: "#4B5563", marginTop: 2 },
+    vadiScoreCircle: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: "#EFF6FF",
+        borderWidth: 2,
+        borderColor: "#3B82F6",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    vadiScoreCircleValue: { fontSize: 24, fontWeight: "900", color: "#1D4ED8" },
+    vadiScoreCircleMax: { fontSize: 11, fontWeight: "600", color: "#1D4ED8" },
+    vadiScoreRank: { fontSize: 13, fontWeight: "600", color: "#4B5563", marginTop: 6 },
+    vadiInsightsWrap: { marginTop: 8, gap: 4 },
+    vadiInsightText: { fontSize: 13, color: "#4B5563" },
     farmerMeta: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 14 },
     farmerMetaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
     farmerMetaText: { fontSize: 18, color: "#5C6B5E", fontWeight: "600" },
@@ -1333,8 +1386,8 @@ const styles = StyleSheet.create({
         gap: 14,
     },
     quickTextWrap: { flex: 1 },
-    quickTitle: { fontSize: 20, fontWeight: "700", color: "#1A2E1C" },
-    quickSub: { fontSize: 17, color: "#64748B", marginTop: 3 },
+    quickTitle: { fontSize: 18, fontWeight: "700", color: "#1A2E1C" },
+    quickSub: { fontSize: 15, color: "#64748B", marginTop: 3 },
     quickDivider: { height: 1, backgroundColor: "#EEF2EC" },
     popupOverlay: {
         flex: 1,

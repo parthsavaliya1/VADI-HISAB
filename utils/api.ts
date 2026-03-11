@@ -337,6 +337,42 @@ export const updateProfile = async (
   return res.data;
 };
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🌾 VADI SCORE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export interface CropVadiScore {
+  crop_id: string;
+  crop_name: string;
+  season: string;
+  area_bigha: number;
+  production_index?: number;
+  expense_index?: number;
+  profit_index?: number;
+  crop_vadi_score?: number;
+  outlier?: boolean;
+  insufficient_data_for_comparison?: boolean;
+}
+
+export interface VadiScoreResponse {
+  farmer_vadi_score: number | null;
+  crop_vadi_scores: CropVadiScore[];
+  production_index: number | null;
+  expense_index: number | null;
+  profit_index: number | null;
+  village_rank: number | null;
+  village_total_farmers: number;
+  farmer_insights: string[];
+  potential_income_improvement: number;
+  classification: string | null;
+}
+
+/** GET /vadi-score/me — current farmer's VADI score and insights */
+export const getVadiScore = async (): Promise<VadiScoreResponse> => {
+  const res = await API.get<VadiScoreResponse>("/vadi-score/me");
+  return res.data;
+};
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🌾 CROP TYPES

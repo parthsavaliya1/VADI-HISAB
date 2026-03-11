@@ -29,8 +29,7 @@ import {
 } from "@/data/gujarati-location";
 import { useLocations } from "@/hooks/useLocations";
 import translations from "@/translations.json";
-import { TRACTOR_SERVICES as API_TRACTOR_SERVICES, type District, type LabourType, type TractorService, type WaterSource } from "@/utils/api";
-import { completeProfile, getMe } from "@/utils/api";
+import { TRACTOR_SERVICES as API_TRACTOR_SERVICES, type District, type LabourType, type TractorService, type WaterSource, type FarmerProfile, completeProfile, getMe, getMyProfile, updateProfile } from "@/utils/api";
 
 const LANG = "gu" as const;
 const t = translations[LANG].profile;
@@ -289,6 +288,7 @@ export default function ProfileSetup() {
         tractorAvailable: null,
         implementsAvailable: [],
     });
+    const [editingExisting, setEditingExisting] = useState(false);
     const [loading, setLoading] = useState(false);
     const [focusedField, setFocusedField] = useState<string | null>(null);
     const [showDistrict, setShowDistrict] = useState(false);
@@ -336,6 +336,44 @@ export default function ProfileSetup() {
                 Animated.timing(tractorFloat, { toValue: 6, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
             ])
         ).start();
+    }, []);
+
+    // When user already has a saved profile (coming from Profile tab "Edit"),
+    // prefill this screen with existing profile data so they don't start from blank.
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const profile: FarmerProfile = await getMyProfile();
+                if (!mounted || !profile) return;
+
+                setEditingExisting(true);
+                setForm({
+                    name: profile.name ?? "",
+                    district: profile.district ?? "",
+                    taluka: profile.taluka ?? "",
+                    village: profile.village ?? "",
+                    farms:
+                        (profile.farms && profile.farms.length > 0
+                            ? profile.farms.map((f) => ({
+                                  name: f.name || "ખેતર ૧",
+                                  area: f.area != null ? String(f.area) : "",
+                              }))
+                            : [{ name: "ખેતર ૧", area: profile.totalLand?.value ? String(profile.totalLand.value) : "" }]),
+                    waterSources: Array.isArray(profile.waterSources) ? profile.waterSources : [],
+                    tractorAvailable: profile.tractorAvailable ?? null,
+                    implementsAvailable: Array.isArray(profile.implementsAvailable)
+                        ? profile.implementsAvailable
+                        : [],
+                });
+            } catch (e) {
+                // If profile doesn't exist yet (first-time setup), ignore.
+                // Any other error still allows manual entry.
+            }
+        })();
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     // Location permission and suggest current location (e.g. Rajkot, Mavdi)
@@ -469,15 +507,24 @@ export default function ProfileSetup() {
         villagesError,
     } = useLocations(form.district, form.taluka);
 
-    // Fallback to static data when API fails
+    // Prefer static Gujarati data (kept in sync with backend) when API is missing or smaller
     const staticDistrictItems = getDistrictItems();
     const staticTalukaItems = form.district ? getTalukaItems(form.district) : [];
-    const staticVillageItems = (form.district && form.taluka)
-        ? getVillageItems(form.district, form.taluka)
-        : [];
+    const staticVillageItems =
+        form.district && form.taluka
+            ? getVillageItems(form.district, form.taluka)
+            : [];
 
-    const talukaItems = talukasError ? staticTalukaItems : apiTalukaItems;
-    const villageItems = villagesError ? staticVillageItems : apiVillageItems;
+    // Use API data only when available AND larger; otherwise rely on static Gujarati map
+    const talukaItems =
+        !talukasError && apiTalukaItems && apiTalukaItems.length >= staticTalukaItems.length
+            ? apiTalukaItems
+            : staticTalukaItems;
+
+    const villageItems =
+        !villagesError && apiVillageItems && apiVillageItems.length >= staticVillageItems.length
+            ? apiVillageItems
+            : staticVillageItems;
 
     // Primary district list: Jamnagar, Rajkot, Junagadh, Morbi, Surendranagar, then અન્ય (Other)
     const PREFERRED_KEYS = ["Jamnagar", "Rajkot", "Junagadh", "Morbi", "Surendranagar"];
@@ -523,23 +570,46 @@ export default function ProfileSetup() {
             .map((f) => ({ name: f.name.trim(), area: parseFloat(f.area), category: "owned" as const }));
         setLoading(true);
         try {
-            await completeProfile({
-                name: form.name,
-                district: form.district as District,
-                taluka: form.taluka,
-                village: form.village,
-                totalLand: { value: totalBigha, unit: "bigha" as const },
-                farms: farmsPayload,
-                waterSources: form.waterSources as WaterSource[],
-                tractorAvailable: form.tractorAvailable!,
-                implementsAvailable: form.tractorAvailable ? (form.implementsAvailable as TractorService[]) : [],
-                labourTypes: [] as LabourType[],
-            });
-            const user = await getMe();
-            if (user.analyticsConsent === null) {
-                router.replace("/(auth)/consent");
+            if (editingExisting) {
+                // Update existing profile when coming from Profile → Edit
+                await updateProfile({
+                    name: form.name,
+                    district: form.district as District,
+                    taluka: form.taluka,
+                    village: form.village,
+                    totalLand: { value: totalBigha, unit: "bigha" as const },
+                    farms: farmsPayload,
+                    waterSources: form.waterSources as WaterSource[],
+                    tractorAvailable: form.tractorAvailable!,
+                    implementsAvailable: form.tractorAvailable
+                        ? (form.implementsAvailable as TractorService[])
+                        : [],
+                    labourTypes: [] as LabourType[],
+                });
+                // Go straight back to profile tab (no OK popup)
+                router.replace("/(tabs)/profile");
             } else {
-                router.replace("/(tabs)");
+                // First-time completion
+                await completeProfile({
+                    name: form.name,
+                    district: form.district as District,
+                    taluka: form.taluka,
+                    village: form.village,
+                    totalLand: { value: totalBigha, unit: "bigha" as const },
+                    farms: farmsPayload,
+                    waterSources: form.waterSources as WaterSource[],
+                    tractorAvailable: form.tractorAvailable!,
+                    implementsAvailable: form.tractorAvailable
+                        ? (form.implementsAvailable as TractorService[])
+                        : [],
+                    labourTypes: [] as LabourType[],
+                });
+                const user = await getMe();
+                if (user.analyticsConsent === null) {
+                    router.replace("/(auth)/consent");
+                } else {
+                    router.replace("/(tabs)");
+                }
             }
         } catch (err: any) {
             Alert.alert(t.errTitle, err.message);

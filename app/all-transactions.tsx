@@ -441,9 +441,9 @@ export default function AllTransactionsScreen() {
 
   const filterChips: { key: TxnFilter; label: string }[] = [
     { key: "crop", label: "પાક આવક/ખર્ચ" },
-    { key: "bhagya", label: "ભાગ્યા નો ઉપાડ" },
+   
     { key: "general", label: "વધારા નો ખર્ચ" },
-    ...(profile?.tractorAvailable ? [{ key: "tractor" as const, label: "ટ્રેક્ટર આવક" }] : []),
+    ...(profile?.tractorAvailable ? [] : []),
   ];
 
   const filteredYearWise = yearWise

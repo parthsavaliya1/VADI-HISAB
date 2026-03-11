@@ -194,6 +194,15 @@ export default function ReportScreen() {
     );
   });
 
+  const peerDisplayLabel =
+    selectedPeer && selectedPeerId !== "average"
+      ? `${selectedPeer.name}${selectedPeer.village ? ` · ${selectedPeer.village}` : ""}`
+      : "સરેરાશ ખેડૂત";
+
+  const peerNameOnly = selectedPeer && selectedPeerId !== "average"
+    ? selectedPeer.name
+    : "સરેરાશ ખેડૂત";
+
   // Temporary VADI scores (0–100) — formula will be updated later.
   const myScore = 85;
   const peerScore = selectedPeer ? 82 : null;
@@ -279,11 +288,7 @@ export default function ReportScreen() {
                 onPress={() => setPeerPickerVisible(true)}
               >
                 <Text style={styles.peerDropdownButtonText} numberOfLines={1}>
-                  {selectedPeerId === "average"
-                    ? "સરેરાશ ખેડૂત"
-                    : selectedPeer
-                    ? `${selectedPeer.name} · ${selectedPeer.village}`
-                    : "સરેરાશ ખેડૂત"}
+                  {peerDisplayLabel}
                 </Text>
                 <Ionicons name="chevron-down" size={16} color={C.textMuted} />
               </TouchableOpacity>
@@ -340,7 +345,11 @@ export default function ReportScreen() {
                         {hasCompare && (
                           <View style={styles.expenseTypeLegendItem}>
                             <View style={[styles.expenseTypeLegendDot, { backgroundColor: C.textMuted }]} />
-                            <Text style={styles.expenseTypeLegendText}>સરેરાશ</Text>
+                            <Text style={styles.expenseTypeLegendText}>
+                              {expenseAnalytics?.mode === "peer" && selectedPeer
+                                ? selectedPeer.name
+                                : "સરેરાશ ખેડૂત"}
+                            </Text>
                           </View>
                         )}
                       </View>
@@ -455,18 +464,20 @@ export default function ReportScreen() {
                 <View style={styles.perBighaVsBadge}>
                   <Text style={styles.perBighaVsText}>VS</Text>
                 </View>
-                  <View style={styles.perBighaHeroBox}>
-                    <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]}>
-                      {expenseAnalytics?.mode === "peer" ? "પસંદ ખેડૂત" : "સરેરાશ"}
-                    </Text>
-                    <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>₹{formatINR(avgExpenseTotal)}</Text>
+                <View style={styles.perBighaHeroBox}>
+                  <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]} numberOfLines={1}>
+                    {expenseAnalytics?.mode === "peer" && selectedPeer
+                      ? peerNameOnly
+                      : "સરેરાશ ખેડૂત"}
+                  </Text>
+                  <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>₹{formatINR(avgExpenseTotal)}</Text>
                 </View>
               </View>
 
               <View style={[styles.perBighaPctBadge, expenseLowerIsBetter ? styles.perBighaPctBadgeGood : styles.perBighaPctBadgeNeutral]}>
                 <Ionicons name={expenseLowerIsBetter ? "trending-down" : "trending-up"} size={18} color={expenseLowerIsBetter ? C.green700 : C.expense} />
                 <Text style={[styles.perBighaPctText, { color: expenseLowerIsBetter ? C.green700 : C.expense }]}>
-                  {expenseAnalytics?.mode === "peer" ? "પસંદ ખેડૂત કરતાં " : "સરેરાશ કરતાં "}
+                  {expenseAnalytics?.mode === "peer" && selectedPeer ? `${selectedPeer.name} કરતાં ` : "સરેરાશ કરતાં "}
                   {Math.abs(expensePctVsAvg)}% {expenseLowerIsBetter ? "ઓછું ✓" : "વધારે"}
                 </Text>
               </View>
@@ -485,8 +496,8 @@ export default function ReportScreen() {
                   <Text style={[styles.perBighaRaceVal, { color: C.expense }]}>{formatINR(myExpenseTotal)}</Text>
                 </View>
                 <View style={styles.perBighaRaceRow}>
-                  <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]}>
-                    {expenseAnalytics?.mode === "peer" ? "પસંદ ખેડૂત" : "સરેરાશ"}
+                  <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]} numberOfLines={1}>
+                    {expenseAnalytics?.mode === "peer" && selectedPeer ? peerNameOnly : "સરેરાશ ખેડૂત"}
                   </Text>
                   <View style={styles.perBighaRaceTrack}>
                     <View
@@ -520,8 +531,8 @@ export default function ReportScreen() {
             const aboveTarget = myVal >= targetVal;
             const isPeerMode = compare.mode === "peer" && compare.peerUserId;
             const targetLabel = isPeerMode
-              ? `${compare.peerName ?? "પસંદ ખેડૂત"}${compare.peerVillage ? ` (${compare.peerVillage})` : ""}`
-              : "સરેરાશ";
+              ? `${compare.peerName ?? selectedPeer?.name ?? "પસંદ ખેડૂત"}`
+              : "સરેરાશ ખેડૂત";
 
             return (
               <View style={styles.perBighaCard}>
@@ -563,7 +574,9 @@ export default function ReportScreen() {
                         { color: aboveTarget ? C.green700 : C.textMuted },
                       ]}
                     >
-                      {isPeerMode ? "પસંદ ખેડૂત કરતાં " : "સરેરાશ કરતાં "}
+                      {isPeerMode && (compare.peerName || selectedPeer)
+                        ? `${compare.peerName ?? selectedPeer?.name} કરતાં `
+                        : "સરેરાશ કરતાં "}
                       {Math.abs(incomePctVsAvg)}% {aboveTarget ? "વધારે" : "ઓછું"}
                     </Text>
                   </View>
@@ -583,8 +596,10 @@ export default function ReportScreen() {
                     <Text style={[styles.perBighaRaceVal, { color: C.green700 }]}>{formatINR(myVal)}</Text>
                   </View>
                   <View style={styles.perBighaRaceRow}>
-                    <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]}>
-                      {isPeerMode ? "પસંદ ખેડૂત" : "સરેરાશ"}
+                    <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]} numberOfLines={1}>
+                      {isPeerMode && (compare.peerName || selectedPeer)
+                        ? targetLabel
+                        : "સરેરાશ ખેડૂત"}
                     </Text>
                     <View style={styles.perBighaRaceTrack}>
                       <View
@@ -602,7 +617,9 @@ export default function ReportScreen() {
                   <View style={styles.perBighaWinRow}>
                     <Ionicons name="trophy" size={18} color={C.textPrimary} />
                     <Text style={styles.perBighaWinText}>
-                      {isPeerMode ? "તમે પસંદ ખેડૂત કરતાં આગળ છો!" : "તમે સરેરાશ કરતાં આગળ છો!"}
+                      {isPeerMode && (compare.peerName || selectedPeer)
+                        ? `તમે ${(compare.peerName ?? selectedPeer?.name) || "પસંદ ખેડૂત"} કરતાં આગળ છો!`
+                        : "તમે સરેરાશ કરતાં આગળ છો!"}
                     </Text>
                   </View>
                 )}
@@ -662,7 +679,9 @@ export default function ReportScreen() {
                     <Ionicons name="analytics" size={22} color={C.green700} />
                     <Text style={styles.rankingText}>
                       આવક પ્રતિ વીઘા{" "}
-                      {compare?.mode === "peer" ? "પસંદ ખેડૂત કરતાં " : "સરેરાશ કરતાં "}
+                      {compare?.mode === "peer" && (compare.peerName || selectedPeer)
+                        ? `${compare.peerName ?? selectedPeer?.name} કરતાં `
+                        : "સરેરાશ કરતાં "}
                       {compareDiffText}.
                     </Text>
                   </View>
