@@ -93,10 +93,18 @@
             },
             "tractorServices": "ટ્રેક્ટર સેવાઓ (પસંદ કરો)",
             "tractorServiceLabels": {
+                "Tractor": "ટ્રેક્ટર",
                 "Rotavator": "રોટાવેટર",
-                "RAP": "RAP",
-                "Bagi": "બગી",
-                "Savda": "સવડા"
+                "RAP": "રૅપ",
+                "Samar": "સમાર",
+                "Sah Nakhya": "સહ નાખ્યા",
+                "Vavetar": "વાવેતર",
+                "Kyara Bandhya": "ક્યારા બાંધ્યા",
+                "Thresher": "થ્રેશર",
+                "Bagu": "બાગુ",
+                "Fukani": "ફૂકણી",
+                "Kheti Kari": "ખેતી કરી",
+                "Other Equipment": "અન્ય ઉપકરણ"
             }
         },
         "dashboard": {
@@ -484,10 +492,18 @@
             },
             "tractorServices": "Tractor services (select)",
             "tractorServiceLabels": {
+                "Tractor": "Tractor",
                 "Rotavator": "Rotavator",
                 "RAP": "RAP",
-                "Bagi": "Bagi",
-                "Savda": "Savda"
+                "Samar": "Samar",
+                "Sah Nakhya": "Sah Nakhya",
+                "Vavetar": "Vavetar",
+                "Kyara Bandhya": "Kyara Bandhya",
+                "Thresher": "Thresher",
+                "Bagu": "Bagu",
+                "Fukani": "Fukani",
+                "Kheti Kari": "Kheti Kari",
+                "Other Equipment": "Other equipment"
             }
         },
         "dashboard": {

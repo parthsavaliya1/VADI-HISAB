@@ -66,7 +66,7 @@ const SEASONS: {
 }[] = [
   {
     value: "Kharif",
-    label: "ખરીફ",
+    label: "ચોમાસુ",
     sublabel: "જૂન – ઓક્ટોબર",
     icon: "☔",
     colors: ["#0EA5E9", "#0369A1"],
@@ -75,7 +75,7 @@ const SEASONS: {
   },
   {
     value: "Rabi",
-    label: "રવી",
+    label: "શિયાળો",
     sublabel: "નવેમ્બર – માર્ચ",
     icon: "❄️",
     colors: ["#6366F1", "#4338CA"],
@@ -711,7 +711,6 @@ export default function AddCrop() {
             >
               <View style={styles.seasonStepInner}>
                 <Text style={styles.stepTitle}>સિઝન અને વર્ષ પસંદ કરો</Text>
-                <Text style={styles.stepDesc}>પાક ક્યા વર્ષ અને સિઝનનો છે? (જૂન થી જૂન)</Text>
 
                 {/* Financial year selector — 2025-26 = June 2025 to May 2026 */}
                 <Text style={styles.fieldLabel}>વર્ષ (જૂન – જૂન)</Text>
@@ -832,10 +831,6 @@ export default function AddCrop() {
           {step === 1 && (
             <View>
               <Text style={styles.stepTitle}>પાક પસંદ કરો</Text>
-              <Text style={styles.stepDesc}>
-                {SEASONS.find((s) => s.value === form.season)?.label} સિઝનના
-                સામાન્ય પાક — એક પાક પસંદ કરો
-              </Text>
               <View style={styles.cropGrid}>
                 {CROPS.map((c) => (
                   <CropCard
@@ -894,7 +889,7 @@ export default function AddCrop() {
                     — બીજ / જાત —
                   </Text>
                   <Text style={styles.stepDesc}>
-                    {finalCropEmoji} {finalCropLabel} નો પ્રકાર પસંદ કરો અથવા ટાઈપ કરો
+                    {finalCropEmoji} {finalCropLabel} નો જાત / બીજ પ્રકાર પસંદ કરો અથવા ટાઈપ કરો
                   </Text>
                   <View style={styles.fieldCard}>
                     {currentCropSubtypes.length > 0 && (
@@ -1140,7 +1135,6 @@ export default function AddCrop() {
           {step === 3 && (
             <View>
               <Text style={styles.stepTitle}>પુષ્ટિ</Text>
-              <Text style={styles.stepDesc}>બધી વિગત ચકાસો અને સાચવો</Text>
 
               {/* Summary card — light green */}
               <View style={styles.summaryCard}>
@@ -1339,8 +1333,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 16, fontWeight: "800", color: C.textPrimary },
-  headerSub: { fontSize: 11, color: C.textMuted, marginTop: 2 },
+  headerTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary },
+  headerSub: { fontSize: 13, color: C.textMuted, marginTop: 2, fontWeight: "700" },
 
   dotsRow: {
     flexDirection: "row",
@@ -1367,13 +1361,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   stepDesc: {
-    fontSize: 16,
+    fontSize: 17,
     color: C.textMuted,
     marginBottom: 20,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   fieldLabel: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
     color: C.textSecondary,
     marginBottom: 8,
@@ -1528,15 +1522,15 @@ const styles = StyleSheet.create({
   },
   cropCard: {
     width: "31%",
-    minWidth: 100,
+    minWidth: 96,
     backgroundColor: C.surface,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 2.5,
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 2,
     borderColor: C.borderLight,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 100,
+    minHeight: 88,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -1547,9 +1541,9 @@ const styles = StyleSheet.create({
     borderColor: C.green700,
     backgroundColor: C.green50,
   },
-  cropCardEmoji: { fontSize: 36, marginBottom: 6 },
+  cropCardEmoji: { fontSize: 32, marginBottom: 4 },
   cropCardLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "800",
     color: C.textPrimary,
     textAlign: "center",

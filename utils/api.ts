@@ -116,10 +116,27 @@ export const getFriendlyErrorMessage = (err: unknown): string => {
 export type LandUnit = "acre" | "bigha";
 export type WaterSource = "Rain" | "Borewell" | "Canal";
 export type LabourType = "Family" | "Hired" | "Mixed";
-/** Tractor services when tractor is available: Rotavator, RAP, Bagi, Savda, etc. */
-export type TractorService = "Rotavator" | "RAP" | "Bagi" | "Savda";
-/** Ordered list of tractor service options (single source of truth). */
-export const TRACTOR_SERVICES: TractorService[] = ["Rotavator", "RAP", "Bagi", "Savda"];
+/**
+ * Tractor services offered by farmer.
+ * This intentionally reuses RentalAssetType so the options
+ * match the tractor income (rental) screen exactly.
+ */
+export type TractorService = RentalAssetType;
+/** Ordered list of tractor service options (single source of truth, matches RentalAssetType). */
+export const TRACTOR_SERVICES: TractorService[] = [
+  "Tractor",
+  "Rotavator",
+  "RAP",
+  "Samar",
+  "Sah Nakhya",
+  "Vavetar",
+  "Kyara Bandhya",
+  "Thresher",
+  "Bagu",
+  "Fukani",
+  "Kheti Kari",
+  "Other Equipment",
+];
 export type District =
   | "Rajkot"
   | "Jamnagar"
