@@ -55,7 +55,6 @@ const C = {
 };
 
 const WATER_SOURCES = ["Rain", "Borewell", "Canal"];
-const LABOUR_TYPES = ["Family", "Hired", "Mixed"];
 const TRACTOR_SERVICES = API_TRACTOR_SERVICES;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -78,7 +77,6 @@ type FormData = {
     waterSources: string[];
     tractorAvailable: boolean | null;
     implementsAvailable: string[];  // tractor services when tractor yes
-    labourTypes: string[];
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -290,7 +288,6 @@ export default function ProfileSetup() {
         waterSources: [],
         tractorAvailable: null,
         implementsAvailable: [],
-        labourTypes: [],
     });
     const [loading, setLoading] = useState(false);
     const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -316,15 +313,14 @@ export default function ProfileSetup() {
         [form.name, form.district, form.taluka, form.village].filter(Boolean).length
         + (atLeastOneFarmFilled ? 1 : 0)
         + (form.waterSources.length > 0 ? 1 : 0)
-        + (form.tractorAvailable !== null ? 1 : 0)
-        + (form.labourTypes.length > 0 ? 1 : 0);
-    const totalFields = 8;
+        + (form.tractorAvailable !== null ? 1 : 0);
+    const totalFields = 7;
     const progress = filledCount / totalFields;
 
     const isValid =
         !!form.name && !!form.district && !!form.taluka && !!form.village &&
         atLeastOneFarmFilled && form.waterSources.length > 0 &&
-        form.tractorAvailable !== null && form.labourTypes.length > 0;
+        form.tractorAvailable !== null;
 
     useEffect(() => {
         Animated.parallel([
@@ -398,14 +394,6 @@ export default function ProfileSetup() {
             waterSources: prev.waterSources.includes(opt)
                 ? prev.waterSources.filter((x) => x !== opt)
                 : [...prev.waterSources, opt],
-        }));
-    };
-    const toggleLabour = (opt: string) => {
-        setForm((prev) => ({
-            ...prev,
-            labourTypes: prev.labourTypes.includes(opt)
-                ? prev.labourTypes.filter((x) => x !== opt)
-                : [...prev.labourTypes, opt],
         }));
     };
     const toggleTractorService = (opt: string) => {
@@ -545,7 +533,7 @@ export default function ProfileSetup() {
                 waterSources: form.waterSources as WaterSource[],
                 tractorAvailable: form.tractorAvailable!,
                 implementsAvailable: form.tractorAvailable ? (form.implementsAvailable as TractorService[]) : [],
-                labourTypes: form.labourTypes as LabourType[],
+                labourTypes: [] as LabourType[],
             });
             const user = await getMe();
             if (user.analyticsConsent === null) {
@@ -749,20 +737,6 @@ export default function ProfileSetup() {
                                 onToggle={toggleTractorService}
                             />
                         )}
-
-                        <View style={styles.sectionDivider} />
-                        {/* ── Section 4: Labour ── */}
-                        <View style={styles.sectionHeader}>
-                            <View style={styles.sectionBadge}><Text style={styles.sectionBadgeText}>4</Text></View>
-                            <Text style={styles.sectionTitle}>{t.labour}</Text>
-                        </View>
-                        <MultiChipSelector
-                            label=""
-                            options={LABOUR_TYPES}
-                            labels={t.labourLabels}
-                            selected={form.labourTypes}
-                            onToggle={toggleLabour}
-                        />
 
                         {/* ── Submit ── */}
                         <Animated.View style={[{ transform: [{ scale: submitScale }] }, { marginTop: 8 }]}>
