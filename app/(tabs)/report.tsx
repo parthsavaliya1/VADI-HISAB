@@ -5,6 +5,7 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getCompareReport,
+  getComparePeers,
   getExpenseAnalytics,
   getFinancialYearOptions,
   getFinancialYearOptionsExtended,
@@ -20,12 +21,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -35,6 +38,14 @@ const VERTICAL_CHART_HEIGHT = 140;
 const { width: SCREEN_W } = Dimensions.get("window");
 
 const C = AppTheme;
+
+interface ComparePeer {
+  userId: string;
+  name: string;
+  village: string;
+  taluka: string;
+  district: string;
+}
 
 const CROP_NAME_GUJARATI: Record<string, string> = {
   Cotton: "કપાસ",
@@ -82,23 +93,34 @@ export default function ReportScreen() {
   const [compare, setCompare] = useState<Awaited<ReturnType<typeof getCompareReport>> | null>(null);
   const [expenseAnalytics, setExpenseAnalytics] = useState<Awaited<ReturnType<typeof getExpenseAnalytics>> | null>(null);
   const [yearlyReports, setYearlyReports] = useState<{ year: string; income: number; expense: number }[]>([]);
+  const [comparePeers, setComparePeers] = useState<ComparePeer[]>([]);
+  const [selectedPeerId, setSelectedPeerId] = useState<string | "average">("average");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [peerPickerVisible, setPeerPickerVisible] = useState(false);
+  const [peerSearch, setPeerSearch] = useState("");
 
   const loadReport = useCallback(async () => {
     try {
       const years = getFinancialYearOptionsExtended();
-      const [data, analyticsRes, compareRes, expAnalytics, ...yearResults] = await Promise.all([
+      const peerUserId = selectedPeerId === "average" ? undefined : selectedPeerId;
+      const [data, analyticsRes, compareRes, expAnalytics, peersRes, ...yearResults] = await Promise.all([
         getYearlyReport(financialYear),
         getIncomeAnalytics(undefined, undefined, financialYear).catch(() => null),
-        getCompareReport(financialYear).catch(() => null),
-        getExpenseAnalytics(financialYear).catch(() => null),
-        ...years.map((fy) => getYearlyReport(fy).then((r) => ({ year: fy, summary: r?.summary })).catch(() => ({ year: "", summary: null }))),
+        getCompareReport(financialYear, undefined, peerUserId).catch(() => null),
+        getExpenseAnalytics(financialYear, peerUserId).catch(() => null),
+        getComparePeers().catch(() => null),
+        ...years.map((fy) =>
+          getYearlyReport(fy)
+            .then((r) => ({ year: fy, summary: r?.summary }))
+            .catch(() => ({ year: "", summary: null }))
+        ),
       ]);
       setReport(data);
       setAnalytics(analyticsRes ?? null);
       setCompare(compareRes ?? null);
       setExpenseAnalytics(expAnalytics ?? null);
+      setComparePeers(peersRes?.peers ?? []);
       setYearlyReports(
         yearResults.map((r: any) => ({
           year: r.year,
@@ -113,11 +135,12 @@ export default function ReportScreen() {
       setCompare(null);
       setExpenseAnalytics(null);
       setYearlyReports([]);
+      setComparePeers([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [financialYear]);
+  }, [financialYear, selectedPeerId]);
 
   useEffect(() => {
     loadReport();
@@ -134,10 +157,16 @@ export default function ReportScreen() {
   const crops = (report?.crops ?? []) as CropReportRow[];
   const showRanking = analytics != null && analytics.percentileRank != null;
   const rankingTopPercent = analytics?.percentileRank != null ? Math.max(1, Math.round(100 - analytics.percentileRank)) : null;
-  const compareDiff = compare ? (compare.myIncomePerBigha ?? 0) - (compare.avgIncomePerBigha ?? 0) : 0;
+  const targetIncomePerBigha =
+    compare && (compare.mode === "peer" && compare.peerIncomePerBigha != null)
+      ? compare.peerIncomePerBigha
+      : compare?.avgIncomePerBigha ?? 0;
+  const compareDiff = compare ? (compare.myIncomePerBigha ?? 0) - targetIncomePerBigha : 0;
   const compareDiffText = `${formatINR(Math.abs(compareDiff))} ${compareDiff >= 0 ? "વધારે" : "ઓછું"}`;
-  const avgVal = compare?.avgIncomePerBigha ?? 0;
-  const incomePctVsAvg = avgVal > 0 && compare ? Math.round(((compare.myIncomePerBigha ?? 0) - avgVal) / avgVal * 100) : 0;
+  const incomePctVsAvg =
+    targetIncomePerBigha > 0 && compare
+      ? Math.round(((compare.myIncomePerBigha ?? 0) - targetIncomePerBigha) / targetIncomePerBigha * 100)
+      : 0;
 
   const expenseAnalyticsData = expenseAnalytics && (expenseAnalytics.myArea ?? 0) > 0 && expenseAnalytics.sampleSize > 0;
   const myBy = expenseAnalyticsData ? (expenseAnalytics?.myPerBighaByCategory || {}) : {};
@@ -150,6 +179,24 @@ export default function ReportScreen() {
   const expenseHigherCategories = expenseAnalyticsData
     ? EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > (avgBy[cat] || 0) && (myBy[cat] || 0) > 0)
     : [];
+
+  const selectedPeer = selectedPeerId === "average"
+    ? null
+    : comparePeers.find((p) => p.userId === selectedPeerId) || null;
+  const filteredPeers = comparePeers.filter((p) => {
+    if (!peerSearch.trim()) return true;
+    const q = peerSearch.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.village.toLowerCase().includes(q) ||
+      (p.taluka && p.taluka.toLowerCase().includes(q)) ||
+      (p.district && p.district.toLowerCase().includes(q))
+    );
+  });
+
+  // Temporary VADI scores (0–100) — formula will be updated later.
+  const myScore = 85;
+  const peerScore = selectedPeer ? 82 : null;
 
   return (
     <View style={styles.container}>
@@ -221,6 +268,52 @@ export default function ReportScreen() {
 
           {/* Expense category pie chart — Labour 30%, Machinery 39%, etc. */}
           <ExpensePieChart byCategory={expenseAnalytics?.myByCategory ?? {}} centerTotal={displayExpense} />
+
+          {/* Peer selection dropdown — choose average or specific farmer (shown below pie chart) */}
+          {comparePeers.length > 0 && (
+            <View style={styles.peerDropdownRow}>
+              <Text style={styles.peerSelectLabel}>તુલના કરો:</Text>
+              <TouchableOpacity
+                style={styles.peerDropdownButton}
+                activeOpacity={0.8}
+                onPress={() => setPeerPickerVisible(true)}
+              >
+                <Text style={styles.peerDropdownButtonText} numberOfLines={1}>
+                  {selectedPeerId === "average"
+                    ? "સરેરાશ ખેડૂત"
+                    : selectedPeer
+                    ? `${selectedPeer.name} · ${selectedPeer.village}`
+                    : "સરેરાશ ખેડૂત"}
+                </Text>
+                <Ionicons name="chevron-down" size={16} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Score summary — your score vs selected farmer (out of 100) */}
+          <View style={styles.scoreRow}>
+            <View style={[styles.scoreBox, styles.scoreBoxMine]}>
+              <Text style={styles.scoreLabel}>તમારો સ્કોર</Text>
+              <Text style={styles.scoreValue}>{myScore}/100</Text>
+            </View>
+            <View style={[styles.scoreBox, styles.scoreBoxPeer]}>
+              <Text style={styles.scoreLabel}>
+                {selectedPeer ? "પસંદ ખેડૂત" : "પસંદ ખેડૂત સ્કોર"}
+              </Text>
+              {selectedPeer ? (
+                <View style={styles.scorePeerInner}>
+                  <Text style={styles.scorePeerName} numberOfLines={1}>
+                    {selectedPeer.name}
+                  </Text>
+                  <Text style={styles.scoreValue}>
+                    {peerScore != null ? `${peerScore}/100` : "--/100"}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.scorePeerHint}>સૌ પ્રથમ કોઈ ખેડૂત પસંદ કરો</Text>
+              )}
+            </View>
+          </View>
 
           {/* 1. Expense type comparison — ખર્ચ પ્રકાર તુલના */}
           {(expenseAnalytics || (report && (report as any).summary)) && (
@@ -349,7 +442,7 @@ export default function ReportScreen() {
             </View>
           )}
 
-          {/* 2. Expense per bigha — common design */}
+          {/* 2. Expense per bigha — common design (uses selected peer or average) */}
           {expenseAnalyticsData && (
             <View style={styles.perBighaCard}>
               <Text style={styles.perBighaTitle}>💸 ખર્ચ પ્રતિ વીઘા</Text>
@@ -362,16 +455,19 @@ export default function ReportScreen() {
                 <View style={styles.perBighaVsBadge}>
                   <Text style={styles.perBighaVsText}>VS</Text>
                 </View>
-                <View style={styles.perBighaHeroBox}>
-                  <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]}>સરેરાશ</Text>
-                  <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>₹{formatINR(avgExpenseTotal)}</Text>
+                  <View style={styles.perBighaHeroBox}>
+                    <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]}>
+                      {expenseAnalytics?.mode === "peer" ? "પસંદ ખેડૂત" : "સરેરાશ"}
+                    </Text>
+                    <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>₹{formatINR(avgExpenseTotal)}</Text>
                 </View>
               </View>
 
               <View style={[styles.perBighaPctBadge, expenseLowerIsBetter ? styles.perBighaPctBadgeGood : styles.perBighaPctBadgeNeutral]}>
                 <Ionicons name={expenseLowerIsBetter ? "trending-down" : "trending-up"} size={18} color={expenseLowerIsBetter ? C.green700 : C.expense} />
                 <Text style={[styles.perBighaPctText, { color: expenseLowerIsBetter ? C.green700 : C.expense }]}>
-                  સરેરાશ કરતાં {Math.abs(expensePctVsAvg)}% {expenseLowerIsBetter ? "ઓછું ✓" : "વધારે"}
+                  {expenseAnalytics?.mode === "peer" ? "પસંદ ખેડૂત કરતાં " : "સરેરાશ કરતાં "}
+                  {Math.abs(expensePctVsAvg)}% {expenseLowerIsBetter ? "ઓછું ✓" : "વધારે"}
                 </Text>
               </View>
 
@@ -389,7 +485,9 @@ export default function ReportScreen() {
                   <Text style={[styles.perBighaRaceVal, { color: C.expense }]}>{formatINR(myExpenseTotal)}</Text>
                 </View>
                 <View style={styles.perBighaRaceRow}>
-                  <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]}>સરેરાશ</Text>
+                  <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]}>
+                    {expenseAnalytics?.mode === "peer" ? "પસંદ ખેડૂત" : "સરેરાશ"}
+                  </Text>
                   <View style={styles.perBighaRaceTrack}>
                     <View
                       style={[
@@ -411,12 +509,20 @@ export default function ReportScreen() {
             </View>
           )}
 
-          {/* 3. Income per bigha — common design */}
+          {/* 3. Income per bigha — common design (uses selected peer or average) */}
           {compare && compare.myTotalArea > 0 && (() => {
             const myVal = compare.myIncomePerBigha ?? 0;
-            const avg = compare.avgIncomePerBigha ?? 0;
-            const maxV = Math.max(1, myVal, avg);
-            const aboveAvg = myVal >= avg;
+            const targetVal =
+              compare.mode === "peer" && compare.peerIncomePerBigha != null
+                ? compare.peerIncomePerBigha
+                : compare.avgIncomePerBigha ?? 0;
+            const maxV = Math.max(1, myVal, targetVal);
+            const aboveTarget = myVal >= targetVal;
+            const isPeerMode = compare.mode === "peer" && compare.peerUserId;
+            const targetLabel = isPeerMode
+              ? `${compare.peerName ?? "પસંદ ખેડૂત"}${compare.peerVillage ? ` (${compare.peerVillage})` : ""}`
+              : "સરેરાશ";
+
             return (
               <View style={styles.perBighaCard}>
                 <Text style={styles.perBighaTitle}>🌾 આવક પ્રતિ વીઘા</Text>
@@ -430,16 +536,35 @@ export default function ReportScreen() {
                     <Text style={styles.perBighaVsText}>VS</Text>
                   </View>
                   <View style={styles.perBighaHeroBox}>
-                    <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]}>સરેરાશ</Text>
-                    <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>₹{formatINR(avg)}</Text>
+                    <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]} numberOfLines={1}>
+                      {targetLabel}
+                    </Text>
+                    <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>
+                      ₹{formatINR(targetVal)}
+                    </Text>
                   </View>
                 </View>
 
                 {compare.sampleSize > 0 && (
-                  <View style={[styles.perBighaPctBadge, aboveAvg ? styles.perBighaPctBadgeGood : styles.perBighaPctBadgeNeutral]}>
-                    <Ionicons name={aboveAvg ? "trending-up" : "trending-down"} size={18} color={aboveAvg ? C.green700 : C.textMuted} />
-                    <Text style={[styles.perBighaPctText, { color: aboveAvg ? C.green700 : C.textMuted }]}>
-                      સરેરાશ કરતાં {Math.abs(incomePctVsAvg)}% {aboveAvg ? "વધારે" : "ઓછું"}
+                  <View
+                    style={[
+                      styles.perBighaPctBadge,
+                      aboveTarget ? styles.perBighaPctBadgeGood : styles.perBighaPctBadgeNeutral,
+                    ]}
+                  >
+                    <Ionicons
+                      name={aboveTarget ? "trending-up" : "trending-down"}
+                      size={18}
+                      color={aboveTarget ? C.green700 : C.textMuted}
+                    />
+                    <Text
+                      style={[
+                        styles.perBighaPctText,
+                        { color: aboveTarget ? C.green700 : C.textMuted },
+                      ]}
+                    >
+                      {isPeerMode ? "પસંદ ખેડૂત કરતાં " : "સરેરાશ કરતાં "}
+                      {Math.abs(incomePctVsAvg)}% {aboveTarget ? "વધારે" : "ઓછું"}
                     </Text>
                   </View>
                 )}
@@ -458,23 +583,27 @@ export default function ReportScreen() {
                     <Text style={[styles.perBighaRaceVal, { color: C.green700 }]}>{formatINR(myVal)}</Text>
                   </View>
                   <View style={styles.perBighaRaceRow}>
-                    <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]}>સરેરાશ</Text>
+                    <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]}>
+                      {isPeerMode ? "પસંદ ખેડૂત" : "સરેરાશ"}
+                    </Text>
                     <View style={styles.perBighaRaceTrack}>
                       <View
                         style={[
                           styles.perBighaRaceFillAvg,
-                          { width: `${Math.min(100, (avg / maxV) * 100)}%` },
+                          { width: `${Math.min(100, (targetVal / maxV) * 100)}%` },
                         ]}
                       />
                     </View>
-                    <Text style={[styles.perBighaRaceVal, { color: C.textMuted }]}>{formatINR(avg)}</Text>
+                    <Text style={[styles.perBighaRaceVal, { color: C.textMuted }]}>{formatINR(targetVal)}</Text>
                   </View>
                 </View>
 
-                {aboveAvg && compare.sampleSize > 0 && (
+                {aboveTarget && compare.sampleSize > 0 && (
                   <View style={styles.perBighaWinRow}>
                     <Ionicons name="trophy" size={18} color={C.textPrimary} />
-                    <Text style={styles.perBighaWinText}>તમે સરેરાશ કરતાં આગળ છો!</Text>
+                    <Text style={styles.perBighaWinText}>
+                      {isPeerMode ? "તમે પસંદ ખેડૂત કરતાં આગળ છો!" : "તમે સરેરાશ કરતાં આગળ છો!"}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -531,7 +660,11 @@ export default function ReportScreen() {
                 {compare && compare.sampleSize > 0 && (
                   <View style={styles.rankingPoint}>
                     <Ionicons name="analytics" size={22} color={C.green700} />
-                    <Text style={styles.rankingText}>આવક પ્રતિ વીઘા સરેરાશ કરતાં {compareDiffText}.</Text>
+                    <Text style={styles.rankingText}>
+                      આવક પ્રતિ વીઘા{" "}
+                      {compare?.mode === "peer" ? "પસંદ ખેડૂત કરતાં " : "સરેરાશ કરતાં "}
+                      {compareDiffText}.
+                    </Text>
                   </View>
                 )}
               </View>
@@ -579,6 +712,84 @@ export default function ReportScreen() {
           )}
           <View style={{ height: 100 }} />
         </ScrollView>
+      )}
+
+      {/* Peer picker dropdown modal */}
+      {comparePeers.length > 0 && (
+        <Modal
+          visible={peerPickerVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setPeerPickerVisible(false)}
+        >
+          <Pressable style={styles.peerModalBackdrop} onPress={() => setPeerPickerVisible(false)}>
+            <Pressable style={styles.peerModalCard}>
+              <Text style={styles.peerModalTitle}>કોઈ ખેડૂત પસંદ કરો</Text>
+              <View style={styles.peerSearchBox}>
+                <Ionicons name="search" size={18} color={C.textMuted} />
+                <TextInput
+                  style={styles.peerSearchInput}
+                  placeholder="નામ અથવા ગામ દ્વારા શોધો"
+                  placeholderTextColor={C.textMuted}
+                  value={peerSearch}
+                  onChangeText={setPeerSearch}
+                />
+              </View>
+
+              <ScrollView style={styles.peerList}>
+                <TouchableOpacity
+                  style={[
+                    styles.peerListItem,
+                    selectedPeerId === "average" && styles.peerListItemActive,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setSelectedPeerId("average");
+                    setPeerPickerVisible(false);
+                    setPeerSearch("");
+                  }}
+                >
+                  <View style={styles.peerListTextWrap}>
+                    <Text style={styles.peerListName}>સરેરાશ ખેડૂત</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {filteredPeers.map((p) => {
+                  const active = selectedPeerId === p.userId;
+                  return (
+                    <TouchableOpacity
+                      key={p.userId}
+                      style={[styles.peerListItem, active && styles.peerListItemActive]}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setSelectedPeerId(p.userId);
+                        setPeerPickerVisible(false);
+                        setPeerSearch("");
+                      }}
+                    >
+                      <View style={styles.peerListTextWrap}>
+                        <Text style={styles.peerListName}>{p.name}</Text>
+                        <Text style={styles.peerListMeta}>
+                          {p.village}
+                          {p.taluka ? `, ${p.taluka}` : ""}
+                          {p.district ? `, ${p.district}` : ""}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={styles.peerModalClose}
+                onPress={() => setPeerPickerVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.peerModalCloseText}>બંધ કરો</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Modal>
       )}
     </View>
   );
@@ -932,6 +1143,166 @@ const styles = StyleSheet.create({
   rankingCompareLabel: { fontSize: 14, color: C.textMuted, marginBottom: 2 },
   rankingCompareValue: { fontSize: 16, fontWeight: "800", marginBottom: 8 },
   compareChartValue: { fontSize: 18, marginTop: 4 },
+  peerDropdownRow: {
+    marginTop: 12,
+    marginBottom: 14,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  peerSelectLabel: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: C.green700,
+  },
+  peerDropdownButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: C.green100,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: C.surfaceGreen,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  peerDropdownButtonText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.textPrimary,
+    marginRight: 8,
+  },
+  peerModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-end",
+  },
+  peerModalCard: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: "70%",
+  },
+  peerModalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 12,
+    color: C.textPrimary,
+  },
+  peerSearchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 12,
+    backgroundColor: C.surface,
+  },
+  peerSearchInput: {
+    flex: 1,
+    marginLeft: 6,
+    fontSize: 15,
+    color: C.textPrimary,
+    paddingVertical: 2,
+  },
+  peerList: {
+    maxHeight: 260,
+    marginBottom: 8,
+  },
+  peerListItem: {
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: C.borderLight,
+  },
+  peerListItemActive: {
+    backgroundColor: C.green50,
+  },
+  peerListTextWrap: {
+    flexDirection: "column",
+    gap: 2,
+  },
+  peerListName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: C.textPrimary,
+  },
+  peerListMeta: {
+    fontSize: 13,
+    color: C.textMuted,
+  },
+  peerModalClose: {
+    alignSelf: "flex-end",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  peerModalCloseText: {
+    fontSize: 15,
+    color: C.textPrimary,
+    fontWeight: "500",
+  },
+  scoreRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    justifyContent: "space-between",
+    gap: 10,
+    paddingHorizontal: 16,
+    marginBottom: 14,
+  },
+  scoreBox: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  scoreBoxMine: {
+    backgroundColor: C.incomePale,
+  },
+  scoreBoxPeer: {
+    backgroundColor: C.expensePale,
+  },
+  scoreLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: C.textMuted,
+    marginBottom: 4,
+  },
+  scoreValue: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: C.textPrimary,
+  },
+  scorePeerInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  scorePeerName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: C.textPrimary,
+    marginRight: 4,
+  },
+  scorePeerHint: {
+    fontSize: 12,
+    color: C.textMuted,
+  },
   adviceWrap: { marginTop: 10 },
   adviceText: { fontSize: 15, color: C.textSecondary, marginBottom: 4 },
   sectionTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },

@@ -952,10 +952,22 @@ export default function Profile() {
                     {/* ══ Light header: title + edit ══ */}
                     <Animated.View style={[styles.topBar, { transform: [{ scale: headerPulse }] }]}>
                         <Text style={styles.topBarTitle}>{t("profileTab", "title")}</Text>
-                        <Pressable onPress={handleEditOpen} style={({ pressed }) => [styles.editFAB, pressed && styles.editFABPressed]}>
-                            <Ionicons name="create-outline" size={20} color="#2E7D32" />
-                            <Text style={styles.editFABText}>{t("profileTab", "edit")}</Text>
-                        </Pressable>
+                        <View style={styles.topBarActions}>
+                            <Pressable
+                                onPress={() => setCardVisible(true)}
+                                style={({ pressed }) => [styles.cardMiniBtn, pressed && styles.cardMiniBtnPressed]}
+                            >
+                                <Ionicons name="download-outline" size={18} color="#0F766E" />
+                                <Text style={styles.cardMiniBtnText}>{t("profileTab", "downloadCard")}</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={handleEditOpen}
+                                style={({ pressed }) => [styles.editFAB, pressed && styles.editFABPressed]}
+                            >
+                                <Ionicons name="create-outline" size={20} color="#2E7D32" />
+                                <Text style={styles.editFABText}>{t("profileTab", "edit")}</Text>
+                            </Pressable>
+                        </View>
                     </Animated.View>
 
                     {/* ══ Farmer card: photo + details ══ */}
@@ -1153,10 +1165,14 @@ const styles = StyleSheet.create({
     bgDecor2: { position: "absolute", width: 160, height: 160, borderRadius: 80, backgroundColor: "#E8F0E6", top: 180, left: -50 },
     scrollContent: { paddingBottom: 20, paddingTop: HEADER_PADDING_TOP },
     topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginBottom: 18 },
+    topBarActions: { flexDirection: "row", alignItems: "center", gap: 10 },
     topBarTitle: { fontSize: 28, fontWeight: "800", color: "#1A2E1C", letterSpacing: 0.2 },
     editFAB: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fff", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, borderWidth: 1.5, borderColor: "#C8E6C9", shadowColor: "#0A0E0B", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
     editFABPressed: { opacity: 0.85 },
     editFABText: { fontSize: 18, fontWeight: "800", color: "#2E7D32" },
+    cardMiniBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#E0F2FE", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: "#BFDBFE" },
+    cardMiniBtnPressed: { opacity: 0.85 },
+    cardMiniBtnText: { fontSize: 13, fontWeight: "700", color: "#0F766E" },
     farmerCard: { backgroundColor: "#fff", borderRadius: 24, marginHorizontal: 18, marginBottom: 18, paddingVertical: 28, paddingHorizontal: 22, alignItems: "center", shadowColor: "#1A2E1C", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
     farmerCardInner: { alignItems: "center" },
     farmerPhotoWrap: { width: 112, height: 112, borderRadius: 56, marginBottom: 16, overflow: "hidden" },

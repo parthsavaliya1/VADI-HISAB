@@ -581,16 +581,50 @@ export interface CompareReportResponse {
   percentileIncome: number | null;
   percentileExpense: number | null;
   sampleSize: number;
+  /** "average" = vs all others, "peer" = vs selected farmer */
+  mode?: "average" | "peer";
+  peerUserId?: string | null;
+  peerName?: string | null;
+  peerVillage?: string | null;
+  peerTaluka?: string | null;
+  peerDistrict?: string | null;
+  peerIncome?: number | null;
+  peerExpense?: number | null;
+  peerIncomePerBigha?: number | null;
 }
 
 /** GET /crops/report/compare — compare with other farmers for a FY and optional crop */
 export const getCompareReport = async (
   financialYear?: string,
-  cropName?: string
+  cropName?: string,
+  peerUserId?: string
 ): Promise<CompareReportResponse> => {
   const res = await API.get<CompareReportResponse>("/crops/report/compare", {
-    params: { financialYear: financialYear || getCurrentFinancialYear(), cropName },
+    params: {
+      financialYear: financialYear || getCurrentFinancialYear(),
+      cropName,
+      peerUserId,
+    },
   });
+  return res.data;
+};
+
+export interface ComparePeer {
+  userId: string;
+  name: string;
+  village: string;
+  taluka: string;
+  district: string;
+}
+
+export interface ComparePeersResponse {
+  success: boolean;
+  peers: ComparePeer[];
+}
+
+/** GET /crops/report/compare/users — list other data-sharing farmers for peer comparison */
+export const getComparePeers = async (): Promise<ComparePeersResponse> => {
+  const res = await API.get<ComparePeersResponse>("/crops/report/compare/users");
   return res.data;
 };
 
@@ -820,12 +854,23 @@ export interface ExpenseAnalyticsResponse {
   avgByCategory: Record<string, number>;
   avgPerBighaByCategory: Record<string, number>;
   sampleSize: number;
+  /** "average" = vs all others, "peer" = vs selected farmer */
+  mode?: "average" | "peer";
+  peerUserId?: string | null;
+  peerName?: string | null;
+  peerVillage?: string | null;
+  peerTaluka?: string | null;
+  peerDistrict?: string | null;
 }
 export const getExpenseAnalytics = async (
   financialYear?: string,
+  peerUserId?: string,
 ): Promise<ExpenseAnalyticsResponse> => {
   const res = await API.get<ExpenseAnalyticsResponse>("/expenses/analytics", {
-    params: { financialYear: financialYear || getCurrentFinancialYear() },
+    params: {
+      financialYear: financialYear || getCurrentFinancialYear(),
+      peerUserId,
+    },
   });
   return res.data;
 };
