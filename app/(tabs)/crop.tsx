@@ -1128,7 +1128,7 @@ const styles = StyleSheet.create({
   },
   modalSubType: {
     marginTop: 2,
-    fontSize: 16,
+    fontSize: 10,
     fontWeight: "700",
     color: C.textSecondary,
   },
