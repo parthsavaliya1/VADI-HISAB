@@ -202,7 +202,7 @@ const CROPS: {
     value: "Vatana",
     label: "વટાણા",
     emoji: "🫛",
-    subtypes: ["સ્થાનિક"],
+    subtypes: ["લીલા", "સફેદ"],
   },
   // 16. વાલ
   {

@@ -127,13 +127,6 @@ function CropCard({
     ]).start();
   }, []);
 
-  const toggleMenu = () => {
-    const next = !menuOpen;
-    setMenuOpen(next);
-    Animated.spring(menuAnim, { toValue: next ? 1 : 0, useNativeDriver: true }).start();
-    if (next) requestAnimationFrame(() => onRequestMenuOpen(index));
-  };
-
   const statusStyle = STATUS_STYLE[item.status ?? "Active"] ?? STATUS_STYLE.Active;
   const statusLabel = item.status === "Active" ? t("common", "statusActive") : item.status === "Harvested" ? t("common", "statusHarvested") : t("common", "statusClosed");
   const [cropPale, cropColor] = getCropColors(item.cropName);
@@ -180,58 +173,15 @@ function CropCard({
                 )}
               </View>
             </View>
-            <TouchableOpacity onPress={toggleMenu} style={styles.menuTrigger} activeOpacity={0.85}>
-              <Text style={styles.menuTriggerText}>વિકલ્પ</Text>
+            <TouchableOpacity
+              onPress={() => onOpenDetails(item)}
+              style={styles.menuTrigger}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.menuTriggerText}>માહિતી</Text>
               <Ionicons name="chevron-forward" size={22} color={C.green700} />
             </TouchableOpacity>
           </View>
-
-          {/* Dropdown menu */}
-          {menuOpen && (
-            <Animated.View
-              style={[
-                styles.dropMenu,
-                { opacity: menuAnim, transform: [{ scaleY: menuAnim }] },
-              ]}
-            >
-              {(["Active", "Harvested", "Closed"] as CropStatus[]).map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  style={[
-                    styles.dropMenuItem,
-                    item.status === s && { backgroundColor: STATUS_STYLE[s].bg },
-                  ]}
-                  onPress={() => { toggleMenu(); onStatusChange(item._id, s); }}
-                >
-                  <View style={[styles.statusDot, { backgroundColor: STATUS_STYLE[s].dot }]} />
-                  <Text style={[styles.dropMenuText, item.status === s && { color: STATUS_STYLE[s].text, fontWeight: "700" }]}>
-                    {s === "Active" ? t("common", "statusActive") : s === "Harvested" ? t("common", "statusHarvested") : t("common", "statusClosed")}
-                  </Text>
-                  {item.status === s && (
-                    <Ionicons name="checkmark" size={14} color={STATUS_STYLE[s].text} style={{ marginLeft: "auto" }} />
-                  )}
-                </TouchableOpacity>
-              ))}
-
-              <View style={styles.dropDivider} />
-              <TouchableOpacity
-                style={styles.dropMenuItem}
-                onPress={() => { toggleMenu(); router.push(`/crop/edit-crop?id=${item._id}` as any); }}
-              >
-                <Ionicons name="create-outline" size={20} color={C.textSecondary} />
-                <Text style={styles.dropMenuText}>{t("crop", "editCrop")}</Text>
-                <Ionicons name="chevron-forward" size={18} color={C.textMuted} style={{ marginLeft: "auto" }} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.dropMenuItem}
-                onPress={() => { toggleMenu(); onDelete(item._id); }}
-              >
-                <Ionicons name="trash-outline" size={20} color={C.expense} />
-                <Text style={[styles.dropMenuText, { color: C.expense }]}>{t("crop", "deleteCrop")}</Text>
-                <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: "auto" }} />
-              </TouchableOpacity>
-            </Animated.View>
-          )}
 
           {/* Footer stats */}
           <View style={styles.cardFooter}>
@@ -738,10 +688,13 @@ export default function CropScreen() {
                 <View style={styles.modalHeader}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalTitle}>
-                      {summaryCrop.cropEmoji ?? "🌱"} {summaryCrop.cropName}
+                      {summaryCrop.cropEmoji ?? "🌱"}{" "}
+                      {summaryCrop.subType
+                        ? `${cropDisplayName(summaryCrop.cropName, t)} - ${summaryCrop.subType}`
+                        : cropDisplayName(summaryCrop.cropName, t)}
                     </Text>
                     <Text style={styles.modalArea}>
-                      {Math.round(summaryCrop.area)} {summaryCrop.areaUnit ?? "વીઘા"}
+                      {Math.round(summaryCrop.area)} વીઘા
                     </Text>
                   </View>
                   <View style={styles.modalHeaderRight}>
@@ -754,9 +707,28 @@ export default function CropScreen() {
                         year: "numeric",
                       })}
                     </Text>
-                    <TouchableOpacity onPress={closeSummary} style={styles.modalCloseBtn}>
-                      <Ionicons name="close" size={20} color={C.textSecondary} />
-                    </TouchableOpacity>
+                    <View style={styles.modalHeaderActions}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          closeSummary();
+                          router.push(`/crop/edit-crop?id=${summaryCrop._id}` as any);
+                        }}
+                        style={styles.modalIconBtn}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="create-outline" size={20} color={C.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => {
+                          closeSummary();
+                          handleDelete(summaryCrop._id);
+                        }}
+                        style={styles.modalIconBtn}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="trash-outline" size={20} color={C.expense} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
 
@@ -828,6 +800,52 @@ export default function CropScreen() {
                         ₹ {formatWholeNumber(netProfit)}
                       </Text>
                     </Text>
+
+                    {/* Status label + divider */}
+                    <Text style={styles.modalStatusLabel}>વિકલ્પ પસંદ કરો</Text>
+                    <View style={styles.modalDivider} />
+
+                    {/* Status change buttons in one row */}
+                    <View style={styles.modalStatusRow}>
+                      {(["Active", "Harvested", "Closed"] as CropStatus[]).map((s) => {
+                        const statusStyle = STATUS_STYLE[s] ?? STATUS_STYLE.Active;
+                        const selected = summaryCrop.status === s;
+                        return (
+                          <TouchableOpacity
+                            key={s}
+                            style={[
+                              styles.modalStatusChip,
+                              selected && {
+                                borderColor: statusStyle.dot,
+                                backgroundColor: statusStyle.bg,
+                              },
+                            ]}
+                            activeOpacity={0.85}
+                            onPress={() => {
+                              setSummaryCrop((prev) =>
+                                prev && prev._id === summaryCrop._id
+                                  ? { ...prev, status: s }
+                                  : prev,
+                              );
+                              handleStatusChange(summaryCrop._id, s);
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.modalStatusChipText,
+                                selected && { color: statusStyle.text },
+                              ]}
+                            >
+                              {s === "Active"
+                                ? t("common", "statusActive")
+                                : s === "Harvested"
+                                ? t("common", "statusHarvested")
+                                : t("common", "statusClosed")}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
                   </>
                 )}
 
@@ -1071,18 +1089,28 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   modalHeaderRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    alignItems: "flex-end",
   },
   modalTitle: {
     fontSize: 27,
     fontWeight: "900",
     color: C.textPrimary,
   },
+  modalSubType: {
+    marginTop: 2,
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.textSecondary,
+  },
+  modalTitleEn: {
+    marginTop: 2,
+    fontSize: 15,
+    fontWeight: "700",
+    color: C.textMuted,
+  },
   modalArea: {
-    marginTop: 4,
-    fontSize: 21,
+    marginTop: 3,
+    fontSize: 20,
     fontWeight: "900",
     color: C.textSecondary,
   },
@@ -1090,10 +1118,21 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "800",
     color: C.textSecondary,
+    marginBottom: 4,
+  },
+  modalHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  modalIconBtn: {
+    padding: 8,
+    borderRadius: 999,
+    backgroundColor: C.surface,
   },
   modalCloseBtn: {
-    padding: 10,
-    borderRadius: 12,
+    padding: 8,
+    borderRadius: 999,
     backgroundColor: C.green50,
   },
   modalSub: {
@@ -1191,6 +1230,46 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "900",
     color: C.textPrimary,
+  },
+  modalStatusLabel: {
+    marginTop: 12,
+    fontSize: 18,
+    fontWeight: "700",
+    color: ACTIVE_COLOR,
+  },
+  modalDivider: {
+    marginTop: 6,
+    marginBottom: 6,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: C.borderLight,
+  },
+  modalStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 14,
+    gap: 10,
+  },
+  modalStatusChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: C.borderLight,
+    backgroundColor: C.surface,
+    alignItems: "center",
+  },
+  modalStatusChipActive: {
+    borderColor: ACTIVE_COLOR,
+    backgroundColor: ACTIVE_PALE,
+  },
+  modalStatusChipText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: C.textSecondary,
+  },
+  modalStatusChipTextActive: {
+    color: ACTIVE_COLOR,
   },
   modalBigClose: {
     marginTop: 16,

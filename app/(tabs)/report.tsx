@@ -628,28 +628,7 @@ export default function ReportScreen() {
             );
           })()}
 
-          {/* Crop vs Extra breakdown */}
-          <View style={styles.breakdownCard}>
-            <Text style={styles.breakdownTitle}>📋 આવક-ખર્ચ વિગત</Text>
-            <View style={[styles.breakdownRow, styles.breakdownRowIncome]}>
-              <Text style={styles.breakdownLabel}>પાક આવક</Text>
-              <Text style={[styles.breakdownValue, { color: C.income }]}>{formatINR(cropIncome)}</Text>
-            </View>
-            <View style={[styles.breakdownRow, styles.breakdownRowIncome]}>
-              <Text style={styles.breakdownLabel}>અન્ય આવક (ભાડા, સબસિડી વગેરે)</Text>
-              <Text style={[styles.breakdownValue, { color: C.income }]}>{formatINR(extraIncome)}</Text>
-            </View>
-            <View style={[styles.breakdownRow, styles.breakdownRowExpense]}>
-              <Text style={styles.breakdownLabel}>પાક ખર્ચ</Text>
-              <Text style={[styles.breakdownValue, { color: C.expense }]}>{formatINR(cropExpense)}</Text>
-            </View>
-            <View style={[styles.breakdownRow, styles.breakdownRowExpense]}>
-              <Text style={styles.breakdownLabel}>અન્ય ખર્ચ (ઘર, મશીન વગેરે)</Text>
-              <Text style={[styles.breakdownValue, { color: C.expense }]}>{formatINR(extraExpense)}</Text>
-            </View>
-          </View>
-
-          {/* તમારો ક્રમ — Farmer ranking */}
+          {/* તમારો ક્રમ — Farmer ranking (after આવક પ્રતિ વીઘા) */}
           {showRanking && analytics && (
             <View style={styles.rankingCard}>
               <View style={styles.rankingHeader}>
@@ -673,7 +652,9 @@ export default function ReportScreen() {
               <View style={styles.rankingPoints}>
                 <View style={styles.rankingPoint}>
                   <Ionicons name="checkmark-circle" size={22} color={C.green700} />
-                  <Text style={styles.rankingText}>તમારી આવક ઘણા ખેડૂતો કરતાં સારી છે. તમારું કામ સાચી દિશામાં છે.</Text>
+                  <Text style={styles.rankingText}>
+                    તમારી કુલ આવક ઘણા ખેડૂતો કરતાં સારી છે. તમારું કામ સાચી દિશામાં છે.
+                  </Text>
                 </View>
                 {compare && compare.sampleSize > 0 && (
                   <View style={styles.rankingPoint}>
@@ -683,7 +664,7 @@ export default function ReportScreen() {
                       {compare?.mode === "peer" && (compare.peerName || selectedPeer)
                         ? `${compare.peerName ?? selectedPeer?.name} કરતાં `
                         : "સરેરાશ કરતાં "}
-                      {compareDiffText}.
+                      {compareDiffText}. કુલ અને પ્રતિ વીઘા આવક એકસમાન ન પણ હોય — વધુ જમીન હોવાથી કુલ આવક ઊંચી અને પ્રતિ વીઘા આવક ઓછી હોઈ શકે.
                     </Text>
                   </View>
                 )}
@@ -694,6 +675,27 @@ export default function ReportScreen() {
               )}
             </View>
           )}
+
+          {/* Crop vs Extra breakdown — keep after ranking */}
+          <View style={styles.breakdownCard}>
+            <Text style={styles.breakdownTitle}>📋 આવક-ખર્ચ વિગત</Text>
+            <View style={[styles.breakdownRow, styles.breakdownRowIncome]}>
+              <Text style={styles.breakdownLabel}>પાક આવક</Text>
+              <Text style={[styles.breakdownValue, { color: C.income }]}>{formatINR(cropIncome)}</Text>
+            </View>
+            <View style={[styles.breakdownRow, styles.breakdownRowIncome]}>
+              <Text style={styles.breakdownLabel}>અન્ય આવક (ભાડા, સબસિડી વગેરે)</Text>
+              <Text style={[styles.breakdownValue, { color: C.income }]}>{formatINR(extraIncome)}</Text>
+            </View>
+            <View style={[styles.breakdownRow, styles.breakdownRowExpense]}>
+              <Text style={styles.breakdownLabel}>પાક ખર્ચ</Text>
+              <Text style={[styles.breakdownValue, { color: C.expense }]}>{formatINR(cropExpense)}</Text>
+            </View>
+            <View style={[styles.breakdownRow, styles.breakdownRowExpense]}>
+              <Text style={styles.breakdownLabel}>અન્ય ખર્ચ (ઘર, મશીન વગેરે)</Text>
+              <Text style={[styles.breakdownValue, { color: C.expense }]}>{formatINR(extraExpense)}</Text>
+            </View>
+          </View>
 
           <Text style={styles.sectionTitle}>🌾 આ વર્ષ ના પાક</Text>
           {crops.length === 0 ? (

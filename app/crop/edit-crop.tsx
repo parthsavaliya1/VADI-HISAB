@@ -63,7 +63,7 @@ const CROP_SUBTYPES: Record<string, string[]> = {
   Moong: ["સ્થાનિક"],
   Urad: ["સ્થાનિક"],
   Moth: ["સ્થાનિક"],
-  Vatana: ["સ્થાનિક"],
+  Vatana: ["લીલા", "સફેદ"],
   Val: ["સ્થાનિક"],
   Soybean: ["સ્થાનિક"],
   Castor: ["સ્થાનિક"],
