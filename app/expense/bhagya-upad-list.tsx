@@ -88,28 +88,37 @@ function BhagyaRow({ item }: { item: Expense }) {
   const amount = getAmount(item);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.cardBar} />
-      <View style={styles.cardBody}>
-        <View style={styles.cardTop}>
-          <Text style={styles.cardTitle} numberOfLines={1}>
-            {reason}
-          </Text>
-          <Text style={styles.amount}>₹ {formatINR(amount)}</Text>
-        </View>
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
-            <Text style={styles.metaText}>{formatDate(item.date)}</Text>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() =>
+        router.push(
+          `/transaction/details?id=${item._id}&type=expense` as any,
+        )
+      }
+    >
+      <View style={styles.card}>
+        <View style={styles.cardBar} />
+        <View style={styles.cardBody}>
+          <View style={styles.cardTop}>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {reason}
+            </Text>
+            <Text style={styles.amount}>₹ {formatINR(amount)}</Text>
           </View>
+          <View style={styles.metaRow}>
+            <View style={styles.metaItem}>
+              <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
+              <Text style={styles.metaText}>{formatDate(item.date)}</Text>
+            </View>
+          </View>
+          {item.notes?.trim() ? (
+            <Text style={styles.notes} numberOfLines={2}>
+              📝 {item.notes.trim()}
+            </Text>
+          ) : null}
         </View>
-        {item.notes?.trim() ? (
-          <Text style={styles.notes} numberOfLines={2}>
-            📝 {item.notes.trim()}
-          </Text>
-        ) : null}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

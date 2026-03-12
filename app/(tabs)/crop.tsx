@@ -801,33 +801,37 @@ export default function CropScreen() {
                       </Text>
                     </Text>
 
-                    {/* Status label + divider */}
-                    <Text style={styles.modalStatusLabel}>વિકલ્પ પસંદ કરો</Text>
-                    <View style={styles.modalDivider} />
+                    {/* Status chooser card */}
+                    <View style={styles.modalStatusCard}>
+                      <Text style={styles.modalStatusLabel}>વિકલ્પ પસંદ કરો</Text>
+                      <View style={styles.modalDivider} />
 
-                    {/* Status change buttons in one row */}
-                    <View style={styles.modalStatusRow}>
-                      {(["Active", "Harvested", "Closed"] as CropStatus[]).map((s) => {
+                      {/* Status change buttons in one row (choose, then Save to apply) */}
+                      <View style={styles.modalStatusRow}>
+                      {(["Active", "Harvested", "Closed"] as CropStatus[]).map((s, idx, arr) => {
                         const statusStyle = STATUS_STYLE[s] ?? STATUS_STYLE.Active;
                         const selected = summaryCrop.status === s;
+                        const isFirst = idx === 0;
+                        const isLast = idx === arr.length - 1;
                         return (
                           <TouchableOpacity
                             key={s}
                             style={[
                               styles.modalStatusChip,
+                              isFirst && styles.modalStatusChipFirst,
+                              isLast && styles.modalStatusChipLast,
                               selected && {
                                 borderColor: statusStyle.dot,
                                 backgroundColor: statusStyle.bg,
                               },
                             ]}
-                            activeOpacity={0.85}
+                            activeOpacity={0.9}
                             onPress={() => {
                               setSummaryCrop((prev) =>
                                 prev && prev._id === summaryCrop._id
                                   ? { ...prev, status: s }
                                   : prev,
                               );
-                              handleStatusChange(summaryCrop._id, s);
                             }}
                           >
                             <Text
@@ -846,12 +850,33 @@ export default function CropScreen() {
                         );
                       })}
                     </View>
+                    </View>
                   </>
                 )}
 
-                <TouchableOpacity style={styles.modalBigClose} onPress={closeSummary}>
-                  <Text style={styles.modalBigCloseText}>બંધ કરો</Text>
-                </TouchableOpacity>
+                <View style={styles.modalActionsRow}>
+                  <TouchableOpacity
+                    style={[styles.modalBigBtn, styles.modalBigBtnSecondary]}
+                    onPress={closeSummary}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.modalBigBtnTextSecondary}>બંધ કરો</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBigBtn, styles.modalBigBtnPrimary]}
+                    onPress={() => {
+                      if (!summaryCrop) {
+                        closeSummary();
+                        return;
+                      }
+                      handleStatusChange(summaryCrop._id, summaryCrop.status);
+                      closeSummary();
+                    }}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.modalBigBtnTextPrimary}>સેવ કરો</Text>
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </Pressable>
@@ -1068,31 +1093,36 @@ const styles = StyleSheet.create({
 
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(15,23,42,0.55)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
   modalCard: {
     width: "100%",
-    maxWidth: 480,
-    borderRadius: 24,
+    maxWidth: 500,
+    borderRadius: 26,
     backgroundColor: C.surface,
     padding: 22,
-    borderWidth: 1,
-    borderColor: C.border,
+    borderWidth: 0,
+    // subtle elevation / shadow for floating card effect
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 4,
+    marginBottom: 10,
   },
   modalHeaderRight: {
     alignItems: "flex-end",
   },
   modalTitle: {
-    fontSize: 27,
+    fontSize: 26,
     fontWeight: "900",
     color: C.textPrimary,
   },
@@ -1109,16 +1139,16 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   modalArea: {
-    marginTop: 3,
-    fontSize: 20,
-    fontWeight: "900",
+    marginTop: 4,
+    fontSize: 18,
+    fontWeight: "800",
     color: C.textSecondary,
   },
   modalDate: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: C.textSecondary,
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: "700",
+    color: C.textMuted,
+    marginBottom: 8,
   },
   modalHeaderActions: {
     flexDirection: "row",
@@ -1128,7 +1158,7 @@ const styles = StyleSheet.create({
   modalIconBtn: {
     padding: 8,
     borderRadius: 999,
-    backgroundColor: C.surface,
+    backgroundColor: C.green50,
   },
   modalCloseBtn: {
     padding: 8,
@@ -1232,9 +1262,8 @@ const styles = StyleSheet.create({
     color: C.textPrimary,
   },
   modalStatusLabel: {
-    marginTop: 12,
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
     color: ACTIVE_COLOR,
   },
   modalDivider: {
@@ -1247,40 +1276,71 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 14,
+    marginTop: 10,
     gap: 10,
+  },
+  modalStatusCard: {
+    marginTop: 16,
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: C.green50,
+    borderWidth: 1,
+    borderColor: C.green100,
   },
   modalStatusChip: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1.5,
     borderColor: C.borderLight,
     backgroundColor: C.surface,
     alignItems: "center",
   },
+  modalStatusChipFirst: {
+    marginRight: 4,
+  },
+  modalStatusChipLast: {
+    marginLeft: 4,
+  },
   modalStatusChipActive: {
     borderColor: ACTIVE_COLOR,
     backgroundColor: ACTIVE_PALE,
   },
   modalStatusChipText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: C.textSecondary,
   },
   modalStatusChipTextActive: {
     color: ACTIVE_COLOR,
   },
-  modalBigClose: {
-    marginTop: 16,
+  modalActionsRow: {
+    marginTop: 18,
+    flexDirection: "row",
+    gap: 10,
+  },
+  modalBigBtn: {
+    flex: 1,
     borderRadius: 16,
-    backgroundColor: C.green700,
     alignItems: "center",
     paddingVertical: 14,
   },
-  modalBigCloseText: {
-    fontSize: 18,
-    fontWeight: "900",
+  modalBigBtnSecondary: {
+    backgroundColor: "#E5E7EB",
+  },
+  modalBigBtnPrimary: {
+    backgroundColor: C.green700,
+  },
+  modalBigBtnTextSecondary: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  modalBigBtnTextPrimary: {
+    fontSize: 16,
+    fontWeight: "800",
     color: "#fff",
   },
 

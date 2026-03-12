@@ -22,7 +22,7 @@ import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -34,6 +34,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Dimensions } from "react-native";
 
 const C = {
   green700: "#2E7D32",
@@ -234,7 +235,7 @@ export default function EditCropScreen() {
           if (Math.abs(n - 50) < 2) return "50";
           return String(pct);
         })());
-        if (cr.farmName) setSelectedFarm({ name: cr.farmName, area: 0, category: "own" });
+        if (cr.farmName) setSelectedFarm({ name: cr.farmName, area: 0, category: "owned" });
       })
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false));

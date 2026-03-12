@@ -4,13 +4,13 @@
 
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
-import { createExpense, type AdvanceReason } from "@/utils/api";
+import { createExpense, getExpenseById, updateExpense, type AdvanceReason } from "@/utils/api";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useCallback, useRef, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -114,6 +114,9 @@ function SelectPicker({
 }
 
 export default function AddBhagyaUpad() {
+  const params = useLocalSearchParams<{ id?: string }>();
+  const editId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const isEdit = !!editId;
   const { refreshTransactions } = useRefresh();
   const keyboardHeight = useKeyboardHeight();
   const keyboardHeightRef = useRef(keyboardHeight);
@@ -147,6 +150,28 @@ export default function AddBhagyaUpad() {
   const [type, setType] = useState<AdvanceReason | "">("");
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  const [date, setDate] = useState<Date | null>(null);
+
+  // Load existing expense when editing
+  useEffect(() => {
+    if (!isEdit || !editId) return;
+    (async () => {
+      try {
+        const doc = await getExpenseById(editId);
+        const reason = doc.labourContract?.advanceReason as AdvanceReason | undefined;
+        if (reason) setType(reason);
+        const amt =
+          doc.labourContract?.amountGiven ??
+          (doc as any).amount ??
+          0;
+        setAmount(amt ? String(amt) : "");
+        if (doc.date) setDate(new Date(doc.date));
+      } catch (e) {
+        Alert.alert("ભૂલ", (e as Error).message ?? "ડેટા લોડ ન થઈ શક્યો");
+        router.back();
+      }
+    })();
+  }, [isEdit, editId]);
 
   const handleSave = async () => {
     if (!type) {
@@ -158,21 +183,30 @@ export default function AddBhagyaUpad() {
       Alert.alert("⚠️ ભૂલ", "રકમ દાખલ કરો.");
       return;
     }
+    const payload = {
+      cropId: null,
+      category: "Labour" as const,
+      expenseSource: "bhagyaUpad" as const,
+      date: (date ?? new Date()).toISOString(),
+      labourContract: {
+        advanceReason: type,
+        amountGiven: num,
+        sourceTag: "bhagyaUpad" as const,
+      },
+    };
     try {
       setSaving(true);
-      await createExpense({
-        cropId: null,
-        category: "Labour",
-        expenseSource: "bhagyaUpad",
-        date: new Date().toISOString(),
-        labourContract: {
-          advanceReason: type,
-          amountGiven: num,
-          sourceTag: "bhagyaUpad",
-        },
-      });
+      if (isEdit && editId) {
+        await updateExpense(editId, payload);
+      } else {
+        await createExpense(payload);
+      }
       refreshTransactions();
-      Toast.show({ type: "success", text1: "સફળ!", text2: "ભાગ્યા નો ઉપાડ સાચવ્યો." });
+      Toast.show({
+        type: "success",
+        text1: "સફળ!",
+        text2: isEdit ? "ભાગ્યા નો ઉપાડ અપડેટ થયો." : "ભાગ્યા નો ઉપાડ સાચવ્યો.",
+      });
       router.back();
     } catch (e: any) {
       Alert.alert("ભૂલ", e?.message ?? "સાચવતી વખતે ભૂલ.");

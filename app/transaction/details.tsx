@@ -169,6 +169,15 @@ export default function TransactionDetailsScreen() {
       const q = cropId ? `?id=${id}&cropId=${cropId}` : `?id=${id}&general=1`;
       router.push(`/income/add-income${q}` as any);
     } else {
+      // Dedicated Bhagya Upad (advance withdrawal) should edit in its own screen
+      if (
+        expense &&
+        (expense.expenseSource === "bhagyaUpad" ||
+          expense.labourContract?.sourceTag === "bhagyaUpad")
+      ) {
+        router.push(`/expense/add-bhagya-upad?id=${id}` as any);
+        return;
+      }
       const cropId = expense?.cropId != null
         ? (typeof expense.cropId === "object" ? (expense.cropId as any)._id : expense.cropId)
         : "";
