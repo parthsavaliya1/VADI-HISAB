@@ -119,9 +119,9 @@ function cropDisplayName(name: string, t: (s: string, k: string) => string): str
 
 /** Season label from translations */
 function seasonCategoryLabel(season: string | undefined, t: (s: string, k: string) => string): string {
-  if (season === "Kharif") return t("common", "kharif");
-  if (season === "Rabi") return t("common", "rabi");
-  if (season === "Summer") return t("common", "summer");
+  if (season === "Chomasu") return t("common", "kharif");
+  if (season === "Siyalo") return t("common", "rabi");
+  if (season === "Unalo") return t("common", "summer");
   return season ?? "—";
 }
 
@@ -327,10 +327,10 @@ function expenseLabel(e: Expense): string {
     Other: "અન્ય",
   };
 
-  if (e.category === "Labour") {
-    if (e.expenseSource === "generalExpense") {
-      return e.notes?.trim() || "વધારા નો ખર્ચ";
-    }
+          if (e.category === "Labour") {
+            if (e.expenseSource === "generalExpense") {
+              return e.notes?.trim() || "વધારો નો ખર્ચ";
+            }
 
     if (e.labourDaily?.task) {
       return `મજૂરી - ${LABOUR_TASK_LABELS[e.labourDaily.task] ?? e.labourDaily.task}`;
@@ -694,10 +694,10 @@ function CropPickerModal({
                   <View style={{ flex: 1 }}>
                     <Text style={styles.sheetCropName}>{cropDisplayName(crop.cropName, t)}</Text>
                     <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
-                      <Text style={styles.sheetCropMeta}>
-                        {crop.season === "Kharif"
+            <Text style={styles.sheetCropMeta}>
+                        {crop.season === "Chomasu"
                           ? `☔ ${t("common", "kharif")}`
-                          : crop.season === "Rabi"
+                          : crop.season === "Siyalo"
                             ? `❄️ ${t("common", "rabi")}`
                             : `☀️ ${t("common", "summer")}`}
                         {" · "}

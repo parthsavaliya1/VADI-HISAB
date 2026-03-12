@@ -49,29 +49,78 @@ const C = {
 };
 
 const CROP_SUBTYPES: Record<string, string[]> = {
-  Cotton: ["Bt-Cotton", "Shankar-6", "RCH-2", "MRC-7017"],
-  Groundnut: ["GG-20", "GJG-22", "TG-37A", "J-11"],
-  Jeera: ["GJ Jeera-2", "RZ-19", "RZ-209", "GCU-1"],
-  Garlic: ["Desi", "Chinese", "Red", "White", "GG-4"],
-  Onion: ["Pusa Red", "Agrifound Dark Red", "Local"],
-  Chana: ["GG-1", "GG-2", "Desi", "Kabuli"],
-  Wheat: ["GW-496", "GW-322", "GW-496", "Lok-1"],
-  Bajra: ["GHB-558", "GHB-719", "GHB-744"],
-  Maize: ["TATA-900M", "DKC-9144", "Pioneer-30V92"],
+  Groundnut: ["BT-32", "BT-37", "BT-38", "BT-39", "BT-45", "BT-128", "જિવિસ", "રોહિણી", "મિનક્ષી", "ગિર્ણાર", "રેન્બો"],
+  Cotton: ["2 BT", "ભક્તિ", "ATM", "જાદુ"],
+  Chana: ["દેશી", "3", "કાબુલી", "સફેદ"],
+  Jeera: ["માંગલમ 4", "માંગલમ 5", "નિસાન 444", "જીરાલી", "કૈલાશ 4"],
+  Wheat: ["452", "496", "લોક 1"],
+  Garlic: ["દેશી", "MP", "ચાઇનીઝ"],
+  Onion: ["પીળી પત્તી", "લાલ", "સફેદ", "દ્રોણા", "કલસ કિંગ", "પંચ ગંગા"],
+  Dhana: ["2", "4", "JAS 4", "ધાણી"],
+  Tal: ["કાળો", "સફેદ"],
+  Maize: ["સાદી", "અમેરિકન"],
+  Kalonji: ["સ્થાનિક"],
+  Moong: ["સ્થાનિક"],
+  Urad: ["સ્થાનિક"],
+  Moth: ["સ્થાનિક"],
+  Vatana: ["સ્થાનિક"],
+  Val: ["સ્થાનિક"],
+  Soybean: ["સ્થાનિક"],
+  Castor: ["સ્થાનિક"],
+  Tuver: ["સ્થાનિક"],
+  Methi: ["સ્થાનિક"],
+  Bajra: ["સ્થાનિક"],
+  Marchi: ["લાંબી", "દેશી", "તીખી", "કાશ્મીરી"],
 };
 // Emojis chosen to best match each crop (research-based; no dedicated cotton/chickpea in Unicode)
 const CROP_EMOJIS: Record<string, string> = {
-  Cotton: "💮",   // white flower ≈ cotton boll (kapas); alt ☁️ cloud
-  Groundnut: "🥜", // peanuts
-  Jeera: "🌿",    // herb/spice (cumin)
+  Groundnut: "🥜",
+  Cotton: "💮",
+  Chana: "🫘",
+  Jeera: "🌿",
+  Wheat: "🌾",
   Garlic: "🧄",
   Onion: "🧅",
-  Chana: "🫘",     // beans/legume (chickpea)
-  Wheat: "🌾",    // sheaf of grain
-  Bajra: "🌾",    // pearl millet (grain)
-  Maize: "🌽",    // corn
+  Dhana: "🌿",
+  Tal: "🌱",
+  Maize: "🌽",
+  Kalonji: "🌿",
+  Moong: "🫘",
+  Urad: "🫘",
+  Moth: "🫘",
+  Vatana: "🫛",
+  Val: "🫘",
+  Soybean: "🫘",
+  Castor: "🌱",
+  Tuver: "🫘",
+  Methi: "🌿",
+  Bajra: "🌾",
+  Marchi: "🌶️",
 };
-const CROP_VALUES = ["Cotton", "Groundnut", "Jeera", "Garlic", "Onion", "Chana", "Wheat", "Bajra", "Maize"];
+const CROP_VALUES = [
+  "Groundnut",
+  "Cotton",
+  "Chana",
+  "Jeera",
+  "Wheat",
+  "Garlic",
+  "Onion",
+  "Dhana",
+  "Tal",
+  "Maize",
+  "Kalonji",
+  "Moong",
+  "Urad",
+  "Moth",
+  "Vatana",
+  "Val",
+  "Soybean",
+  "Castor",
+  "Tuver",
+  "Methi",
+  "Bajra",
+  "Marchi",
+];
 
 function SectionLabel({ text }: { text: string }) {
   return <Text style={styles.sectionLabel}>{text}</Text>;
@@ -84,9 +133,9 @@ export default function EditCropScreen() {
   const { profile, setProfile } = useProfile();
 
   const SEASONS: { value: CropSeason; label: string; icon: string }[] = [
-    { value: "Kharif", label: t("common", "kharif"), icon: "☔" },
-    { value: "Rabi", label: t("common", "rabi"), icon: "❄️" },
-    { value: "Summer", label: t("common", "summer"), icon: "☀️" },
+    { value: "Chomasu", label: t("common", "kharif"), icon: "☔" },
+    { value: "Siyalo", label: t("common", "rabi"), icon: "❄️" },
+    { value: "Unalo", label: t("common", "summer"), icon: "☀️" },
   ];
   const CROPS = CROP_VALUES.map((value) => ({
     value,

@@ -148,9 +148,9 @@ function expenseLabel(e: Expense): string {
     Other: "અન્ય",
   };
 
-  if (e.category === "Labour") {
+    if (e.category === "Labour") {
     if (e.expenseSource === "generalExpense") {
-      return e.notes?.trim() || "વધારા નો ખર્ચ";
+      return e.notes?.trim() || "વધારો નો ખર્ચ";
     }
 
     if (e.labourDaily?.task) {
@@ -441,8 +441,7 @@ export default function AllTransactionsScreen() {
 
   const filterChips: { key: TxnFilter; label: string }[] = [
     { key: "crop", label: "પાક આવક/ખર્ચ" },
-   
-    { key: "general", label: "વધારા નો ખર્ચ" },
+    { key: "general", label: "વધારો નો ખર્ચ" },
     ...(profile?.tractorAvailable ? [] : []),
   ];
 

@@ -49,14 +49,14 @@ const C = { ...AppTheme, gold: "#F9A825", goldPale: "#FFFDE7" };
 
 // ─── Season & Status config (labels from translations in component) ───────────
 const SEASON_ICONS: Record<string, string> = {
-  Kharif: "☔",
-  Rabi: "❄️",
-  Summer: "☀️",
+  Chomasu: "☔",
+  Siyalo: "❄️",
+  Unalo: "☀️",
 };
 const SEASON_COLORS: Record<string, { color: string; pale: string }> = {
-  Kharif: { color: "#0EA5E9", pale: "#E0F2FE" },
-  Rabi: { color: "#6366F1", pale: "#EEF2FF" },
-  Summer: { color: "#F59E0B", pale: "#FEF3C7" },
+  Chomasu: { color: "#0EA5E9", pale: "#E0F2FE" },
+  Siyalo: { color: "#6366F1", pale: "#EEF2FF" },
+  Unalo: { color: "#F59E0B", pale: "#FEF3C7" },
 };
 
 const ACTIVE_COLOR = "#0D9488";

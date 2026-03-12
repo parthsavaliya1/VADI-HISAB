@@ -167,9 +167,9 @@ const CROP_NAME_GUJ: Record<string, string> = {
   Maize: "મકાઈ",
 };
 const SEASON_DISPLAY: Record<string, string> = {
-  Kharif: "☔ ખરીફ",
-  Rabi: "❄️ રવી",
-  Summer: "☀️ ઉનાળો",
+  Chomasu: "☔ ચોમાસું",
+  Siyalo: "❄️ શિયાળો",
+  Unalo: "☀️ ઉનાળો",
 };
 const AREA_UNIT_GUJ: Record<string, string> = {
   Bigha: "વીઘા",

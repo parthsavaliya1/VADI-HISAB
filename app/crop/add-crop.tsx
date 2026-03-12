@@ -65,7 +65,7 @@ const SEASONS: {
   inactiveBg: [string, string];
 }[] = [
   {
-    value: "Kharif",
+    value: "Chomasu",
     label: "ચોમાસુ",
     sublabel: "જૂન – ઓક્ટોબર",
     icon: "☔",
@@ -74,7 +74,7 @@ const SEASONS: {
     inactiveBg: ["#E0F2FE", "#BAE6FD"],
   },
   {
-    value: "Rabi",
+    value: "Siyalo",
     label: "શિયાળો",
     sublabel: "નવેમ્બર – માર્ચ",
     icon: "❄️",
@@ -83,7 +83,7 @@ const SEASONS: {
     inactiveBg: ["#E0E7FF", "#C7D2FE"],
   },
   {
-    value: "Summer",
+    value: "Unalo",
     label: "ઉનાળો",
     sublabel: "એપ્રિલ – જૂન",
     icon: "☀️",
@@ -99,59 +99,159 @@ const CROPS: {
   emoji: string;
   subtypes: string[];
 }[] = [
-  {
-    value: "Cotton",
-    label: "કપાસ",
-    emoji: "💮",
-    subtypes: ["Bt-Cotton", "Shankar-6", "RCH-2", "MRC-7017"],
-  },
+  // 1. મગફળી
   {
     value: "Groundnut",
     label: "મગફળી",
     emoji: "🥜",
-    subtypes: ["GG-20", "GJG-22", "TG-37A", "J-11"],
+    subtypes: ["BT-32", "BT-37", "BT-38", "BT-39", "BT-45", "BT-128", "જિવિસ", "રોહિણી", "મિનક્ષી", "ગિર્ણાર", "રેન્બો"],
   },
+  // 2. કપાસ
   {
-    value: "Jeera",
-    label: "જીરું",
-    emoji: "🌿",
-    subtypes: ["GJ Jeera-2", "RZ-19", "RZ-209", "GCU-1"],
+    value: "Cotton",
+    label: "કપાસ",
+    emoji: "💮",
+    subtypes: ["2 BT", "ભક્તિ", "ATM", "જાદુ"],
   },
-  {
-    value: "Garlic",
-    label: "લસણ",
-    emoji: "🧄",
-    subtypes: ["Desi", "Chinese", "Red", "White", "GG-4"],
-  },
-  {
-    value: "Onion",
-    label: "ડુંગળી",
-    emoji: "🧅",
-    subtypes: ["Pusa Red", "Agrifound Dark Red", "Local"],
-  },
+  // 3. ચણા
   {
     value: "Chana",
     label: "ચણા",
     emoji: "🫘",
-    subtypes: ["GG-1", "GG-2", "Desi", "Kabuli"],
+    subtypes: ["દેશી", "3", "કાબુલી", "સફેદ"],
   },
+  // 4. જીરું
+  {
+    value: "Jeera",
+    label: "જીરું",
+    emoji: "🌿",
+    subtypes: ["માંગલમ 4", "માંગલમ 5", "નિસાન 444", "જીરાલી", "કૈલાશ 4"],
+  },
+  // 5. ઘઉં
   {
     value: "Wheat",
     label: "ઘઉં",
     emoji: "🌾",
-    subtypes: ["GW-496", "GW-322", "GW-496", "Lok-1"],
+    subtypes: ["452", "496", "લોક 1"],
   },
+  // 6. લસણ
   {
-    value: "Bajra",
-    label: "બાજરી",
-    emoji: "🌾",
-    subtypes: ["GHB-558", "GHB-719", "GHB-744"],
+    value: "Garlic",
+    label: "લસણ",
+    emoji: "🧄",
+    subtypes: ["દેશી", "MP", "ચાઇનીઝ"],
   },
+  // 7. ડુંગળી
+  {
+    value: "Onion",
+    label: "ડુંગળી",
+    emoji: "🧅",
+    subtypes: ["પીળી પત્તી", "લાલ", "સફેદ", "દ્રોણા", "કલસ કિંગ", "પંચ ગંગા"],
+  },
+  // 8. ધાણા
+  {
+    value: "Dhana",
+    label: "ધાણા",
+    emoji: "🌿",
+    subtypes: ["2", "4", "JAS 4", "ધાણી"],
+  },
+  // 9. તલ
+  {
+    value: "Tal",
+    label: "તલ",
+    emoji: "🌱",
+    subtypes: ["કાળો", "સફેદ"],
+  },
+  // 10. મકાઈ
   {
     value: "Maize",
     label: "મકાઈ",
     emoji: "🌽",
-    subtypes: ["TATA-900M", "DKC-9144", "Pioneer-30V92"],
+    subtypes: ["સાદી", "અમેરિકન"],
+  },
+  // 11. કલોનજી
+  {
+    value: "Kalonji",
+    label: "કલોનજી",
+    emoji: "🌿",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 12. મગ
+  {
+    value: "Moong",
+    label: "મગ",
+    emoji: "🫘",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 13. અડદ
+  {
+    value: "Urad",
+    label: "અડદ",
+    emoji: "🫘",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 14. મઠ
+  {
+    value: "Moth",
+    label: "મઠ",
+    emoji: "🫘",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 15. વટાણા
+  {
+    value: "Vatana",
+    label: "વટાણા",
+    emoji: "🫛",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 16. વાલ
+  {
+    value: "Val",
+    label: "વાલ",
+    emoji: "🫘",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 17. સોયાબીન
+  {
+    value: "Soybean",
+    label: "સોયાબીન",
+    emoji: "🫘",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 18. એરંડા
+  {
+    value: "Castor",
+    label: "એરંડા",
+    emoji: "🌱",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 19. તુવર
+  {
+    value: "Tuver",
+    label: "તુવર",
+    emoji: "🫘",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 20. મેથી
+  {
+    value: "Methi",
+    label: "મેથી",
+    emoji: "🌿",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 21. બાજરી
+  {
+    value: "Bajra",
+    label: "બાજરી",
+    emoji: "🌾",
+    subtypes: ["સ્થાનિક"],
+  },
+  // 22. મરચી
+  {
+    value: "Marchi",
+    label: "મરચી",
+    emoji: "🌶️",
+    subtypes: ["લાંબી", "દેશી", "તીખી", "કાશ્મીરી"],
   },
 ];
 
@@ -311,7 +411,7 @@ function CropCard({
   );
 }
 
-// Large subtype card for step 2 — icon left, label right, highlight only
+// Large subtype card — same style grid as crop cards
 function SubTypeCard({
   label,
   cropEmoji,
@@ -329,22 +429,17 @@ function SubTypeCard({
       onPress={onPress}
       activeOpacity={0.85}
     >
-      <View style={styles.subTypeIconWrap}>
-        <Text style={styles.subTypeEmoji}>{cropEmoji}</Text>
-      </View>
+      <Text style={styles.subTypeEmoji}>{cropEmoji}</Text>
       <Text
         style={[styles.subTypeLabel, selected && styles.subTypeLabelActive]}
-        numberOfLines={1}
+        numberOfLines={2}
       >
         {label}
       </Text>
       {selected && (
-        <Ionicons
-          name="checkmark-circle"
-          size={22}
-          color={C.green700}
-          style={{ marginLeft: "auto" }}
-        />
+        <View style={styles.cropCardCheck}>
+          <Ionicons name="checkmark-circle" size={20} color={C.green700} />
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -389,6 +484,8 @@ export default function AddCrop() {
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef<ScrollView | null>(null);
+  const [subTypeOffsetY, setSubTypeOffsetY] = useState<number | null>(null);
   const { profile, setProfile } = useProfile();
 
   // Load existing crop when editing
@@ -693,6 +790,7 @@ export default function AddCrop() {
 
       {/* ── Content ── */}
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1, backgroundColor: C.bg }}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -838,7 +936,7 @@ export default function AddCrop() {
                     label={c.label}
                     emoji={c.emoji}
                     selected={form.cropValue === c.value && !form.customCrop}
-                    onPress={() =>
+                    onPress={() => {
                       setForm((p) => ({
                         ...p,
                         cropValue: c.value,
@@ -847,8 +945,14 @@ export default function AddCrop() {
                         customCrop: "",
                         subType: "",
                         customSubType: "",
-                      }))
-                    }
+                      }));
+                      if (subTypeOffsetY != null && scrollRef.current) {
+                        scrollRef.current.scrollTo({
+                          y: Math.max(subTypeOffsetY - 40, 0),
+                          animated: true,
+                        });
+                      }
+                    }}
                   />
                 ))}
               </View>
@@ -891,7 +995,12 @@ export default function AddCrop() {
                   <Text style={styles.stepDesc}>
                     {finalCropEmoji} {finalCropLabel} નો જાત / બીજ પ્રકાર પસંદ કરો અથવા ટાઈપ કરો
                   </Text>
-                  <View style={styles.fieldCard}>
+                  <View
+                    style={styles.fieldCard}
+                    onLayout={(e) => {
+                      setSubTypeOffsetY(e.nativeEvent.layout.y);
+                    }}
+                  >
                     {currentCropSubtypes.length > 0 && (
                       <View style={styles.subTypeGrid}>
                         {currentCropSubtypes.map((st) => (
@@ -1333,7 +1442,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: C.textPrimary,
+    textAlign: "center",
+  },
   headerSub: { fontSize: 13, color: C.textMuted, marginTop: 2, fontWeight: "700" },
 
   dotsRow: {
@@ -1513,16 +1627,16 @@ const styles = StyleSheet.create({
   },
   leaseAddText: { fontSize: 15, fontWeight: "700", color: "#fff" },
 
-  // Crop grid — 3 per row, large icons
+  // Crop grid — 4 per row, large icons
   cropGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 10,
     marginBottom: 16,
   },
   cropCard: {
-    width: "31%",
-    minWidth: 96,
+    width: "23%",
+    minWidth: 76,
     backgroundColor: C.surface,
     borderRadius: 14,
     padding: 10,
@@ -1551,7 +1665,7 @@ const styles = StyleSheet.create({
   cropCardLabelActive: { color: C.green900 },
   cropCardCheck: { position: "absolute", top: 8, right: 8 },
 
-  // SubType — large cards, icon left, label right
+  // SubType — same grid pattern as crop cards (4 per row)
   subTypeGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1559,15 +1673,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   subTypeCard: {
-    width: "48%",
-    minWidth: 140,
-    flexDirection: "row",
+    width: "31%",
+    minWidth: 96,
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: C.surface,
     borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderWidth: 2.5,
+    padding: 10,
+    borderWidth: 2,
     borderColor: C.borderLight,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -1576,13 +1689,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   subTypeCardActive: { borderColor: C.green700, backgroundColor: C.green50 },
-  subTypeIconWrap: { width: 44, alignItems: "center" },
-  subTypeEmoji: { fontSize: 28 },
+  subTypeEmoji: { fontSize: 28, marginBottom: 4 },
   subTypeLabel: {
-    flex: 1,
     fontSize: 16,
     fontWeight: "700",
     color: C.textPrimary,
+    textAlign: "center",
   },
   subTypeLabelActive: { color: C.green900 },
 

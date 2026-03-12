@@ -12,7 +12,9 @@ import {
   getIncomeAnalytics,
   getCurrentFinancialYear,
   getYearlyReport,
+  getVadiScore,
   type CropReportRow,
+  type VadiScoreResponse,
 } from "@/utils/api";
 import { formatWholeNumber } from "@/utils/format";
 import { Ionicons } from "@expo/vector-icons";
@@ -99,6 +101,7 @@ export default function ReportScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [peerPickerVisible, setPeerPickerVisible] = useState(false);
   const [peerSearch, setPeerSearch] = useState("");
+  const [vadiScore, setVadiScore] = useState<VadiScoreResponse | null>(null);
 
   const loadReport = useCallback(async () => {
     try {
@@ -145,6 +148,12 @@ export default function ReportScreen() {
   useEffect(() => {
     loadReport();
   }, [loadReport, transactionsRefreshKey]);
+
+  useEffect(() => {
+    getVadiScore()
+      .then((res) => setVadiScore(res))
+      .catch(() => setVadiScore(null));
+  }, [transactionsRefreshKey]);
 
   const years = getFinancialYearOptionsExtended();
   const summary = report?.summary ?? { totalIncome: 0, totalExpense: 0, netProfit: 0, totalCrops: 0, totalArea: 0 };
@@ -203,9 +212,10 @@ export default function ReportScreen() {
     ? selectedPeer.name
     : "સરેરાશ ખેડૂત";
 
-  // Temporary VADI scores (0–100) — formula will be updated later.
-  const myScore = 85;
-  const peerScore = selectedPeer ? 82 : null;
+  // VADI score (0–100) — use same API as profile; show 0 when backend has no score yet.
+  const myScore = vadiScore?.farmer_vadi_score ?? 0;
+  // For now backend does not return peer VADI scores; keep comparison UI but show 0 as placeholder.
+  const peerScore = 0;
 
   return (
     <View style={styles.container}>
@@ -298,25 +308,16 @@ export default function ReportScreen() {
           {/* Score summary — your score vs selected farmer (out of 100) */}
           <View style={styles.scoreRow}>
             <View style={[styles.scoreBox, styles.scoreBoxMine]}>
-              <Text style={styles.scoreLabel}>તમારો સ્કોર</Text>
+              <Text style={styles.scoreLabel}>તમારો VADI સ્કોર</Text>
               <Text style={styles.scoreValue}>{myScore}/100</Text>
             </View>
             <View style={[styles.scoreBox, styles.scoreBoxPeer]}>
               <Text style={styles.scoreLabel}>
-                {selectedPeer ? "પસંદ ખેડૂત" : "પસંદ ખેડૂત સ્કોર"}
+                {selectedPeer ? selectedPeer.name : "સરેરાશ ખેડૂત"}
               </Text>
-              {selectedPeer ? (
-                <View style={styles.scorePeerInner}>
-                  <Text style={styles.scorePeerName} numberOfLines={1}>
-                    {selectedPeer.name}
-                  </Text>
-                  <Text style={styles.scoreValue}>
-                    {peerScore != null ? `${peerScore}/100` : "--/100"}
-                  </Text>
-                </View>
-              ) : (
-                <Text style={styles.scorePeerHint}>સૌ પ્રથમ કોઈ ખેડૂત પસંદ કરો</Text>
-              )}
+              <View style={styles.scorePeerInner}>
+                <Text style={styles.scoreValue}>{peerScore}/100</Text>
+              </View>
             </View>
           </View>
 

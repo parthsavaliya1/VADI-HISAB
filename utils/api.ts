@@ -10,7 +10,7 @@ import axios, { AxiosError } from "axios";
 // 🚀 PROD: Set EXPO_PUBLIC_API_URL=https://your-api.onrender.com/api
 const BASE_URL =
   (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ||
-  "http://192.168.1.13:8000/api";
+  "http://192.168.1.8:8000/api";
 
 // ─── Axios Instance ───────────────────────────
 export const API = axios.create({
@@ -378,7 +378,7 @@ export const getVadiScore = async (): Promise<VadiScoreResponse> => {
 // 🌾 CROP TYPES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export type CropSeason = "Kharif" | "Rabi" | "Summer";
+export type CropSeason = "Chomasu" | "Siyalo" | "Unalo";
 export type CropStatus = "Active" | "Harvested" | "Closed";
 export type AreaUnit = "Acre" | "Bigha" | "Hectare";
 

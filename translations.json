@@ -144,7 +144,7 @@
             "labourShareLabel": "મજૂર/યંત્ર ભાગ ({pct}%)",
             "weatherLoading": "લોડ થઈ રહ્યું છે...",
             "bhagyaUpad": "ભાગ્યા ઉપાડ",
-            "generalExpense": "વધારા નો ખર્ચ",
+            "generalExpense": "વધારો નો ખર્ચ",
             "generalIncome": "સામાન્ય આવક",
             "incomePerBighaShort": "આવક/વીઘા",
             "expensePerBighaShort": "ખર્ચ/વીઘા"
@@ -192,8 +192,8 @@
         "common": {
             "bigha": "વીઘા",
             "acre": "એકર",
-            "kharif": "ખરીફ",
-            "rabi": "રવી",
+            "kharif": "ચોમાસું",
+            "rabi": "શિયાળો",
             "summer": "ઉનાળો",
             "logout": "લૉગ આઉટ",
             "language": "ભાષા",
@@ -590,7 +590,7 @@
         "common": {
             "bigha": "Bigha",
             "acre": "Acre",
-            "kharif": "Kharif",
+            "kharif": "Chomasu",
             "rabi": "Rabi",
             "summer": "Summer",
             "logout": "Logout",
@@ -621,15 +621,28 @@
             "partlyCloudy": "Partly cloudy"
         },
         "cropNames": {
-            "Cotton": "Cotton",
             "Groundnut": "Groundnut",
+            "Cotton": "Cotton",
+            "Chana": "Chana",
             "Jeera": "Jeera",
+            "Wheat": "Wheat",
             "Garlic": "Garlic",
             "Onion": "Onion",
-            "Chana": "Chana",
-            "Wheat": "Wheat",
+            "Dhana": "Dhana",
+            "Tal": "Tal",
+            "Maize": "Maize",
+            "Kalonji": "Kalonji",
+            "Moong": "Moong",
+            "Urad": "Urad",
+            "Moth": "Moth",
+            "Vatana": "Vatana",
+            "Val": "Val",
+            "Soybean": "Soybean",
+            "Castor": "Castor",
+            "Tuver": "Tuver",
+            "Methi": "Methi",
             "Bajra": "Bajra",
-            "Maize": "Maize"
+            "Marchi": "Marchi"
         },
         "txn": {
             "expenseSeed": "Seed - {detail}",

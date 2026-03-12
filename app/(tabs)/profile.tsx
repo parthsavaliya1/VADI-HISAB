@@ -859,7 +859,7 @@ export default function Profile() {
         const current = !!apiProfile?.analyticsConsent;
         setProfilePopup({
             title: t("profileTab", "dataSharing"),
-            message: `${t("profileTab", "dataSharingNote")}\n\n${current ? t("profileTab", "on") : t("profileTab", "off")}`,
+            message: t("profileTab", "dataSharingNote"),
             icon: "shield-checkmark-outline",
             iconColor: "#0F766E",
             iconBg: "#CCFBF1",
@@ -991,7 +991,7 @@ export default function Profile() {
                         <View style={styles.vadiScoreCard}>
                             <Text style={styles.vadiScoreTitle}>Your VADI Score</Text>
                             <Text style={styles.vadiScoreMainValue}>
-                                {vadiScore.farmer_vadi_score != null ? vadiScore.farmer_vadi_score : "--"}
+                                {vadiScore.farmer_vadi_score ?? 0}
                             </Text>
                             {vadiScore.village_rank != null && vadiScore.village_total_farmers > 0 && (
                                 <Text style={styles.vadiScoreRank}>
@@ -1112,7 +1112,7 @@ export default function Profile() {
                                         villageLabel={villageDisplay}
                                         cardWidth={Math.min(SCREEN_W - 48, 440)}
                                         cardHeight={320}
-                                        vadiScore={85}
+                                        vadiScore={vadiScore?.farmer_vadi_score ?? 0}
                                     />
                                 </ViewShotComponent>
                             ) : (
@@ -1123,7 +1123,7 @@ export default function Profile() {
                                     villageLabel={villageDisplay}
                                     cardWidth={Math.min(SCREEN_W - 48, 440)}
                                     cardHeight={320}
-                                    vadiScore={85}
+                                    vadiScore={vadiScore?.farmer_vadi_score ?? 0}
                                 />
                             )}
                         </ScrollView>
@@ -1198,18 +1198,26 @@ const styles = StyleSheet.create({
     profileScoreCornerValue: { fontSize: 22, fontWeight: "900", color: "#166534" },
     vadiScoreCard: {
         marginHorizontal: 18,
-        marginBottom: 18,
-        padding: 16,
-        borderRadius: 18,
-        backgroundColor: "#F1F5F9",
-        borderWidth: 1,
-        borderColor: "#DBEAFE",
+        marginBottom: 22,
+        paddingVertical: 26,
+        paddingHorizontal: 22,
+        borderRadius: 24,
+        backgroundColor: "#EFF6FF",
+        borderWidth: 1.5,
+        borderColor: "#93C5FD",
+        shadowColor: "#1D4ED8",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.18,
+        shadowRadius: 12,
+        elevation: 5,
+        minHeight: 170,
+        justifyContent: "center",
     },
     vadiScoreMainValue: {
-        fontSize: 28,
+        fontSize: 34,
         fontWeight: "900",
         color: "#1D4ED8",
-        marginTop: 4,
+        marginTop: 6,
     },
     vadiScoreHeader: {
         flexDirection: "row",
@@ -1217,8 +1225,8 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         marginBottom: 8,
     },
-    vadiScoreTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A" },
-    vadiScoreSubtitle: { fontSize: 13, fontWeight: "600", color: "#4B5563", marginTop: 2 },
+    vadiScoreTitle: { fontSize: 20, fontWeight: "900", color: "#0F172A" },
+    vadiScoreSubtitle: { fontSize: 14, fontWeight: "700", color: "#4B5563", marginTop: 4 },
     vadiScoreCircle: {
         width: 70,
         height: 70,
@@ -1368,26 +1376,26 @@ const styles = StyleSheet.create({
     versionText: { textAlign: "center", fontSize: 16, color: "#2D4230", marginBottom: 4 },
     quickCard: {
         backgroundColor: "#FFFFFF",
-        borderRadius: 20,
+        borderRadius: 18,
         marginHorizontal: 18,
-        marginBottom: 18,
-        paddingHorizontal: 20,
-        paddingVertical: 8,
+        marginBottom: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 4,
         shadowColor: "#0A0E0B",
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+        elevation: 1,
     },
     quickRow: {
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 15,
-        gap: 14,
+        paddingVertical: 10,
+        gap: 10,
     },
     quickTextWrap: { flex: 1 },
-    quickTitle: { fontSize: 18, fontWeight: "700", color: "#1A2E1C" },
-    quickSub: { fontSize: 15, color: "#64748B", marginTop: 3 },
+    quickTitle: { fontSize: 16, fontWeight: "700", color: "#1A2E1C" },
+    quickSub: { fontSize: 13, color: "#64748B", marginTop: 2 },
     quickDivider: { height: 1, backgroundColor: "#EEF2EC" },
     popupOverlay: {
         flex: 1,
@@ -1429,7 +1437,7 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
     popupMessage: {
-        fontSize: 16,
+        fontSize: 18,
         lineHeight: 24,
         color: "#5C6B5E",
         textAlign: "center",
