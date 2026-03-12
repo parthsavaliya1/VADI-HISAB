@@ -683,14 +683,8 @@ export type FertilizerProduct = "Urea" | "DAP" | "NPK" | "Organic" | "Sulphur" |
 export type PesticideCategory = "Insecticide" | "Fungicide" | "Herbicide" | "Growth Booster";
 export type LabourTask = "Weeding" | "Sowing" | "Spraying" | "Harvesting" | "Irrigation";
 export type AdvanceReason = "Medical" | "Grocery" | "Mobile Recharge" | "Festival" | "Loan" | "Other";
-export type MachineryImplement =
-  | "Rotavator"
-  | "Plough"
-  | "Sowing Machine"
-  | "Thresher"
-  | "Tractor Rental"
-  | "બલૂન (Baluun)"
-  | "રેપ (Rap)";
+// MachineryImplement reuses the same options as RentalAssetType (tractor income)
+export type MachineryImplement = RentalAssetType;
 
 // ── Sub-payload types (what you send) ─────────────────────────────────────────
 

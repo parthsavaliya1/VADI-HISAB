@@ -282,13 +282,13 @@ function getCropName(
   crops: Crop[] | undefined,
   t: (s: string, k: string) => string,
 ): string {
-  if (!cropId) return "—";
-  if (typeof cropId === "object") return cropDisplayName(cropId.cropName ?? "—", t);
+  if (!cropId) return "";
+  if (typeof cropId === "object") return cropDisplayName(cropId.cropName ?? "", t);
   if (crops?.length) {
     const c = crops.find((x) => x._id === cropId);
-    if (c) return cropDisplayName(c.cropName ?? "—", t);
+    if (c) return cropDisplayName(c.cropName ?? "", t);
   }
-  return "—";
+  return "";
 }
 
 function getCropEmoji(
@@ -975,9 +975,16 @@ function RecentTransactions({
               </View>
               <View style={styles.txnInfo}>
                 <Text style={styles.txnLabel}>{t.label}</Text>
-                <Text style={styles.txnMeta}>
-                  {t.crop} · {t.date}
-                </Text>
+                {t.crop ?(
+ <Text style={styles.txnMeta}>
+ {t.crop} · {t.date}
+</Text>
+                ): (
+                  <Text style={styles.txnMeta}>
+ {t.date}
+</Text>
+                )}
+               
               </View>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 4 }}

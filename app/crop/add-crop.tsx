@@ -1,5 +1,6 @@
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -487,6 +488,17 @@ export default function AddCrop() {
   const scrollRef = useRef<ScrollView | null>(null);
   const [subTypeOffsetY, setSubTypeOffsetY] = useState<number | null>(null);
   const { profile, setProfile } = useProfile();
+  const keyboardHeight = useKeyboardHeight();
+  const areaSectionYRef = useRef(0);
+  const scrollToArea = useCallback(() => {
+    const offset = keyboardHeight > 0 ? keyboardHeight + 140 : 140;
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, areaSectionYRef.current - offset),
+        animated: true,
+      });
+    }, 250);
+  }, [keyboardHeight]);
 
   // Load existing crop when editing
   useEffect(() => {
@@ -759,7 +771,8 @@ export default function AddCrop() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
@@ -792,7 +805,10 @@ export default function AddCrop() {
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1, backgroundColor: C.bg }}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 140 : 140 },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -1109,7 +1125,12 @@ export default function AddCrop() {
                   મહત્તમ {maxBighaForSelectedFarm} વીઘા દાખલ કરી શકો (અન્ય સક્રિય પાક સિવાય)
                 </Text>
               )}
-              <View style={styles.areaCard}>
+              <View
+                style={styles.areaCard}
+                onLayout={(e) => {
+                  areaSectionYRef.current = e.nativeEvent.layout.y;
+                }}
+              >
                 <View style={styles.areaInputRow}>
                   <TextInput
                     style={styles.areaInput}
@@ -1119,6 +1140,7 @@ export default function AddCrop() {
                     placeholderTextColor="#D1D5DB"
                     keyboardType="numeric"
                     autoFocus={!(profile?.farms && profile.farms.length > 0)}
+                    onFocus={scrollToArea}
                   />
                   <View style={styles.areaUnitBadge}>
                     <Text style={styles.areaUnitText}>વીઘા</Text>
@@ -1297,7 +1319,6 @@ export default function AddCrop() {
             </View>
           )}
         </Animated.View>
-        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* ── Bottom bar ── */}

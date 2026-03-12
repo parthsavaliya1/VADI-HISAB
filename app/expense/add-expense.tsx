@@ -145,13 +145,18 @@ const ADVANCE_REASONS: { value: AdvanceReason; label: string }[] = [
   { value: "Other", label: "અન્ય" },
 ];
 const MACHINERY_IMPLEMENTS: { value: MachineryImplement; label: string }[] = [
+  { value: "Tractor", label: "ટ્રેક્ટર" },
   { value: "Rotavator", label: "રોટાવેટર" },
-  { value: "Plough", label: "હળ" },
-  { value: "Sowing Machine", label: "સોઇંગ મશીન" },
+  { value: "RAP", label: "રૅપ" },
+  { value: "Samar", label: "સમાર" },
+  { value: "Sah Nakhya", label: "સહ નાખ્યા" },
+  { value: "Vavetar", label: "વાવેતર" },
+  { value: "Kyara Bandhya", label: "ક્યારા બાંધ્યા" },
   { value: "Thresher", label: "થ્રેશર" },
-  { value: "Tractor Rental", label: "ટ્રેક્ટર ભાડે" },
-  { value: "બલૂન (Baluun)", label: "બલૂન" },
-  { value: "રેપ (Rap)", label: "રેપ" },
+  { value: "Bagu", label: "બાગુ" },
+  { value: "Fukani", label: "ફૂકણી" },
+  { value: "Kheti Kari", label: "ખેતી કરી" },
+  { value: "Other Equipment", label: "અન્ય ઉપકરણ" },
 ];
 
 // ─── Crop dropdown: same format as dashboard CropPickerModal (Gujarati name, સિઝન, વીઘા) ───
@@ -367,7 +372,6 @@ export default function AddExpense() {
       try {
         const doc = await getExpenseById(editId);
         setCategory(doc.category as ExpenseCategory);
-        setNotes(doc.notes ?? "");
         if (!doc.cropId) {
           setGeneralDescription(doc.notes ?? "");
           setGeneralAmount(String(doc.labourContract?.amountGiven ?? doc.amount ?? ""));
@@ -504,7 +508,6 @@ export default function AddExpense() {
   const [machineUnitType, setMachineUnitType] = useState<"hour" | "vigha">("vigha");
   const [machineQty, setMachineQty] = useState("");
   const [machineRate, setMachineRate] = useState("");
-  const [notes, setNotes] = useState("");
   const [irrigationAmount, setIrrigationAmount] = useState("");
   const [otherAmount, setOtherAmount] = useState("");
   const [otherDescription, setOtherDescription] = useState("");
@@ -604,7 +607,6 @@ export default function AddExpense() {
         category: category as ExpenseCategory,
         expenseSource: isBhagyaUpad ? ("bhagyaUpad" as const) : ("cropExpense" as const),
         date: effectiveExpenseDate.toISOString(),
-        notes: notes.trim() || undefined,
         ...(category === "Seed" && {
           seed: {
             seedType: seedType as SeedType,
@@ -703,7 +705,6 @@ export default function AddExpense() {
         setMachineImpl("");
         setMachineQty("");
         setMachineRate("");
-        setNotes("");
         setIrrigationAmount("");
         setOtherAmount("");
         setOtherDescription("");
@@ -1319,28 +1320,6 @@ export default function AddExpense() {
           </View>
         )}
 
-        {/* ── Notes ── */}
-        {category !== "" && (
-          <View style={[styles.card, { marginTop: 4 }]}>
-            <View
-              style={[styles.cardTitleRow, { borderLeftColor: C.textMuted }]}
-            >
-              <Text style={styles.cardTitle}>📝 નોંધ</Text>
-            </View>
-            <TextInput
-              style={styles.notesInput}
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="વધારાની માહિતી..."
-              placeholderTextColor="#5B6570"
-              multiline
-              numberOfLines={2}
-              textAlignVertical="top"
-            />
-          </View>
-        )}
-
-        <View style={{ height: 120 }} />
           </>
         )}
       </ScrollView>
