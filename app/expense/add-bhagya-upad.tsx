@@ -23,6 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Dimensions } from "react-native";
 
 const C = {
   green700: "#2E7D32",
@@ -115,18 +116,34 @@ function SelectPicker({
 export default function AddBhagyaUpad() {
   const { refreshTransactions } = useRefresh();
   const keyboardHeight = useKeyboardHeight();
-  const scrollRef = useRef<ScrollView>(null);
-  const formSectionYRef = useRef(0);
-  const scrollToForm = useCallback(() => {
-    // When keyboard is open, use larger offset so inputs stay visible above keyboard
-    const offset = keyboardHeight > 0 ? 380 : 80;
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({
-        y: Math.max(0, formSectionYRef.current - offset),
-        animated: true,
-      });
-    }, 280);
+  const keyboardHeightRef = useRef(keyboardHeight);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const amountRowRef = useRef<View | null>(null);
+
+  // Keep ref in sync so we can safely read inside timeouts
+  React.useEffect(() => {
+    keyboardHeightRef.current = keyboardHeight;
   }, [keyboardHeight]);
+
+  const scrollToAmount = useCallback(() => {
+    if (!amountRowRef.current || !scrollRef.current) return;
+    setTimeout(() => {
+      amountRowRef.current?.measureLayout(
+        // @ts-ignore measure relative to ScrollView content
+        scrollRef.current,
+        (_left: number, top: number, _width: number, _height: number) => {
+          const kbH = keyboardHeightRef.current || 300;
+          const windowH = Dimensions.get("window").height;
+          const visibleH = windowH - kbH - 80; // 80 ≈ bottom button area
+          const targetY = Math.max(0, top - visibleH * 0.4);
+          scrollRef.current?.scrollTo({ y: targetY, animated: true });
+        },
+        () => {
+          scrollRef.current?.scrollToEnd({ animated: true });
+        },
+      );
+    }, 280);
+  }, []);
   const [type, setType] = useState<AdvanceReason | "">("");
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
@@ -186,7 +203,7 @@ export default function AddBhagyaUpad() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+        <View style={styles.card}>
           <SectionLabel text="પ્રકાર પસંદ કરો *" />
           <SelectPicker
             options={BHAGYA_UPAD_TYPES}
@@ -195,7 +212,7 @@ export default function AddBhagyaUpad() {
             placeholder="કરિયાણું, ઉધાર, મેડિકલ, અન્ય..."
           />
           <SectionLabel text="રકમ *" />
-          <View style={styles.numRow}>
+          <View style={styles.numRow} ref={amountRowRef}>
             <Text style={styles.numPrefix}>₹</Text>
             <TextInput
               style={styles.numInput}
@@ -204,7 +221,7 @@ export default function AddBhagyaUpad() {
               placeholder="0"
               placeholderTextColor="#5B6570"
               keyboardType="numeric"
-              onFocus={scrollToForm}
+              onFocus={scrollToAmount}
             />
           </View>
           <TouchableOpacity

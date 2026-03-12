@@ -5,6 +5,7 @@
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import {
   getCropById,
   getCurrentFinancialYear,
@@ -131,6 +132,39 @@ export default function EditCropScreen() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { t, tParam } = useLanguage();
   const { profile, setProfile } = useProfile();
+  const keyboardHeight = useKeyboardHeight();
+  const keyboardHeightRef = useRef(keyboardHeight);
+  useEffect(() => {
+    keyboardHeightRef.current = keyboardHeight;
+  }, [keyboardHeight]);
+
+  const scrollRef = useRef<ScrollView | null>(null);
+  const makeOnFocus = useCallback(
+    (fieldRef: React.RefObject<View | null>) => () => {
+      if (!fieldRef.current || !scrollRef.current) return;
+      setTimeout(() => {
+        fieldRef.current?.measureLayout(
+          // @ts-ignore measure relative to ScrollView content
+          scrollRef.current,
+          (_left: number, top: number, _width: number, _height: number) => {
+            const kbH = keyboardHeightRef.current || 300;
+            const windowH = Dimensions.get("window").height;
+            const visibleH = windowH - kbH - 80;
+            const targetY = Math.max(0, top - visibleH * 0.4);
+            scrollRef.current?.scrollTo({ y: targetY, animated: true });
+          },
+          () => {
+            scrollRef.current?.scrollToEnd({ animated: true });
+          },
+        );
+      }, 280);
+    },
+    [],
+  );
+
+  const customCropRef = useRef<View | null>(null);
+  const subTypeRef = useRef<View | null>(null);
+  const areaRef = useRef<View | null>(null);
 
   const SEASONS: { value: CropSeason; label: string; icon: string }[] = [
     { value: "Chomasu", label: t("common", "kharif"), icon: "☔" },
@@ -316,12 +350,17 @@ export default function EditCropScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 40 : 24 },
+        ]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card}>
+        <View style={styles.card} ref={customCropRef}>
           <SectionLabel text={t("editCrop", "yearLabel")} />
           <View style={styles.yearRow}>
             {yearOptions.map((fy) => (
@@ -380,10 +419,11 @@ export default function EditCropScreen() {
             }}
             placeholder={t("editCrop", "cropNamePlaceholder")}
             placeholderTextColor={C.textMuted}
+            onFocus={makeOnFocus(customCropRef)}
           />
         </View>
 
-        <View style={styles.card}>
+        <View style={styles.card} ref={subTypeRef}>
           <SectionLabel text={`🏷️ ${t("editCrop", "subtypeLabel")}`} />
           {(cropValue || customCrop.trim()) ? (() => {
             const selectedCrop = CROPS.find((c) => c.value === cropValue);
@@ -412,6 +452,7 @@ export default function EditCropScreen() {
                   onChangeText={setSubType}
                   placeholder={t("editCrop", "typePlaceholder")}
                   placeholderTextColor={C.textMuted}
+                  onFocus={makeOnFocus(subTypeRef)}
                 />
               </>
             );
@@ -439,7 +480,7 @@ export default function EditCropScreen() {
           </View>
         )}
 
-        <View style={styles.card}>
+        <View style={styles.card} ref={areaRef}>
           <SectionLabel text={`📐 ${t("editCrop", "areaLabelRequired")}`} />
           <View style={styles.areaRow}>
             <TextInput
@@ -449,6 +490,7 @@ export default function EditCropScreen() {
               placeholder="0"
               placeholderTextColor={C.textMuted}
               keyboardType="numeric"
+              onFocus={makeOnFocus(areaRef)}
             />
             <View style={styles.areaUnit}>
               <Text style={styles.areaUnitText}>{t("editCrop", "bighaUnit")}</Text>

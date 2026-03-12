@@ -21,6 +21,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Dimensions } from "react-native";
 
 import { useProfile } from "@/contexts/ProfileContext";
 import {
@@ -489,16 +490,39 @@ export default function AddCrop() {
   const [subTypeOffsetY, setSubTypeOffsetY] = useState<number | null>(null);
   const { profile, setProfile } = useProfile();
   const keyboardHeight = useKeyboardHeight();
-  const areaSectionYRef = useRef(0);
-  const scrollToArea = useCallback(() => {
-    const offset = keyboardHeight > 0 ? keyboardHeight + 140 : 140;
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({
-        y: Math.max(0, areaSectionYRef.current - offset),
-        animated: true,
-      });
-    }, 250);
+  const keyboardHeightRef = useRef(keyboardHeight);
+  useEffect(() => {
+    keyboardHeightRef.current = keyboardHeight;
   }, [keyboardHeight]);
+
+  // Generic keyboard-aware scroll (similar to add-expense)
+  const makeOnFocus = useCallback(
+    (fieldRef: React.RefObject<View | null>) => () => {
+      if (!fieldRef.current || !scrollRef.current) return;
+      setTimeout(() => {
+        fieldRef.current?.measureLayout(
+          // @ts-ignore measure relative to ScrollView content
+          scrollRef.current,
+          (_left: number, top: number, _width: number, _height: number) => {
+            const kbH = keyboardHeightRef.current || 300;
+            const windowH = Dimensions.get("window").height;
+            const visibleH = windowH - kbH - 80; // account for bottom bar
+            const targetY = Math.max(0, top - visibleH * 0.4);
+            scrollRef.current?.scrollTo({ y: targetY, animated: true });
+          },
+          () => {
+            scrollRef.current?.scrollToEnd({ animated: true });
+          },
+        );
+      }, 280);
+    },
+    [],
+  );
+
+  // Refs for important inputs
+  const customCropRef = useRef<View | null>(null);
+  const customSubTypeRef = useRef<View | null>(null);
+  const areaRef = useRef<View | null>(null);
 
   // Load existing crop when editing
   useEffect(() => {
@@ -529,7 +553,6 @@ export default function AddCrop() {
             if (Math.abs(n - 50) < 2) return "50";
             return String(pct);
           })(),
-          notes: cr.notes ?? "",
         });
         if (cr.farmName) setEditCropFarmName(cr.farmName);
       })
@@ -810,6 +833,7 @@ export default function AddCrop() {
           { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 140 : 140 },
         ]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         <Animated.View
@@ -1126,10 +1150,8 @@ export default function AddCrop() {
                 </Text>
               )}
               <View
+                ref={areaRef}
                 style={styles.areaCard}
-                onLayout={(e) => {
-                  areaSectionYRef.current = e.nativeEvent.layout.y;
-                }}
               >
                 <View style={styles.areaInputRow}>
                   <TextInput
@@ -1140,7 +1162,7 @@ export default function AddCrop() {
                     placeholderTextColor="#D1D5DB"
                     keyboardType="numeric"
                     autoFocus={!(profile?.farms && profile.farms.length > 0)}
-                    onFocus={scrollToArea}
+                    onFocus={makeOnFocus(areaRef)}
                   />
                   <View style={styles.areaUnitBadge}>
                     <Text style={styles.areaUnitText}>વીઘા</Text>

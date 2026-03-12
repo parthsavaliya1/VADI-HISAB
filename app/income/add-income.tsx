@@ -706,8 +706,11 @@ export default function AddIncomeScreen() {
     if (cropIdParam) setSelectedCropId(cropIdParam);
   }, [cropIdParam]);
 
-  // Default category: general = always Other; only reset when current category not in visible list
+  // Default category: for NEW entries only.
+  // General income = always "Other"; for crop income, ensure category is within visibleCategories.
+  // When editing (isEdit), we keep the category from the loaded document (e.g. "Rental Income" for tractor income).
   useEffect(() => {
+    if (isEdit) return;
     if (isGeneralIncome) {
       if (category !== "Other") {
         setCategory("Other");
@@ -722,7 +725,7 @@ export default function AddIncomeScreen() {
         setSubData(DEFAULT_DATA[first.value]);
       }
     }
-  }, [isGeneralIncome, visibleCategories, category]);
+  }, [isEdit, isGeneralIncome, visibleCategories, category]);
 
   const [showPicker, setShowPicker] = useState(false);
   const [notes, setNotes] = useState("");
@@ -907,19 +910,8 @@ export default function AddIncomeScreen() {
     }
   };
 
-  // ── Loading skeleton while fetching edit data ───────────────────────────────
-  if (fetchingEdit) {
-    return (
-      <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color={C.green500} />
-        <Text style={styles.loadingText}>ડેટા લોડ થઈ રહ્યો છે...</Text>
-      </View>
-    );
-  }
-
-  // ── Active category meta ────────────────────────────────────────────────────
+  // ── Active category meta + layout hooks ─────────────────────────────────────
   const activeCat = CATEGORIES.find((c) => c.value === category)!;
-
   const headerPaddingTop = HEADER_PADDING_TOP;
   const keyboardHeight = useKeyboardHeight();
   const scrollRef = useRef<ScrollView>(null);
@@ -947,6 +939,16 @@ export default function AddIncomeScreen() {
           ? `${activeCat.label} આવક`
           : "આવક ઉમેરો";
   const headerSub = "";
+
+  // ── Loading skeleton while fetching edit data ───────────────────────────────
+  if (fetchingEdit) {
+    return (
+      <View style={styles.loadingWrap}>
+        <ActivityIndicator size="large" color={C.green500} />
+        <Text style={styles.loadingText}>ડેટા લોડ થઈ રહ્યું છે...</Text>
+      </View>
+    );
+  }
 
   // ─── UI ─────────────────────────────────────────────────────────────────────
   return (
@@ -1133,7 +1135,7 @@ export default function AddIncomeScreen() {
       )}
 
       {/* ── Dynamic sub-form ── */}
-      {((isGeneralIncome && generalIncomeType) || !isGeneralIncome) && (
+      {(isGeneralIncome ? (isEdit || generalIncomeType) : true) && (
       <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
         {category === "Crop Sale" && (
           <CropSaleForm

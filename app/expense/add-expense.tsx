@@ -30,6 +30,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -221,6 +222,7 @@ function SelectPicker<T extends string>({
   const [open, setOpen] = useState(false);
   const selectedLabel = options.find((o) => o.value === selected)?.label;
   const handlePress = () => {
+    Keyboard.dismiss();
     if (!open && onOpen) onOpen();
     setOpen((p) => !p);
   };
@@ -275,23 +277,20 @@ function SelectPicker<T extends string>({
   );
 }
 
-function NumericInput({
-  value,
-  onChange,
-  placeholder,
-  prefix,
-  suffix,
-  onFocus,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  prefix?: string;
-  suffix?: string;
-  onFocus?: () => void;
-}) {
+// ─── NumericInput with forwardRef so parent can measure its exact position ────
+const NumericInput = React.forwardRef<
+  View,
+  {
+    value: string;
+    onChange: (v: string) => void;
+    placeholder: string;
+    prefix?: string;
+    suffix?: string;
+    onFocus?: () => void;
+  }
+>(({ value, onChange, placeholder, prefix, suffix, onFocus }, ref) => {
   return (
-    <View style={styles.numRow}>
+    <View ref={ref} style={styles.numRow}>
       {prefix ? <Text style={styles.numAffix}>{prefix}</Text> : null}
       <TextInput
         style={styles.numInput}
@@ -305,7 +304,7 @@ function NumericInput({
       {suffix ? <Text style={styles.numAffix}>{suffix}</Text> : null}
     </View>
   );
-}
+});
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AddExpense() {
@@ -529,6 +528,58 @@ export default function AddExpense() {
       ? String(Math.round(Number(seedCost) / seedQuantityKg))
       : null;
 
+  // ─── Keyboard-aware scroll ─────────────────────────────────────────────────
+  // Each input gets its own ref. On focus we use measureLayout (relative to the
+  // ScrollView) to find the exact field position and scroll it into view above
+  // the keyboard — no hardcoded offsets, works on every screen size.
+  const scrollRef = useRef<ScrollView>(null);
+  const keyboardHeight = useKeyboardHeight();
+  const keyboardHeightRef = useRef(keyboardHeight);
+  useEffect(() => { keyboardHeightRef.current = keyboardHeight; }, [keyboardHeight]);
+
+  const makeOnFocus = useCallback(
+    (fieldRef: React.RefObject<View | null>) => () => {
+      if (!fieldRef.current || !scrollRef.current) return;
+      setTimeout(() => {
+        fieldRef.current?.measureLayout(
+          // @ts-ignore
+          scrollRef.current,
+          (_left: number, top: number, _width: number, height: number) => {
+            const kbH = keyboardHeightRef.current || 300;
+            const windowH = Dimensions.get("window").height;
+            // Visible height above keyboard minus the bottom save bar (~80 px)
+            const visibleH = windowH - kbH - 80;
+            // Place the focused field at 40% from the top of the visible area
+            const targetScroll = Math.max(0, top - visibleH * 0.4);
+            scrollRef.current?.scrollTo({ y: targetScroll, animated: true });
+          },
+          () => { scrollRef.current?.scrollToEnd({ animated: true }); },
+        );
+      }, 300);
+    },
+    [],
+  );
+
+  // ── Per-field refs ──────────────────────────────────────────────────────────
+  const seedQtyRef       = useRef<View>(null);
+  const seedRateRef      = useRef<View>(null);
+  const fertBagsRef      = useRef<View>(null);
+  const fertUnitCostRef  = useRef<View>(null);
+  const pestDosageRef    = useRef<View>(null);
+  const pestCostRef      = useRef<View>(null);
+  const labourPeopleRef  = useRef<View>(null);
+  const labourDaysRef    = useRef<View>(null);
+  const labourRateRef    = useRef<View>(null);
+  const advanceAmountRef = useRef<View>(null);
+  const sharingCustomRef = useRef<View>(null);
+  const machineQtyRef    = useRef<View>(null);
+  const machineRateRef   = useRef<View>(null);
+  const irrigationRef    = useRef<View>(null);
+  const otherAmountRef   = useRef<View>(null);
+  const otherDescRef     = useRef<View>(null);
+  const generalAmountRef = useRef<View>(null);
+  const generalDescRef   = useRef<View>(null);
+
   const validate = (): string | null => {
     if (isGeneralExpense) {
       if (!generalDescription.trim()) return "ખર્ચનો પ્રકાર / વિવરણ લખો (દા.ત. ફાર્મ વિકાસ, સાધન ખરીદી).";
@@ -718,19 +769,6 @@ export default function AddExpense() {
 
   const activeCat = CATEGORIES.find((c) => c.value === category);
   const paddingTop = HEADER_PADDING_TOP;
-  const keyboardHeight = useKeyboardHeight();
-  const scrollRef = useRef<ScrollView>(null);
-  const formSectionYRef = useRef(0);
-  const scrollToForm = useCallback(() => {
-    // When keyboard is open, use larger offset so lower fields (e.g. દર દર બૅગ) stay visible above keyboard
-    const offset = keyboardHeight > 0 ? 420 : 100;
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({
-        y: Math.max(0, formSectionYRef.current - offset),
-        animated: true,
-      });
-    }, 280);
-  }, [keyboardHeight]);
 
   if (fetchingEdit) {
     return (
@@ -742,10 +780,13 @@ export default function AddExpense() {
   }
 
   return (
+    // FIX 1: behavior="padding" on both platforms shrinks the scroll area
+    // correctly when the keyboard appears (instead of "height" which is buggy
+    // on Android and doesn't account for the bottom save bar).
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
@@ -796,13 +837,12 @@ export default function AddExpense() {
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1, backgroundColor: C.bg }}
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 100 : 120 },
-        ]}
+        // FIX 2: static 140px bottom padding — enough room for the save bar.
+        // No longer driven by keyboardHeight (that caused fields to jump).
+        contentContainerStyle={[styles.scroll, { paddingBottom: 140 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        keyboardDismissMode="on-drag"
+        keyboardDismissMode="interactive"
       >
         {/* ── Financial year selector only for general expense; for crop expense year comes from crop ── */}
         {isGeneralExpense ? (
@@ -841,20 +881,26 @@ export default function AddExpense() {
               </Text>
             </View>
             <SectionLabel text="ખર્ચનો પ્રકાર / વિવરણ" />
-            <TextInput
-              style={styles.notesInput}
-              value={generalDescription}
-              onChangeText={setGeneralDescription}
-              placeholder="દા.ત. ફાર્મ વિકાસ, સાધન ખરીદી, ભાડું, મરામત..."
-              placeholderTextColor="#5B6570"
-              multiline
-            />
+            {/* Wrap plain TextInput in a View with ref so makeOnFocus can measure it */}
+            <View ref={generalDescRef}>
+              <TextInput
+                style={styles.notesInput}
+                value={generalDescription}
+                onChangeText={setGeneralDescription}
+                placeholder="દા.ત. ફાર્મ વિકાસ, સાધન ખરીદી, ભાડું, મરામત..."
+                placeholderTextColor="#5B6570"
+                multiline
+                onFocus={makeOnFocus(generalDescRef)}
+              />
+            </View>
             <SectionLabel text="ખર્ચ રકમ" />
             <NumericInput
+              ref={generalAmountRef}
               value={generalAmount}
               onChange={setGeneralAmount}
               placeholder="0"
               prefix=""
+              onFocus={makeOnFocus(generalAmountRef)}
             />
             <TouchableOpacity
               style={styles.saveBtn}
@@ -958,7 +1004,7 @@ export default function AddExpense() {
 
         {/* ── SEED ── */}
         {category === "Seed" && (
-          <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+          <View style={styles.card}>
             <View style={[styles.cardTitleRow, { borderLeftColor: "#16A34A" }]}>
               <Text style={styles.cardTitle}>🌱 બિયારણ ખર્ચ</Text>
             </View>
@@ -968,18 +1014,16 @@ export default function AddExpense() {
               selected={seedType}
               onSelect={setSeedType}
               placeholder="પ્રકાર પસંદ કરો..."
-              onOpen={scrollToForm}
             />
             <SectionLabel text="જથ્થો (૧ મણ = ૨૦ કિ.ગ્રા.)" />
             <View style={styles.seedQtyRow}>
-              <View style={{ flex: 1 }}>
-                <NumericInput
-                  value={seedQty}
-                  onChange={setSeedQty}
-                  placeholder="0"
-                  onFocus={scrollToForm}
-                />
-              </View>
+              <NumericInput
+                ref={seedQtyRef}
+                value={seedQty}
+                onChange={setSeedQty}
+                placeholder="0"
+                onFocus={makeOnFocus(seedQtyRef)}
+              />
               <View style={styles.unitToggle}>
                 <TouchableOpacity
                   style={[styles.unitToggleBtn, seedQtyUnit === "man" && styles.unitToggleBtnActive]}
@@ -997,10 +1041,12 @@ export default function AddExpense() {
             </View>
             <SectionLabel text={`દર (પ્રતિ ${seedQtyUnit === "man" ? "મણ" : "કિ.ગ્રા."})`} />
             <NumericInput
+              ref={seedRateRef}
               value={seedUnitRate}
               onChange={setSeedUnitRate}
               placeholder="0"
               prefix=""
+              onFocus={makeOnFocus(seedRateRef)}
             />
             {Number(seedQty) > 0 && Number(seedUnitRate) >= 0 && (
               <View style={styles.derivedBox}>
@@ -1016,7 +1062,7 @@ export default function AddExpense() {
 
         {/* ── FERTILIZER ── */}
         {category === "Fertilizer" && (
-          <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+          <View style={styles.card}>
             <View style={[styles.cardTitleRow, { borderLeftColor: "#0891B2" }]}>
               <Text style={styles.cardTitle}>🧪 ખાતર ખર્ચ</Text>
             </View>
@@ -1026,23 +1072,24 @@ export default function AddExpense() {
               selected={fertProduct}
               onSelect={setFertProduct}
               placeholder="ખાતર પસંદ કરો..."
-              onOpen={scrollToForm}
             />
             <SectionLabel text="બૅગ સંખ્યા" />
             <NumericInput
+              ref={fertBagsRef}
               value={fertBags}
               onChange={setFertBags}
               placeholder="0"
               suffix="બૅગ"
-              onFocus={scrollToForm}
+              onFocus={makeOnFocus(fertBagsRef)}
             />
             <SectionLabel text="દર દર બૅગ" />
             <NumericInput
+              ref={fertUnitCostRef}
               value={fertUnitCost}
               onChange={setFertUnitCost}
               placeholder="0"
               prefix=""
-              onFocus={scrollToForm}
+              onFocus={makeOnFocus(fertUnitCostRef)}
             />
             {fertTotal !== null && fertTotal >= 0 && (
               <View style={styles.totalBox}>
@@ -1057,7 +1104,7 @@ export default function AddExpense() {
 
         {/* ── PESTICIDE ── */}
         {category === "Pesticide" && (
-          <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+          <View style={styles.card}>
             <View style={[styles.cardTitleRow, { borderLeftColor: "#DC2626" }]}>
               <Text style={styles.cardTitle}>🧴 જંતુનાશક ખર્ચ</Text>
             </View>
@@ -1073,30 +1120,31 @@ export default function AddExpense() {
               selected={pestCategory}
               onSelect={setPestCategory}
               placeholder="પ્રકાર પસંદ કરો..."
-              onOpen={scrollToForm}
             />
             <SectionLabel text="જથ્થો (ml/લિ.)" />
             <NumericInput
+              ref={pestDosageRef}
               value={pestDosage}
               onChange={setPestDosage}
               placeholder="0"
               suffix="ml"
-              onFocus={scrollToForm}
+              onFocus={makeOnFocus(pestDosageRef)}
             />
             <SectionLabel text="ખર્ચ" />
             <NumericInput
+              ref={pestCostRef}
               value={pestCost}
               onChange={setPestCost}
               placeholder="0"
               prefix=""
-              onFocus={scrollToForm}
+              onFocus={makeOnFocus(pestCostRef)}
             />
           </View>
         )}
 
         {/* ── LABOUR (મજૂરી): bhagma crop → ભાગમા (advance/medical). Non-bhagma → દૈનિક મજૂર (daily labour cost). ── */}
         {category === "Labour" && (
-          <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+          <View style={styles.card}>
             <View style={[styles.cardTitleRow, { borderLeftColor: "#D97706" }]}>
               <Text style={styles.cardTitle}>
                 👷 મજૂરી ખર્ચ {isBhagmaCrop ? "(ભાગમા / અગ્રિમ)" : "(દૈનિક મજૂર)"}
@@ -1110,16 +1158,16 @@ export default function AddExpense() {
                   selected={sharingType}
                   onSelect={(v) => handleSharingSelect(v as SharingOption | "")}
                   placeholder="શેરિંગ પસંદ કરો..."
-                  onOpen={scrollToForm}
                 />
                 {sharingType === "custom" && (
                   <>
                     <SectionLabel text="ટકા દાખલ કરો (0–100)" />
                     <NumericInput
+                      ref={sharingCustomRef}
                       value={sharingCustom}
                       onChange={handleSharingCustomChange}
                       placeholder="ઉદા. 40"
-                      onFocus={scrollToForm}
+                      onFocus={makeOnFocus(sharingCustomRef)}
                     />
                   </>
                 )}
@@ -1135,15 +1183,15 @@ export default function AddExpense() {
                   selected={advanceReason}
                   onSelect={setAdvanceReason}
                   placeholder="કારણ પસંદ કરો..."
-                  onOpen={scrollToForm}
                 />
                 <SectionLabel text="આપેલ રકમ" />
                 <NumericInput
+                  ref={advanceAmountRef}
                   value={advanceAmount}
                   onChange={setAdvanceAmount}
                   placeholder="0"
                   prefix=""
-                  onFocus={scrollToForm}
+                  onFocus={makeOnFocus(advanceAmountRef)}
                 />
               </>
             ) : (
@@ -1154,35 +1202,37 @@ export default function AddExpense() {
                   selected={labourTask}
                   onSelect={setLabourTask}
                   placeholder="કામ પસંદ કરો..."
-                  onOpen={scrollToForm}
                 />
                 <SectionLabel text="લોકો × દિવસ" />
                 <View style={styles.multiRow}>
                   <View style={{ flex: 1 }}>
                     <NumericInput
+                      ref={labourPeopleRef}
                       value={labourPeople}
                       onChange={setLabourPeople}
                       placeholder="લોકો"
-                      onFocus={scrollToForm}
+                      onFocus={makeOnFocus(labourPeopleRef)}
                     />
                   </View>
                   <Text style={styles.multiX}>×</Text>
                   <View style={{ flex: 1 }}>
                     <NumericInput
+                      ref={labourDaysRef}
                       value={labourDays}
                       onChange={setLabourDays}
                       placeholder="દિવસ"
-                      onFocus={scrollToForm}
+                      onFocus={makeOnFocus(labourDaysRef)}
                     />
                   </View>
                 </View>
                 <SectionLabel text="દૈનિક દર" />
                 <NumericInput
+                  ref={labourRateRef}
                   value={labourRate}
                   onChange={setLabourRate}
                   placeholder="0"
                   prefix=""
-                  onFocus={scrollToForm}
+                  onFocus={makeOnFocus(labourRateRef)}
                 />
                 {labourTotal !== null && (
                   <View style={styles.totalBox}>
@@ -1199,7 +1249,7 @@ export default function AddExpense() {
 
         {/* ── MACHINERY ── */}
         {category === "Machinery" && (
-          <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+          <View style={styles.card}>
             <View style={[styles.cardTitleRow, { borderLeftColor: "#7C3AED" }]}>
               <Text style={styles.cardTitle}>🚜 ટ્રેક્ટર ભાડું</Text>
             </View>
@@ -1209,7 +1259,6 @@ export default function AddExpense() {
               selected={machineImpl}
               onSelect={setMachineImpl}
               placeholder="હળ અથવા ઓજાર પસંદ કરો..."
-              onOpen={scrollToForm}
             />
             <SectionLabel text="દરનો એકમ" />
             <View style={styles.toggleRow}>
@@ -1250,19 +1299,21 @@ export default function AddExpense() {
             </View>
             <SectionLabel text={machineUnitType === "vigha" ? "વીઘા" : "કલાક"} />
             <NumericInput
+              ref={machineQtyRef}
               value={machineQty}
               onChange={setMachineQty}
               placeholder="0"
               suffix={machineUnitType === "vigha" ? "વીઘા" : "કલાક"}
-              onFocus={scrollToForm}
+              onFocus={makeOnFocus(machineQtyRef)}
             />
             <SectionLabel text="દર" />
             <NumericInput
+              ref={machineRateRef}
               value={machineRate}
               onChange={setMachineRate}
               placeholder="0"
               prefix=""
-              onFocus={scrollToForm}
+              onFocus={makeOnFocus(machineRateRef)}
             />
             {machineTotal !== null && (
               <View style={styles.totalBox}>
@@ -1279,44 +1330,48 @@ export default function AddExpense() {
 
         {/* ── IRRIGATION ── */}
         {category === "Irrigation" && (
-          <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+          <View style={styles.card}>
             <View style={[styles.cardTitleRow, { borderLeftColor: "#0284C7" }]}>
               <Text style={styles.cardTitle}>💧 સિંચાઈ ખર્ચ</Text>
             </View>
             <SectionLabel text="રકમ" />
             <NumericInput
+              ref={irrigationRef}
               value={irrigationAmount}
               onChange={setIrrigationAmount}
               placeholder="0"
               prefix="₹"
-              onFocus={scrollToForm}
+              onFocus={makeOnFocus(irrigationRef)}
             />
           </View>
         )}
 
         {/* ── OTHER ── */}
         {category === "Other" && (
-          <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+          <View style={styles.card}>
             <View style={[styles.cardTitleRow, { borderLeftColor: "#64748B" }]}>
               <Text style={styles.cardTitle}>📦 અન્ય ખર્ચ</Text>
             </View>
             <SectionLabel text="રકમ" />
             <NumericInput
+              ref={otherAmountRef}
               value={otherAmount}
               onChange={setOtherAmount}
               placeholder="0"
               prefix="₹"
-              onFocus={scrollToForm}
+              onFocus={makeOnFocus(otherAmountRef)}
             />
             <SectionLabel text="વિવરણ (ઐચ્છિક)" />
-            <TextInput
-              style={styles.notesInput}
-              value={otherDescription}
-              onChangeText={setOtherDescription}
-              placeholder="દા.ત. ઘર બાંધકામ, સાધન ખરીદી..."
-              placeholderTextColor="#5B6570"
-              onFocus={scrollToForm}
-            />
+            <View ref={otherDescRef}>
+              <TextInput
+                style={styles.notesInput}
+                value={otherDescription}
+                onChangeText={setOtherDescription}
+                placeholder="દા.ત. ઘર બાંધકામ, સાધન ખરીદી..."
+                placeholderTextColor="#5B6570"
+                onFocus={makeOnFocus(otherDescRef)}
+              />
+            </View>
           </View>
         )}
 
@@ -1325,6 +1380,8 @@ export default function AddExpense() {
       </ScrollView>
 
       {/* ── Bottom bar (hidden for general expense) ── */}
+      {/* FIX 3: removed position:"absolute" — now in normal flow so
+          KeyboardAvoidingView pushes it up when the keyboard opens. */}
       {!isGeneralExpense && (
       <View style={styles.bottomBar}>
         <TouchableOpacity
@@ -1851,12 +1908,8 @@ const styles = StyleSheet.create({
     backgroundColor: C.surfaceGreen,
   },
 
-  // Bottom bar
+  // Bottom bar — normal flow (not absolute) so KeyboardAvoidingView works correctly
   bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     padding: 18,
     paddingBottom: Platform.OS === "ios" ? 36 : 18,
     backgroundColor: C.bg,
