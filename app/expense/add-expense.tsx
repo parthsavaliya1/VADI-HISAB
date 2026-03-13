@@ -1,13 +1,13 @@
-import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import {
   createExpense,
-  getExpenseById,
   getCrops,
   getCurrentFinancialYear,
+  getExpenseById,
   getFinancialYearOptions,
   updateExpense,
   type AdvanceReason,
@@ -20,9 +20,8 @@ import {
   type SeedType,
   type SharingOption,
 } from "@/utils/api";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import Toast from "react-native-toast-message";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -41,6 +40,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 const BHAGMA_SHARING_KEY = "@vadi_bhagma_sharing";
 
@@ -98,11 +98,46 @@ const CATEGORIES: {
   color: string;
   pale: string;
 }[] = [
-  { value: "Seed", label: "બિયારણ", iconSet: "mci", iconName: "sprout", color: "#16A34A", pale: "#DCFCE7" },
-  { value: "Fertilizer", label: "ખાતર", iconSet: "ionicons", iconName: "flask-outline", color: "#0891B2", pale: "#E0F2FE" },
-  { value: "Pesticide", label: "જંતુનાશક", iconSet: "mci", iconName: "spray", color: "#DC2626", pale: "#FEE2E2" },
-  { value: "Labour", label: "મજૂરી", iconSet: "ionicons", iconName: "people-outline", color: "#D97706", pale: "#FEF3C7" },
-  { value: "Machinery", label: "ટ્રેક્ટર/મશીન", iconSet: "mci", iconName: "tractor-variant", color: "#7C3AED", pale: "#EDE9FE" },
+  {
+    value: "Seed",
+    label: "બિયારણ",
+    iconSet: "mci",
+    iconName: "sprout",
+    color: "#16A34A",
+    pale: "#DCFCE7",
+  },
+  {
+    value: "Fertilizer",
+    label: "ખાતર",
+    iconSet: "ionicons",
+    iconName: "flask-outline",
+    color: "#0891B2",
+    pale: "#E0F2FE",
+  },
+  {
+    value: "Pesticide",
+    label: "જંતુનાશક",
+    iconSet: "mci",
+    iconName: "spray",
+    color: "#DC2626",
+    pale: "#FEE2E2",
+  },
+  {
+    value: "Labour",
+    label: "મજૂરી",
+    iconSet: "ionicons",
+    iconName: "people-outline",
+    color: "#D97706",
+    pale: "#FEF3C7",
+  },
+  {
+    value: "Machinery",
+    label: "ટ્રેક્ટર/મશીન",
+    iconSet: "mci",
+    iconName: "tractor-variant",
+    color: "#7C3AED",
+    pale: "#EDE9FE",
+  },
 ];
 
 const SEED_TYPES: { value: SeedType; label: string }[] = [
@@ -187,17 +222,21 @@ function cropDisplayNameGuj(name: string): string {
   const trimmed = name.trim();
   const exact = CROP_NAME_GUJ[trimmed];
   if (exact) return exact;
-  const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  const capitalized =
+    trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
   if (CROP_NAME_GUJ[capitalized]) return CROP_NAME_GUJ[capitalized];
   return trimmed;
 }
 function getCropDropdownLabel(c: Crop): string {
   const emoji = c.cropEmoji ?? "🌱";
   const name = cropDisplayNameGuj(c.cropName ?? "");
-  const season = SEASON_DISPLAY[c.season ?? ""] ?? (c.season ?? "—");
+  const season = SEASON_DISPLAY[c.season ?? ""] ?? c.season ?? "—";
   const area = c.area != null ? String(Math.round(Number(c.area))) : "—";
   const unit = AREA_UNIT_GUJ[(c.areaUnit ?? "Bigha") as string] ?? "વીઘા";
-  const bhagma = c.landType === "bhagma" && c.bhagmaPercentage != null ? ` · ભાગમા ${c.bhagmaPercentage}%` : "";
+  const bhagma =
+    c.landType === "bhagma" && c.bhagmaPercentage != null
+      ? ` · ભાગમા ${c.bhagmaPercentage}%`
+      : "";
   return `${emoji} ${name} · ${season} · ${area} ${unit}${bhagma}`;
 }
 
@@ -308,19 +347,35 @@ const NumericInput = React.forwardRef<
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AddExpense() {
-  const params = useLocalSearchParams<{ id?: string; cropId?: string; general?: string; year?: string; bhagyaUpad?: string }>();
+  const params = useLocalSearchParams<{
+    id?: string;
+    cropId?: string;
+    general?: string;
+    year?: string;
+    bhagyaUpad?: string;
+  }>();
   const editId = Array.isArray(params.id) ? params.id[0] : params.id;
   const isEdit = !!editId;
-  const paramCropId = Array.isArray(params.cropId) ? params.cropId[0] : params.cropId;
+  const paramCropId = Array.isArray(params.cropId)
+    ? params.cropId[0]
+    : params.cropId;
   const paramYear = Array.isArray(params.year) ? params.year[0] : params.year;
-  const isGeneralExpense = (Array.isArray(params.general) ? params.general[0] : params.general) === "1";
-  const isBhagyaUpad = (Array.isArray(params.bhagyaUpad) ? params.bhagyaUpad[0] : params.bhagyaUpad) === "1";
+  const isGeneralExpense =
+    (Array.isArray(params.general) ? params.general[0] : params.general) ===
+    "1";
+  const isBhagyaUpad =
+    (Array.isArray(params.bhagyaUpad)
+      ? params.bhagyaUpad[0]
+      : params.bhagyaUpad) === "1";
   const { profile } = useProfile();
   const { refreshTransactions } = useRefresh();
 
   const yearOptions = getYearOptions();
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
-    () => paramYear && yearOptions.includes(paramYear) ? paramYear : getCurrentFinancialYear(),
+    () =>
+      paramYear && yearOptions.includes(paramYear)
+        ? paramYear
+        : getCurrentFinancialYear(),
   );
   const [crops, setCrops] = useState<Crop[]>([]);
   const [selectedCropId, setSelectedCropId] = useState<string | "">("");
@@ -335,8 +390,14 @@ export default function AddExpense() {
   // ભાગ્યા નો ઉપાડ with bhagma crop: same options as bhagma screen in majuri — બિયારણ, ખાતર, જંતુનાશક, મજૂરી (exclude only Machinery). Normal bhagma add expense: Seed/Fertilizer/Pesticide only.
   const visibleCategories = (() => {
     if (isGeneralExpense) return CATEGORIES;
-    if (isBhagyaUpad) return isBhagmaCrop ? CATEGORIES.filter((c) => c.value !== "Machinery") : [];
-    if (isBhagmaCrop) return CATEGORIES.filter((c) => c.value !== "Labour" && c.value !== "Machinery");
+    if (isBhagyaUpad)
+      return isBhagmaCrop
+        ? CATEGORIES.filter((c) => c.value !== "Machinery")
+        : [];
+    if (isBhagmaCrop)
+      return CATEGORIES.filter(
+        (c) => c.value !== "Labour" && c.value !== "Machinery",
+      );
     return CATEGORIES;
   })();
 
@@ -351,7 +412,9 @@ export default function AddExpense() {
       getCrops()
         .then((r) => {
           const list = [...(r.data ?? [])];
-          list.sort((a, b) => cropStatusOrder(a.status) - cropStatusOrder(b.status));
+          list.sort(
+            (a, b) => cropStatusOrder(a.status) - cropStatusOrder(b.status),
+          );
           setCrops(list);
         })
         .catch(() => setCrops([]));
@@ -373,20 +436,38 @@ export default function AddExpense() {
         setCategory(doc.category as ExpenseCategory);
         if (!doc.cropId) {
           setGeneralDescription(doc.notes ?? "");
-          setGeneralAmount(String(doc.labourContract?.amountGiven ?? doc.amount ?? ""));
+          setGeneralAmount(
+            String(doc.labourContract?.amountGiven ?? doc.amount ?? ""),
+          );
         } else {
           if (doc.seed) {
             setSeedType((doc.seed.seedType as SeedType) ?? "");
             setSeedQty(String(doc.seed.quantityKg ?? ""));
-            setSeedUnitRate(doc.seed.quantityKg && doc.seed.totalCost ? String(Math.round(doc.seed.totalCost / doc.seed.quantityKg)) : "");
+            setSeedUnitRate(
+              doc.seed.quantityKg && doc.seed.totalCost
+                ? String(Math.round(doc.seed.totalCost / doc.seed.quantityKg))
+                : "",
+            );
           }
           if (doc.fertilizer) {
-            setFertProduct((doc.fertilizer.productName as FertilizerProduct) ?? "");
+            setFertProduct(
+              (doc.fertilizer.productName as FertilizerProduct) ?? "",
+            );
             setFertBags(String(doc.fertilizer.numberOfBags ?? ""));
-            setFertUnitCost(doc.fertilizer.numberOfBags && doc.fertilizer.totalCost ? String((doc.fertilizer.totalCost / doc.fertilizer.numberOfBags).toFixed(0)) : "");
+            setFertUnitCost(
+              doc.fertilizer.numberOfBags && doc.fertilizer.totalCost
+                ? String(
+                    (
+                      doc.fertilizer.totalCost / doc.fertilizer.numberOfBags
+                    ).toFixed(0),
+                  )
+                : "",
+            );
           }
           if (doc.pesticide) {
-            setPestCategory((doc.pesticide.category as PesticideCategory) ?? "");
+            setPestCategory(
+              (doc.pesticide.category as PesticideCategory) ?? "",
+            );
             setPestDosage(String(doc.pesticide.dosageML ?? ""));
             setPestCost(String(doc.pesticide.cost ?? ""));
           }
@@ -399,17 +480,24 @@ export default function AddExpense() {
           }
           if (doc.labourContract) {
             setLabourMode("Contract");
-            setAdvanceReason((doc.labourContract.advanceReason as AdvanceReason) ?? "");
+            setAdvanceReason(
+              (doc.labourContract.advanceReason as AdvanceReason) ?? "",
+            );
             setAdvanceAmount(String(doc.labourContract.amountGiven ?? ""));
-            if (doc.labourContract.sharingType) setSharingType(doc.labourContract.sharingType as SharingOption);
-            if (doc.labourContract.sharingCustom != null) setSharingCustom(String(doc.labourContract.sharingCustom));
+            if (doc.labourContract.sharingType)
+              setSharingType(doc.labourContract.sharingType as SharingOption);
+            if (doc.labourContract.sharingCustom != null)
+              setSharingCustom(String(doc.labourContract.sharingCustom));
           }
           if (doc.machinery) {
-            setMachineImpl((doc.machinery.implement as MachineryImplement) ?? "");
+            setMachineImpl(
+              (doc.machinery.implement as MachineryImplement) ?? "",
+            );
             setMachineQty(String(doc.machinery.hoursOrAcres ?? ""));
             setMachineRate(String(doc.machinery.rate ?? ""));
           }
-          if (doc.irrigation?.amount != null) setIrrigationAmount(String(doc.irrigation.amount));
+          if (doc.irrigation?.amount != null)
+            setIrrigationAmount(String(doc.irrigation.amount));
           if (doc.other) {
             setOtherAmount(String(doc.other.totalAmount ?? ""));
             setOtherDescription(doc.other.description ?? "");
@@ -440,7 +528,10 @@ export default function AddExpense() {
   const [fertBags, setFertBags] = useState("");
   const [fertUnitCost, setFertUnitCost] = useState("");
   const fertTotal =
-    fertBags && fertUnitCost && Number(fertBags) > 0 && Number(fertUnitCost) >= 0
+    fertBags &&
+    fertUnitCost &&
+    Number(fertBags) > 0 &&
+    Number(fertUnitCost) >= 0
       ? Number(fertBags) * Number(fertUnitCost)
       : null;
   const [pestCategory, setPestCategory] = useState<PesticideCategory | "">("");
@@ -480,16 +571,21 @@ export default function AddExpense() {
   }, []);
 
   // Persist sharing when it changes (same for all ભાગમા expenses)
-  const persistSharing = useCallback((type: SharingOption | "", custom: string) => {
-    if (!type) return;
-    AsyncStorage.setItem(
-      BHAGMA_SHARING_KEY,
-      JSON.stringify({
-        sharingType: type,
-        ...(type === "custom" && custom !== "" ? { sharingCustom: custom } : {}),
-      }),
-    );
-  }, []);
+  const persistSharing = useCallback(
+    (type: SharingOption | "", custom: string) => {
+      if (!type) return;
+      AsyncStorage.setItem(
+        BHAGMA_SHARING_KEY,
+        JSON.stringify({
+          sharingType: type,
+          ...(type === "custom" && custom !== ""
+            ? { sharingCustom: custom }
+            : {}),
+        }),
+      );
+    },
+    [],
+  );
   const handleSharingSelect = useCallback(
     (v: SharingOption | "") => {
       setSharingType(v);
@@ -504,7 +600,9 @@ export default function AddExpense() {
     },
     [persistSharing, sharingType],
   );
-  const [machineUnitType, setMachineUnitType] = useState<"hour" | "vigha">("vigha");
+  const [machineUnitType, setMachineUnitType] = useState<"hour" | "vigha">(
+    "vigha",
+  );
   const [machineQty, setMachineQty] = useState("");
   const [machineRate, setMachineRate] = useState("");
   const [irrigationAmount, setIrrigationAmount] = useState("");
@@ -535,7 +633,9 @@ export default function AddExpense() {
   const scrollRef = useRef<ScrollView>(null);
   const keyboardHeight = useKeyboardHeight();
   const keyboardHeightRef = useRef(keyboardHeight);
-  useEffect(() => { keyboardHeightRef.current = keyboardHeight; }, [keyboardHeight]);
+  useEffect(() => {
+    keyboardHeightRef.current = keyboardHeight;
+  }, [keyboardHeight]);
 
   const makeOnFocus = useCallback(
     (fieldRef: React.RefObject<View | null>) => () => {
@@ -553,7 +653,9 @@ export default function AddExpense() {
             const targetScroll = Math.max(0, top - visibleH * 0.4);
             scrollRef.current?.scrollTo({ y: targetScroll, animated: true });
           },
-          () => { scrollRef.current?.scrollToEnd({ animated: true }); },
+          () => {
+            scrollRef.current?.scrollToEnd({ animated: true });
+          },
         );
       }, 300);
     },
@@ -561,42 +663,47 @@ export default function AddExpense() {
   );
 
   // ── Per-field refs ──────────────────────────────────────────────────────────
-  const seedQtyRef       = useRef<View>(null);
-  const seedRateRef      = useRef<View>(null);
-  const fertBagsRef      = useRef<View>(null);
-  const fertUnitCostRef  = useRef<View>(null);
-  const pestDosageRef    = useRef<View>(null);
-  const pestCostRef      = useRef<View>(null);
-  const labourPeopleRef  = useRef<View>(null);
-  const labourDaysRef    = useRef<View>(null);
-  const labourRateRef    = useRef<View>(null);
+  const seedQtyRef = useRef<View>(null);
+  const seedRateRef = useRef<View>(null);
+  const fertBagsRef = useRef<View>(null);
+  const fertUnitCostRef = useRef<View>(null);
+  const pestDosageRef = useRef<View>(null);
+  const pestCostRef = useRef<View>(null);
+  const labourPeopleRef = useRef<View>(null);
+  const labourDaysRef = useRef<View>(null);
+  const labourRateRef = useRef<View>(null);
   const advanceAmountRef = useRef<View>(null);
   const sharingCustomRef = useRef<View>(null);
-  const machineQtyRef    = useRef<View>(null);
-  const machineRateRef   = useRef<View>(null);
-  const irrigationRef    = useRef<View>(null);
-  const otherAmountRef   = useRef<View>(null);
-  const otherDescRef     = useRef<View>(null);
+  const machineQtyRef = useRef<View>(null);
+  const machineRateRef = useRef<View>(null);
+  const irrigationRef = useRef<View>(null);
+  const otherAmountRef = useRef<View>(null);
+  const otherDescRef = useRef<View>(null);
   const generalAmountRef = useRef<View>(null);
-  const generalDescRef   = useRef<View>(null);
+  const generalDescRef = useRef<View>(null);
 
   const validate = (): string | null => {
     if (isGeneralExpense) {
-      if (!generalDescription.trim()) return "ખર્ચનો પ્રકાર / વિવરણ લખો (દા.ત. ફાર્મ વિકાસ, સાધન ખરીદી).";
-      if (!generalAmount || Number(generalAmount) <= 0) return "ખર્ચની રકમ દાખલ કરો.";
+      if (!generalDescription.trim())
+        return "ખર્ચનો પ્રકાર / વિવરણ લખો (દા.ત. ફાર્મ વિકાસ, સાધન ખરીદી).";
+      if (!generalAmount || Number(generalAmount) <= 0)
+        return "ખર્ચની રકમ દાખલ કરો.";
       return null;
     }
-    if (!cropId) return "કૃપા કરીને પાક પસંદ કરો અથવા સામાન્ય ખર્ચ માટે કોઈ પાક પસંદ કરો.";
+    if (!cropId)
+      return "કૃપા કરીને પાક પસંદ કરો અથવા સામાન્ય ખર્ચ માટે કોઈ પાક પસંદ કરો.";
     if (!category) return "કૃપા કરીને ખર્ચ પ્રકાર પસંદ કરો.";
     if (category === "Seed") {
       if (!seedType) return "બિયારણ પ્રકાર જરૂરી છે.";
       if (!seedQty || Number(seedQty) <= 0) return "જથ્થો દાખલ કરો.";
-      if (!seedUnitRate || Number(seedUnitRate) < 0) return "દર (પ્રતિ એકમ) દાખલ કરો.";
+      if (!seedUnitRate || Number(seedUnitRate) < 0)
+        return "દર (પ્રતિ એકમ) દાખલ કરો.";
     }
     if (category === "Fertilizer") {
       if (!fertProduct) return "ઉત્પાદનનું નામ જરૂરી છે.";
       if (!fertBags || Number(fertBags) <= 0) return "બૅગ સંખ્યા દાખલ કરો.";
-      if (!fertUnitCost || Number(fertUnitCost) < 0) return "દર દર બૅગ દાખલ કરો.";
+      if (!fertUnitCost || Number(fertUnitCost) < 0)
+        return "દર દર બૅગ દાખલ કરો.";
     }
     if (category === "Pesticide") {
       if (!pestCategory) return "કેટેગરી પસંદ કરો.";
@@ -623,10 +730,12 @@ export default function AddExpense() {
       if (!machineQty || !machineRate) return "બધી મશીનરી માહિતી ભરો.";
     }
     if (category === "Irrigation") {
-      if (!irrigationAmount || Number(irrigationAmount) <= 0) return "સિંચાઈ ખર્ચની રકમ દાખલ કરો.";
+      if (!irrigationAmount || Number(irrigationAmount) <= 0)
+        return "સિંચાઈ ખર્ચની રકમ દાખલ કરો.";
     }
     if (category === "Other") {
-      if (!otherAmount || Number(otherAmount) <= 0) return "ખર્ચની રકમ દાખલ કરો.";
+      if (!otherAmount || Number(otherAmount) <= 0)
+        return "ખર્ચની રકમ દાખલ કરો.";
     }
     return null;
   };
@@ -656,7 +765,9 @@ export default function AddExpense() {
       const cropPayload = {
         cropId: cropId as string,
         category: category as ExpenseCategory,
-        expenseSource: isBhagyaUpad ? ("bhagyaUpad" as const) : ("cropExpense" as const),
+        expenseSource: isBhagyaUpad
+          ? ("bhagyaUpad" as const)
+          : ("cropExpense" as const),
         date: effectiveExpenseDate.toISOString(),
         ...(category === "Seed" && {
           seed: {
@@ -695,9 +806,10 @@ export default function AddExpense() {
               amountGiven: Number(advanceAmount),
               ...(sharingType && {
                 sharingType: sharingType as SharingOption,
-                ...(sharingType === "custom" && sharingCustom !== "" && {
-                  sharingCustom: Number(sharingCustom),
-                }),
+                ...(sharingType === "custom" &&
+                  sharingCustom !== "" && {
+                    sharingCustom: Number(sharingCustom),
+                  }),
               }),
             },
           }),
@@ -713,7 +825,10 @@ export default function AddExpense() {
           irrigation: { amount: Number(irrigationAmount) },
         }),
         ...(category === "Other" && {
-          other: { totalAmount: Number(otherAmount), description: otherDescription.trim() || undefined },
+          other: {
+            totalAmount: Number(otherAmount),
+            description: otherDescription.trim() || undefined,
+          },
         }),
       };
 
@@ -721,7 +836,11 @@ export default function AddExpense() {
         if (isEdit) await updateExpense(editId!, generalPayload);
         else await createExpense(generalPayload);
         refreshTransactions();
-        Toast.show({ type: "success", text1: "સફળ!", text2: isEdit ? "ફેરફાર સાચવ્યો." : "સામાન્ય ખર્ચ સાચવ્યો." });
+        Toast.show({
+          type: "success",
+          text1: "સફળ!",
+          text2: isEdit ? "ફેરફાર સાચવ્યો." : "સામાન્ય ખર્ચ સાચવ્યો.",
+        });
         if (isEdit) router.back();
         if (!isEdit) {
           setGeneralDescription("");
@@ -732,7 +851,11 @@ export default function AddExpense() {
       if (isEdit) await updateExpense(editId!, cropPayload);
       else await createExpense(cropPayload);
       refreshTransactions();
-      Toast.show({ type: "success", text1: "સફળ!", text2: isEdit ? "ખર્ચમાં ફેરફાર સાચવ્યો!" : "ખર્ચ સફળતાપૂર્વક ઉમેરાયો!" });
+      Toast.show({
+        type: "success",
+        text1: "સફળ!",
+        text2: isEdit ? "ખર્ચમાં ફેરફાર સાચવ્યો!" : "ખર્ચ સફળતાપૂર્વક ઉમેરાયો!",
+      });
       if (isEdit) router.back();
       if (!isEdit) {
         setCategory("");
@@ -772,9 +895,18 @@ export default function AddExpense() {
 
   if (fetchingEdit) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: C.bg }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: C.bg,
+        }}
+      >
         <ActivityIndicator size="large" color={C.green700} />
-        <Text style={{ marginTop: 12, fontSize: 16, color: C.textMuted }}>લોડ થઈ રહ્યું છે...</Text>
+        <Text style={{ marginTop: 12, fontSize: 16, color: C.textMuted }}>
+          લોડ થઈ રહ્યું છે...
+        </Text>
       </View>
     );
   }
@@ -800,20 +932,40 @@ export default function AddExpense() {
         <View style={styles.decorCircle1} />
         <View style={styles.decorCircle2} />
         <View style={styles.headerRow}>
-          <AppBackButton onPress={() => router.back()} iconColor={C.green700} backgroundColor={C.surface} borderColor={C.green100} />
+          <AppBackButton
+            onPress={() => router.back()}
+            iconColor={C.green700}
+            backgroundColor={C.surface}
+            borderColor={C.green100}
+          />
           <View style={{ alignItems: "center" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
               {isGeneralExpense ? (
                 <Text style={styles.headerTitle}>સામાન્ય ખર્ચ</Text>
               ) : isBhagyaUpad ? (
                 <Text style={styles.headerTitle}>ભાગ્યા નો ઉપાડ</Text>
               ) : activeCat ? (
                 <>
-                  <View style={[styles.headerIconWrap, { backgroundColor: activeCat.pale }]}>
+                  <View
+                    style={[
+                      styles.headerIconWrap,
+                      { backgroundColor: activeCat.pale },
+                    ]}
+                  >
                     {activeCat.iconSet === "mci" ? (
-                      <MaterialCommunityIcons name={activeCat.iconName as any} size={20} color={activeCat.color} />
+                      <MaterialCommunityIcons
+                        name={activeCat.iconName as any}
+                        size={20}
+                        color={activeCat.color}
+                      />
                     ) : (
-                      <Ionicons name={activeCat.iconName as any} size={20} color={activeCat.color} />
+                      <Ionicons
+                        name={activeCat.iconName as any}
+                        size={20}
+                        color={activeCat.color}
+                      />
                     )}
                   </View>
                   <Text style={styles.headerTitle}>{activeCat.label} ખર્ચ</Text>
@@ -822,13 +974,19 @@ export default function AddExpense() {
                 <Text style={styles.headerTitle}>ખર્ચ ઉમેરો</Text>
               )}
             </View>
-            {selectedCrop?.landType === "bhagma" && selectedCrop?.bhagmaPercentage != null && (
-              <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
-                <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
-                  ભાગમા {selectedCrop.bhagmaPercentage}%
-                </Text>
-              </View>
-            )}
+            {selectedCrop?.landType === "bhagma" &&
+              selectedCrop?.bhagmaPercentage != null && (
+                <View
+                  style={[
+                    styles.bhagmaBadge,
+                    { backgroundColor: C.expensePale },
+                  ]}
+                >
+                  <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
+                    ભાગમા {selectedCrop.bhagmaPercentage}%
+                  </Text>
+                </View>
+              )}
           </View>
           <View style={{ width: 36 }} />
         </View>
@@ -858,7 +1016,14 @@ export default function AddExpense() {
                     style={[styles.yearPill, active && styles.yearPillActive]}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.yearPillText, active && styles.yearPillTextActive]}>{fy}</Text>
+                    <Text
+                      style={[
+                        styles.yearPillText,
+                        active && styles.yearPillTextActive,
+                      ]}
+                    >
+                      {fy}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -875,9 +1040,14 @@ export default function AddExpense() {
         {isGeneralExpense ? (
           <View style={styles.card}>
             <View style={styles.generalExpenseInfo}>
-              <Ionicons name="information-circle" size={18} color={C.green700} />
+              <Ionicons
+                name="information-circle"
+                size={18}
+                color={C.green700}
+              />
               <Text style={styles.generalExpenseInfoText}>
-                આ ખર્ચ કોઈ પાક સાથે લિંક નથી. વાર્ષિક ફાર્મ વિકાસ, સાધન ખરીદી વગેરે — અહેવાલમાં કુલ ખર્ચમાં ગણાશે.
+                આ ખર્ચ કોઈ પાક સાથે લિંક નથી. વાર્ષિક ફાર્મ વિકાસ, સાધન ખરીદી
+                વગેરે — અહેવાલમાં કુલ ખર્ચમાં ગણાશે.
               </Text>
             </View>
             <SectionLabel text="ખર્ચનો પ્રકાર / વિવરણ" />
@@ -905,7 +1075,12 @@ export default function AddExpense() {
             <TouchableOpacity
               style={styles.saveBtn}
               onPress={handleSave}
-              disabled={saving || !generalDescription.trim() || !generalAmount || Number(generalAmount) <= 0}
+              disabled={
+                saving ||
+                !generalDescription.trim() ||
+                !generalAmount ||
+                Number(generalAmount) <= 0
+              }
             >
               <LinearGradient
                 colors={["#2E7D32", "#4CAF50"]}
@@ -926,455 +1101,576 @@ export default function AddExpense() {
           </View>
         ) : (
           <>
-        {/* ── Crop dropdown: hidden in edit mode (only change data entry: bags, amount, etc.) ── */}
-        {!isEdit && (
-          <View style={styles.cropSelectCard}>
-            <SectionLabel text={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો" : "પાક પસંદ કરો"} />
-            {(isBhagyaUpad ? crops.filter((c) => c.landType === "bhagma") : crops).length > 0 ? (
-              <SelectPicker
-                options={(isBhagyaUpad ? crops.filter((c) => c.landType === "bhagma") : crops).map((c) => ({ value: c._id, label: getCropDropdownLabel(c) }))}
-                selected={cropId ?? ""}
-                onSelect={(id) => setSelectedCropId(id)}
-                placeholder={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો..." : "આ ખર્ચ કયા પાક માટે?"}
-              />
-            ) : (
-              <Text style={styles.generalExpenseNote}>
-                {isBhagyaUpad ? "કોઈ ભાગમા પાક નથી — પહેલા ડેશબોર્ડથી ભાગમા પાક ઉમેરો." : "કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો."}
-              </Text>
-            )}
-          </View>
-        )}
-
-        {/* ── Category: hidden in edit mode; when edit only show data form (bags, amount, etc.) ── */}
-        {!isEdit && category === "" ? (
-          <>
-            {visibleCategories.length > 0 && <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર પસંદ કરો</Text>}
-            {isBhagyaUpad && !isBhagmaCrop && (
-              <View style={[styles.card, { marginBottom: 16, backgroundColor: "#FFF8E1", borderColor: "#F9A825" }]}>
-                <Text style={[styles.generalExpenseInfoText, { color: "#92400E" }]}>
-                  ભાગ્યા નો ઉપાડ ફક્ત ભાગમા પાક માટે છે. ઉપરથી ભાગમા પાક પસંદ કરો.
-                </Text>
-              </View>
-            )}
-            {visibleCategories.length > 0 && <View style={styles.catGrid}>
-              {visibleCategories.map((cat) => (
-                <TouchableOpacity
-                  key={cat.value}
-                  onPress={() => setCategory(cat.value)}
-                  activeOpacity={0.85}
-                  style={styles.catGridItem}
-                >
-                  <View style={[styles.catCard, { borderColor: C.borderLight }]}>
-                    <View style={[styles.catCardIconWrap, { backgroundColor: cat.pale }]}>
-                      {cat.iconSet === "mci" ? (
-                        <MaterialCommunityIcons name={cat.iconName as any} size={28} color={cat.color} />
-                      ) : (
-                        <Ionicons name={cat.iconName as any} size={28} color={cat.color} />
-                      )}
-                    </View>
-                    <Text style={styles.catCardLabel} numberOfLines={2}>{cat.label}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>}
-          </>
-        ) : (
-          !isEdit && (
-            <View style={styles.catStrip}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catStripContent}>
-                {visibleCategories.map((cat) => {
-                  const active = category === cat.value;
-                  return (
-                    <TouchableOpacity
-                      key={cat.value}
-                      onPress={() => setCategory(cat.value)}
-                      activeOpacity={0.8}
-                      style={[styles.catStripChip, active && { backgroundColor: cat.pale, borderColor: cat.color }]}
-                    >
-                      <Text style={[styles.catStripLabel, active && { color: cat.color, fontWeight: "800" }]} numberOfLines={1}>
-                        {cat.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )
-        )}
-
-        {/* ── SEED ── */}
-        {category === "Seed" && (
-          <View style={styles.card}>
-            <View style={[styles.cardTitleRow, { borderLeftColor: "#16A34A" }]}>
-              <Text style={styles.cardTitle}>🌱 બિયારણ ખર્ચ</Text>
-            </View>
-            <SectionLabel text="બિયારણ પ્રકાર" />
-            <SelectPicker
-              options={SEED_TYPES}
-              selected={seedType}
-              onSelect={setSeedType}
-              placeholder="પ્રકાર પસંદ કરો..."
-            />
-            <SectionLabel text="જથ્થો (૧ મણ = ૨૦ કિ.ગ્રા.)" />
-            <View style={styles.seedQtyRow}>
-              <NumericInput
-                ref={seedQtyRef}
-                value={seedQty}
-                onChange={setSeedQty}
-                placeholder="0"
-                onFocus={makeOnFocus(seedQtyRef)}
-              />
-              <View style={styles.unitToggle}>
-                <TouchableOpacity
-                  style={[styles.unitToggleBtn, seedQtyUnit === "man" && styles.unitToggleBtnActive]}
-                  onPress={() => setSeedQtyUnit("man")}
-                >
-                  <Text style={[styles.unitToggleText, seedQtyUnit === "man" && styles.unitToggleTextActive]}>મણ</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.unitToggleBtn, seedQtyUnit === "kg" && styles.unitToggleBtnActive]}
-                  onPress={() => setSeedQtyUnit("kg")}
-                >
-                  <Text style={[styles.unitToggleText, seedQtyUnit === "kg" && styles.unitToggleTextActive]}>કિ.ગ્રા.</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <SectionLabel text={`દર (પ્રતિ ${seedQtyUnit === "man" ? "મણ" : "કિ.ગ્રા."})`} />
-            <NumericInput
-              ref={seedRateRef}
-              value={seedUnitRate}
-              onChange={setSeedUnitRate}
-              placeholder="0"
-              prefix=""
-              onFocus={makeOnFocus(seedRateRef)}
-            />
-            {Number(seedQty) > 0 && Number(seedUnitRate) >= 0 && (
-              <View style={styles.derivedBox}>
-                <Ionicons name="calculator" size={16} color={C.green700} />
-                <Text style={styles.derivedText}>
-                  કુલ ખર્ચ: {Math.round(Number(seedCost)).toLocaleString("en-IN")}
-                  {seedRatePerKg && ` · દર ${Math.round(Number(seedRatePerKg))}/કિ.ગ્રા.`}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* ── FERTILIZER ── */}
-        {category === "Fertilizer" && (
-          <View style={styles.card}>
-            <View style={[styles.cardTitleRow, { borderLeftColor: "#0891B2" }]}>
-              <Text style={styles.cardTitle}>🧪 ખાતર ખર્ચ</Text>
-            </View>
-            <SectionLabel text="ઉત્પાદન" />
-            <SelectPicker
-              options={FERTILIZER_PRODUCTS}
-              selected={fertProduct}
-              onSelect={setFertProduct}
-              placeholder="ખાતર પસંદ કરો..."
-            />
-            <SectionLabel text="બૅગ સંખ્યા" />
-            <NumericInput
-              ref={fertBagsRef}
-              value={fertBags}
-              onChange={setFertBags}
-              placeholder="0"
-              suffix="બૅગ"
-              onFocus={makeOnFocus(fertBagsRef)}
-            />
-            <SectionLabel text="દર દર બૅગ" />
-            <NumericInput
-              ref={fertUnitCostRef}
-              value={fertUnitCost}
-              onChange={setFertUnitCost}
-              placeholder="0"
-              prefix=""
-              onFocus={makeOnFocus(fertUnitCostRef)}
-            />
-            {fertTotal !== null && fertTotal >= 0 && (
-              <View style={styles.totalBox}>
-                <Text style={styles.totalLabel}>કુલ = બૅગ × દર</Text>
-                <Text style={styles.totalValue}>
-                  {Math.round(fertTotal).toLocaleString("en-IN")}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* ── PESTICIDE ── */}
-        {category === "Pesticide" && (
-          <View style={styles.card}>
-            <View style={[styles.cardTitleRow, { borderLeftColor: "#DC2626" }]}>
-              <Text style={styles.cardTitle}>🧴 જંતુનાશક ખર્ચ</Text>
-            </View>
-            <View style={styles.infoNote}>
-              <Ionicons name="information-circle" size={14} color="#0891B2" />
-              <Text style={styles.infoNoteText}>
-                અહીં ફક્ત આર્થિક માહિતી નોંધો.
-              </Text>
-            </View>
-            <SectionLabel text="પ્રકાર" />
-            <SelectPicker
-              options={PESTICIDE_CATEGORIES}
-              selected={pestCategory}
-              onSelect={setPestCategory}
-              placeholder="પ્રકાર પસંદ કરો..."
-            />
-            <SectionLabel text="જથ્થો (ml/લિ.)" />
-            <NumericInput
-              ref={pestDosageRef}
-              value={pestDosage}
-              onChange={setPestDosage}
-              placeholder="0"
-              suffix="ml"
-              onFocus={makeOnFocus(pestDosageRef)}
-            />
-            <SectionLabel text="ખર્ચ" />
-            <NumericInput
-              ref={pestCostRef}
-              value={pestCost}
-              onChange={setPestCost}
-              placeholder="0"
-              prefix=""
-              onFocus={makeOnFocus(pestCostRef)}
-            />
-          </View>
-        )}
-
-        {/* ── LABOUR (મજૂરી): bhagma crop → ભાગમા (advance/medical). Non-bhagma → દૈનિક મજૂર (daily labour cost). ── */}
-        {category === "Labour" && (
-          <View style={styles.card}>
-            <View style={[styles.cardTitleRow, { borderLeftColor: "#D97706" }]}>
-              <Text style={styles.cardTitle}>
-                👷 મજૂરી ખર્ચ {isBhagmaCrop ? "(ભાગમા / અગ્રિમ)" : "(દૈનિક મજૂર)"}
-              </Text>
-            </View>
-            {isBhagmaCrop ? (
-              <>
-                <SectionLabel text="શેરિંગ (ભાગમા વિભાજન)" />
-                <SelectPicker
-                  options={SHARING_OPTIONS}
-                  selected={sharingType}
-                  onSelect={(v) => handleSharingSelect(v as SharingOption | "")}
-                  placeholder="શેરિંગ પસંદ કરો..."
+            {/* ── Crop dropdown: hidden in edit mode (only change data entry: bags, amount, etc.) ── */}
+            {!isEdit && (
+              <View style={styles.cropSelectCard}>
+                <SectionLabel
+                  text={isBhagyaUpad ? "ભાગમા પાક પસંદ કરો" : "પાક પસંદ કરો"}
                 />
-                {sharingType === "custom" && (
-                  <>
-                    <SectionLabel text="ટકા દાખલ કરો (0–100)" />
-                    <NumericInput
-                      ref={sharingCustomRef}
-                      value={sharingCustom}
-                      onChange={handleSharingCustomChange}
-                      placeholder="ઉદા. 40"
-                      onFocus={makeOnFocus(sharingCustomRef)}
-                    />
-                  </>
-                )}
-                <View style={styles.warnNote}>
-                  <Ionicons name="warning" size={14} color="#D97706" />
-                  <Text style={styles.warnNoteText}>
-                    આ રકમ ખેત ખર્ચ નથી — ભવિષ્યની જવાબદારી સામે ડેબિટ છે.
+                {(isBhagyaUpad
+                  ? crops.filter((c) => c.landType === "bhagma")
+                  : crops
+                ).length > 0 ? (
+                  <SelectPicker
+                    options={(isBhagyaUpad
+                      ? crops.filter((c) => c.landType === "bhagma")
+                      : crops
+                    ).map((c) => ({
+                      value: c._id,
+                      label: getCropDropdownLabel(c),
+                    }))}
+                    selected={cropId ?? ""}
+                    onSelect={(id) => setSelectedCropId(id)}
+                    placeholder={
+                      isBhagyaUpad
+                        ? "ભાગમા પાક પસંદ કરો..."
+                        : "આ ખર્ચ કયા પાક માટે?"
+                    }
+                  />
+                ) : (
+                  <Text style={styles.generalExpenseNote}>
+                    {isBhagyaUpad
+                      ? "કોઈ ભાગમા પાક નથી — પહેલા ડેશબોર્ડથી ભાગમા પાક ઉમેરો."
+                      : "કોઈ પાક નથી — પહેલા ડેશબોર્ડથી પાક ઉમેરો."}
                   </Text>
-                </View>
-                <SectionLabel text="ઍડ્વાન્સ કારણ" />
-                <SelectPicker
-                  options={ADVANCE_REASONS}
-                  selected={advanceReason}
-                  onSelect={setAdvanceReason}
-                  placeholder="કારણ પસંદ કરો..."
-                />
-                <SectionLabel text="આપેલ રકમ" />
-                <NumericInput
-                  ref={advanceAmountRef}
-                  value={advanceAmount}
-                  onChange={setAdvanceAmount}
-                  placeholder="0"
-                  prefix=""
-                  onFocus={makeOnFocus(advanceAmountRef)}
-                />
-              </>
-            ) : (
+                )}
+              </View>
+            )}
+
+            {/* ── Category: hidden in edit mode; when edit only show data form (bags, amount, etc.) ── */}
+            {!isEdit && category === "" ? (
               <>
-                <SectionLabel text="કામ પ્રકાર" />
-                <SelectPicker
-                  options={LABOUR_TASKS}
-                  selected={labourTask}
-                  onSelect={setLabourTask}
-                  placeholder="કામ પસંદ કરો..."
-                />
-                <SectionLabel text="લોકો × દિવસ" />
-                <View style={styles.multiRow}>
-                  <View style={{ flex: 1 }}>
-                    <NumericInput
-                      ref={labourPeopleRef}
-                      value={labourPeople}
-                      onChange={setLabourPeople}
-                      placeholder="લોકો"
-                      onFocus={makeOnFocus(labourPeopleRef)}
-                    />
-                  </View>
-                  <Text style={styles.multiX}>×</Text>
-                  <View style={{ flex: 1 }}>
-                    <NumericInput
-                      ref={labourDaysRef}
-                      value={labourDays}
-                      onChange={setLabourDays}
-                      placeholder="દિવસ"
-                      onFocus={makeOnFocus(labourDaysRef)}
-                    />
-                  </View>
-                </View>
-                <SectionLabel text="દૈનિક દર" />
-                <NumericInput
-                  ref={labourRateRef}
-                  value={labourRate}
-                  onChange={setLabourRate}
-                  placeholder="0"
-                  prefix=""
-                  onFocus={makeOnFocus(labourRateRef)}
-                />
-                {labourTotal !== null && (
-                  <View style={styles.totalBox}>
-                    <Text style={styles.totalLabel}>કુલ =</Text>
-                    <Text style={styles.totalValue}>
-                      {Math.round(labourTotal).toLocaleString("en-IN")}
+                {visibleCategories.length > 0 && (
+                  <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર પસંદ કરો</Text>
+                )}
+                {isBhagyaUpad && !isBhagmaCrop && (
+                  <View
+                    style={[
+                      styles.card,
+                      {
+                        marginBottom: 16,
+                        backgroundColor: "#FFF8E1",
+                        borderColor: "#F9A825",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.generalExpenseInfoText,
+                        { color: "#92400E" },
+                      ]}
+                    >
+                      ભાગ્યા નો ઉપાડ ફક્ત ભાગમા પાક માટે છે. ઉપરથી ભાગમા પાક
+                      પસંદ કરો.
                     </Text>
                   </View>
                 )}
+                {visibleCategories.length > 0 && (
+                  <View style={styles.catGrid}>
+                    {visibleCategories.map((cat) => (
+                      <TouchableOpacity
+                        key={cat.value}
+                        onPress={() => setCategory(cat.value)}
+                        activeOpacity={0.85}
+                        style={styles.catGridItem}
+                      >
+                        <View
+                          style={[
+                            styles.catCard,
+                            { borderColor: C.borderLight },
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.catCardIconWrap,
+                              { backgroundColor: cat.pale },
+                            ]}
+                          >
+                            {cat.iconSet === "mci" ? (
+                              <MaterialCommunityIcons
+                                name={cat.iconName as any}
+                                size={28}
+                                color={cat.color}
+                              />
+                            ) : (
+                              <Ionicons
+                                name={cat.iconName as any}
+                                size={28}
+                                color={cat.color}
+                              />
+                            )}
+                          </View>
+                          <Text style={styles.catCardLabel} numberOfLines={2}>
+                            {cat.label}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </>
+            ) : (
+              !isEdit && (
+                <View style={styles.catStrip}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.catStripContent}
+                  >
+                    {visibleCategories.map((cat) => {
+                      const active = category === cat.value;
+                      return (
+                        <TouchableOpacity
+                          key={cat.value}
+                          onPress={() => setCategory(cat.value)}
+                          activeOpacity={0.8}
+                          style={[
+                            styles.catStripChip,
+                            active && {
+                              backgroundColor: cat.pale,
+                              borderColor: cat.color,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.catStripLabel,
+                              active && { color: cat.color, fontWeight: "800" },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {cat.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )
             )}
-          </View>
-        )}
 
-        {/* ── MACHINERY ── */}
-        {category === "Machinery" && (
-          <View style={styles.card}>
-            <View style={[styles.cardTitleRow, { borderLeftColor: "#7C3AED" }]}>
-              <Text style={styles.cardTitle}>🚜 ટ્રેક્ટર ભાડું</Text>
-            </View>
-            <SectionLabel text="ઓજાર / હળ" />
-            <SelectPicker
-              options={MACHINERY_IMPLEMENTS}
-              selected={machineImpl}
-              onSelect={setMachineImpl}
-              placeholder="હળ અથવા ઓજાર પસંદ કરો..."
-            />
-            <SectionLabel text="દરનો એકમ" />
-            <View style={styles.toggleRow}>
-              <TouchableOpacity
-                style={[
-                  styles.toggleBtn,
-                  machineUnitType === "vigha" && styles.toggleBtnActive,
-                ]}
-                onPress={() => setMachineUnitType("vigha")}
-              >
-                <Text
-                  style={
-                    machineUnitType === "vigha"
-                      ? styles.toggleTextActive
-                      : styles.toggleText
-                  }
+            {/* ── SEED ── */}
+            {category === "Seed" && (
+              <View style={styles.card}>
+                <View
+                  style={[styles.cardTitleRow, { borderLeftColor: "#16A34A" }]}
                 >
-                  વીઘા
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.toggleBtn,
-                  machineUnitType === "hour" && styles.toggleBtnActive,
-                ]}
-                onPress={() => setMachineUnitType("hour")}
-              >
-                <Text
-                  style={
-                    machineUnitType === "hour"
-                      ? styles.toggleTextActive
-                      : styles.toggleText
-                  }
-                >
-                  કલાક
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <SectionLabel text={machineUnitType === "vigha" ? "વીઘા" : "કલાક"} />
-            <NumericInput
-              ref={machineQtyRef}
-              value={machineQty}
-              onChange={setMachineQty}
-              placeholder="0"
-              suffix={machineUnitType === "vigha" ? "વીઘા" : "કલાક"}
-              onFocus={makeOnFocus(machineQtyRef)}
-            />
-            <SectionLabel text="દર" />
-            <NumericInput
-              ref={machineRateRef}
-              value={machineRate}
-              onChange={setMachineRate}
-              placeholder="0"
-              prefix=""
-              onFocus={makeOnFocus(machineRateRef)}
-            />
-            {machineTotal !== null && (
-              <View style={styles.totalBox}>
-                <Text style={styles.totalLabel}>
-                  કુલ = {machineUnitType === "vigha" ? "વીઘા" : "કલાક"} × દર
-                </Text>
-                <Text style={styles.totalValue}>
-                  {Math.round(machineTotal).toLocaleString("en-IN")}
-                </Text>
+                  <Text style={styles.cardTitle}>🌱 બિયારણ ખર્ચ</Text>
+                </View>
+                <SectionLabel text="બિયારણ પ્રકાર" />
+                <SelectPicker
+                  options={SEED_TYPES}
+                  selected={seedType}
+                  onSelect={setSeedType}
+                  placeholder="પ્રકાર પસંદ કરો..."
+                />
+                <SectionLabel text="જથ્થો (૧ મણ = ૨૦ કિ.ગ્રા.)" />
+                <View style={styles.seedQtyRow}>
+                  <View style={{ flex: 1 }}>
+                    <NumericInput
+                      ref={seedQtyRef}
+                      value={seedQty}
+                      onChange={setSeedQty}
+                      placeholder="0"
+                      onFocus={makeOnFocus(seedQtyRef)}
+                    />
+                  </View>
+
+                  <View style={styles.unitToggle}>
+                    <TouchableOpacity
+                      style={[
+                        styles.unitToggleBtn,
+                        seedQtyUnit === "man" && styles.unitToggleBtnActive,
+                      ]}
+                      onPress={() => setSeedQtyUnit("man")}
+                    >
+                      <Text
+                        style={[
+                          styles.unitToggleText,
+                          seedQtyUnit === "man" && styles.unitToggleTextActive,
+                        ]}
+                      >
+                        મણ
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.unitToggleBtn,
+                        seedQtyUnit === "kg" && styles.unitToggleBtnActive,
+                      ]}
+                      onPress={() => setSeedQtyUnit("kg")}
+                    >
+                      <Text
+                        style={[
+                          styles.unitToggleText,
+                          seedQtyUnit === "kg" && styles.unitToggleTextActive,
+                        ]}
+                      >
+                        કિ.ગ્રા.
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <SectionLabel
+                  text={`દર (પ્રતિ ${seedQtyUnit === "man" ? "મણ" : "કિ.ગ્રા."})`}
+                />
+                <NumericInput
+                  ref={seedRateRef}
+                  value={seedUnitRate}
+                  onChange={setSeedUnitRate}
+                  placeholder="0"
+                  prefix=""
+                  onFocus={makeOnFocus(seedRateRef)}
+                />
+                {Number(seedQty) > 0 && Number(seedUnitRate) >= 0 && (
+                  <View style={styles.derivedBox}>
+                    <Ionicons name="calculator" size={16} color={C.green700} />
+                    <Text style={styles.derivedText}>
+                      કુલ ખર્ચ:{" "}
+                      {Math.round(Number(seedCost)).toLocaleString("en-IN")}
+                      {seedRatePerKg &&
+                        ` · દર ${Math.round(Number(seedRatePerKg))}/કિ.ગ્રા.`}
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
-          </View>
-        )}
 
-        {/* ── IRRIGATION ── */}
-        {category === "Irrigation" && (
-          <View style={styles.card}>
-            <View style={[styles.cardTitleRow, { borderLeftColor: "#0284C7" }]}>
-              <Text style={styles.cardTitle}>💧 સિંચાઈ ખર્ચ</Text>
-            </View>
-            <SectionLabel text="રકમ" />
-            <NumericInput
-              ref={irrigationRef}
-              value={irrigationAmount}
-              onChange={setIrrigationAmount}
-              placeholder="0"
-              prefix="₹"
-              onFocus={makeOnFocus(irrigationRef)}
-            />
-          </View>
-        )}
+            {/* ── FERTILIZER ── */}
+            {category === "Fertilizer" && (
+              <View style={styles.card}>
+                <View
+                  style={[styles.cardTitleRow, { borderLeftColor: "#0891B2" }]}
+                >
+                  <Text style={styles.cardTitle}>🧪 ખાતર ખર્ચ</Text>
+                </View>
+                <SectionLabel text="ઉત્પાદન" />
+                <SelectPicker
+                  options={FERTILIZER_PRODUCTS}
+                  selected={fertProduct}
+                  onSelect={setFertProduct}
+                  placeholder="ખાતર પસંદ કરો..."
+                />
+                <SectionLabel text="બૅગ સંખ્યા" />
+                <NumericInput
+                  ref={fertBagsRef}
+                  value={fertBags}
+                  onChange={setFertBags}
+                  placeholder="0"
+                  suffix="બૅગ"
+                  onFocus={makeOnFocus(fertBagsRef)}
+                />
+                <SectionLabel text="દર દર બૅગ" />
+                <NumericInput
+                  ref={fertUnitCostRef}
+                  value={fertUnitCost}
+                  onChange={setFertUnitCost}
+                  placeholder="0"
+                  prefix=""
+                  onFocus={makeOnFocus(fertUnitCostRef)}
+                />
+                {fertTotal !== null && fertTotal >= 0 && (
+                  <View style={styles.totalBox}>
+                    <Text style={styles.totalLabel}>કુલ = બૅગ × દર</Text>
+                    <Text style={styles.totalValue}>
+                      {Math.round(fertTotal).toLocaleString("en-IN")}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
 
-        {/* ── OTHER ── */}
-        {category === "Other" && (
-          <View style={styles.card}>
-            <View style={[styles.cardTitleRow, { borderLeftColor: "#64748B" }]}>
-              <Text style={styles.cardTitle}>📦 અન્ય ખર્ચ</Text>
-            </View>
-            <SectionLabel text="રકમ" />
-            <NumericInput
-              ref={otherAmountRef}
-              value={otherAmount}
-              onChange={setOtherAmount}
-              placeholder="0"
-              prefix="₹"
-              onFocus={makeOnFocus(otherAmountRef)}
-            />
-            <SectionLabel text="વિવરણ (ઐચ્છિક)" />
-            <View ref={otherDescRef}>
-              <TextInput
-                style={styles.notesInput}
-                value={otherDescription}
-                onChangeText={setOtherDescription}
-                placeholder="દા.ત. ઘર બાંધકામ, સાધન ખરીદી..."
-                placeholderTextColor="#5B6570"
-                onFocus={makeOnFocus(otherDescRef)}
-              />
-            </View>
-          </View>
-        )}
+            {/* ── PESTICIDE ── */}
+            {category === "Pesticide" && (
+              <View style={styles.card}>
+                <View
+                  style={[styles.cardTitleRow, { borderLeftColor: "#DC2626" }]}
+                >
+                  <Text style={styles.cardTitle}>🧴 જંતુનાશક ખર્ચ</Text>
+                </View>
+                <View style={styles.infoNote}>
+                  <Ionicons
+                    name="information-circle"
+                    size={14}
+                    color="#0891B2"
+                  />
+                  <Text style={styles.infoNoteText}>
+                    અહીં ફક્ત આર્થિક માહિતી નોંધો.
+                  </Text>
+                </View>
+                <SectionLabel text="પ્રકાર" />
+                <SelectPicker
+                  options={PESTICIDE_CATEGORIES}
+                  selected={pestCategory}
+                  onSelect={setPestCategory}
+                  placeholder="પ્રકાર પસંદ કરો..."
+                />
+                <SectionLabel text="જથ્થો (ml/લિ.)" />
+                <NumericInput
+                  ref={pestDosageRef}
+                  value={pestDosage}
+                  onChange={setPestDosage}
+                  placeholder="0"
+                  suffix="ml"
+                  onFocus={makeOnFocus(pestDosageRef)}
+                />
+                <SectionLabel text="ખર્ચ" />
+                <NumericInput
+                  ref={pestCostRef}
+                  value={pestCost}
+                  onChange={setPestCost}
+                  placeholder="0"
+                  prefix=""
+                  onFocus={makeOnFocus(pestCostRef)}
+                />
+              </View>
+            )}
 
+            {/* ── LABOUR (મજૂરી): bhagma crop → ભાગમા (advance/medical). Non-bhagma → દૈનિક મજૂર (daily labour cost). ── */}
+            {category === "Labour" && (
+              <View style={styles.card}>
+                <View
+                  style={[styles.cardTitleRow, { borderLeftColor: "#D97706" }]}
+                >
+                  <Text style={styles.cardTitle}>
+                    👷 મજૂરી ખર્ચ{" "}
+                    {isBhagmaCrop ? "(ભાગમા / અગ્રિમ)" : "(દૈનિક મજૂર)"}
+                  </Text>
+                </View>
+                {isBhagmaCrop ? (
+                  <>
+                    <SectionLabel text="શેરિંગ (ભાગમા વિભાજન)" />
+                    <SelectPicker
+                      options={SHARING_OPTIONS}
+                      selected={sharingType}
+                      onSelect={(v) =>
+                        handleSharingSelect(v as SharingOption | "")
+                      }
+                      placeholder="શેરિંગ પસંદ કરો..."
+                    />
+                    {sharingType === "custom" && (
+                      <>
+                        <SectionLabel text="ટકા દાખલ કરો (0–100)" />
+                        <NumericInput
+                          ref={sharingCustomRef}
+                          value={sharingCustom}
+                          onChange={handleSharingCustomChange}
+                          placeholder="ઉદા. 40"
+                          onFocus={makeOnFocus(sharingCustomRef)}
+                        />
+                      </>
+                    )}
+                    <View style={styles.warnNote}>
+                      <Ionicons name="warning" size={14} color="#D97706" />
+                      <Text style={styles.warnNoteText}>
+                        આ રકમ ખેત ખર્ચ નથી — ભવિષ્યની જવાબદારી સામે ડેબિટ છે.
+                      </Text>
+                    </View>
+                    <SectionLabel text="ઍડ્વાન્સ કારણ" />
+                    <SelectPicker
+                      options={ADVANCE_REASONS}
+                      selected={advanceReason}
+                      onSelect={setAdvanceReason}
+                      placeholder="કારણ પસંદ કરો..."
+                    />
+                    <SectionLabel text="આપેલ રકમ" />
+                    <NumericInput
+                      ref={advanceAmountRef}
+                      value={advanceAmount}
+                      onChange={setAdvanceAmount}
+                      placeholder="0"
+                      prefix=""
+                      onFocus={makeOnFocus(advanceAmountRef)}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <SectionLabel text="કામ પ્રકાર" />
+                    <SelectPicker
+                      options={LABOUR_TASKS}
+                      selected={labourTask}
+                      onSelect={setLabourTask}
+                      placeholder="કામ પસંદ કરો..."
+                    />
+                    <SectionLabel text="લોકો × દિવસ" />
+                    <View style={styles.multiRow}>
+                      <View style={{ flex: 1 }}>
+                        <NumericInput
+                          ref={labourPeopleRef}
+                          value={labourPeople}
+                          onChange={setLabourPeople}
+                          placeholder="લોકો"
+                          onFocus={makeOnFocus(labourPeopleRef)}
+                        />
+                      </View>
+                      <Text style={styles.multiX}>×</Text>
+                      <View style={{ flex: 1 }}>
+                        <NumericInput
+                          ref={labourDaysRef}
+                          value={labourDays}
+                          onChange={setLabourDays}
+                          placeholder="દિવસ"
+                          onFocus={makeOnFocus(labourDaysRef)}
+                        />
+                      </View>
+                    </View>
+                    <SectionLabel text="દૈનિક દર" />
+                    <NumericInput
+                      ref={labourRateRef}
+                      value={labourRate}
+                      onChange={setLabourRate}
+                      placeholder="0"
+                      prefix=""
+                      onFocus={makeOnFocus(labourRateRef)}
+                    />
+                    {labourTotal !== null && (
+                      <View style={styles.totalBox}>
+                        <Text style={styles.totalLabel}>કુલ =</Text>
+                        <Text style={styles.totalValue}>
+                          {Math.round(labourTotal).toLocaleString("en-IN")}
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            )}
+
+            {/* ── MACHINERY ── */}
+            {category === "Machinery" && (
+              <View style={styles.card}>
+                <View
+                  style={[styles.cardTitleRow, { borderLeftColor: "#7C3AED" }]}
+                >
+                  <Text style={styles.cardTitle}>🚜 ટ્રેક્ટર ભાડું</Text>
+                </View>
+                <SectionLabel text="ઓજાર / હળ" />
+                <SelectPicker
+                  options={MACHINERY_IMPLEMENTS}
+                  selected={machineImpl}
+                  onSelect={setMachineImpl}
+                  placeholder="હળ અથવા ઓજાર પસંદ કરો..."
+                />
+                <SectionLabel text="દરનો એકમ" />
+                <View style={styles.toggleRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleBtn,
+                      machineUnitType === "vigha" && styles.toggleBtnActive,
+                    ]}
+                    onPress={() => setMachineUnitType("vigha")}
+                  >
+                    <Text
+                      style={
+                        machineUnitType === "vigha"
+                          ? styles.toggleTextActive
+                          : styles.toggleText
+                      }
+                    >
+                      વીઘા
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleBtn,
+                      machineUnitType === "hour" && styles.toggleBtnActive,
+                    ]}
+                    onPress={() => setMachineUnitType("hour")}
+                  >
+                    <Text
+                      style={
+                        machineUnitType === "hour"
+                          ? styles.toggleTextActive
+                          : styles.toggleText
+                      }
+                    >
+                      કલાક
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <SectionLabel
+                  text={machineUnitType === "vigha" ? "વીઘા" : "કલાક"}
+                />
+                <NumericInput
+                  ref={machineQtyRef}
+                  value={machineQty}
+                  onChange={setMachineQty}
+                  placeholder="0"
+                  suffix={machineUnitType === "vigha" ? "વીઘા" : "કલાક"}
+                  onFocus={makeOnFocus(machineQtyRef)}
+                />
+                <SectionLabel text="દર" />
+                <NumericInput
+                  ref={machineRateRef}
+                  value={machineRate}
+                  onChange={setMachineRate}
+                  placeholder="0"
+                  prefix=""
+                  onFocus={makeOnFocus(machineRateRef)}
+                />
+                {machineTotal !== null && (
+                  <View style={styles.totalBox}>
+                    <Text style={styles.totalLabel}>
+                      કુલ = {machineUnitType === "vigha" ? "વીઘા" : "કલાક"} × દર
+                    </Text>
+                    <Text style={styles.totalValue}>
+                      {Math.round(machineTotal).toLocaleString("en-IN")}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* ── IRRIGATION ── */}
+            {category === "Irrigation" && (
+              <View style={styles.card}>
+                <View
+                  style={[styles.cardTitleRow, { borderLeftColor: "#0284C7" }]}
+                >
+                  <Text style={styles.cardTitle}>💧 સિંચાઈ ખર્ચ</Text>
+                </View>
+                <SectionLabel text="રકમ" />
+                <NumericInput
+                  ref={irrigationRef}
+                  value={irrigationAmount}
+                  onChange={setIrrigationAmount}
+                  placeholder="0"
+                  prefix="₹"
+                  onFocus={makeOnFocus(irrigationRef)}
+                />
+              </View>
+            )}
+
+            {/* ── OTHER ── */}
+            {category === "Other" && (
+              <View style={styles.card}>
+                <View
+                  style={[styles.cardTitleRow, { borderLeftColor: "#64748B" }]}
+                >
+                  <Text style={styles.cardTitle}>📦 અન્ય ખર્ચ</Text>
+                </View>
+                <SectionLabel text="રકમ" />
+                <NumericInput
+                  ref={otherAmountRef}
+                  value={otherAmount}
+                  onChange={setOtherAmount}
+                  placeholder="0"
+                  prefix="₹"
+                  onFocus={makeOnFocus(otherAmountRef)}
+                />
+                <SectionLabel text="વિવરણ (ઐચ્છિક)" />
+                <View ref={otherDescRef}>
+                  <TextInput
+                    style={styles.notesInput}
+                    value={otherDescription}
+                    onChangeText={setOtherDescription}
+                    placeholder="દા.ત. ઘર બાંધકામ, સાધન ખરીદી..."
+                    placeholderTextColor="#5B6570"
+                    onFocus={makeOnFocus(otherDescRef)}
+                  />
+                </View>
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -1383,30 +1679,32 @@ export default function AddExpense() {
       {/* FIX 3: removed position:"absolute" — now in normal flow so
           KeyboardAvoidingView pushes it up when the keyboard opens. */}
       {!isGeneralExpense && (
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={[styles.saveBtn, saving && { opacity: 0.65 }]}
-          onPress={handleSave}
-          disabled={saving}
-          activeOpacity={0.88}
-        >
-          <LinearGradient
-            colors={saving ? ["#9CA3AF", "#6B7280"] : [C.green700, C.green500]}
-            style={styles.btnGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && { opacity: 0.65 }]}
+            onPress={handleSave}
+            disabled={saving}
+            activeOpacity={0.88}
           >
-            <Ionicons
-              name={saving ? "hourglass-outline" : "checkmark-circle"}
-              size={20}
-              color="#fff"
-            />
-            <Text style={styles.btnText}>
-              {saving ? "સાચવી રહ્યા છીએ..." : "ખર્ચ સાચવો"}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+            <LinearGradient
+              colors={
+                saving ? ["#9CA3AF", "#6B7280"] : [C.green700, C.green500]
+              }
+              style={styles.btnGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Ionicons
+                name={saving ? "hourglass-outline" : "checkmark-circle"}
+                size={20}
+                color="#fff"
+              />
+              <Text style={styles.btnText}>
+                {saving ? "સાચવી રહ્યા છીએ..." : "ખર્ચ સાચવો"}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       )}
     </KeyboardAvoidingView>
   );
@@ -1797,7 +2095,12 @@ const styles = StyleSheet.create({
     backgroundColor: C.surfaceGreen,
     marginBottom: 6,
   },
-  numAffix: { fontSize: 20, color: C.textSecondary, marginHorizontal: 6, fontWeight: "700" },
+  numAffix: {
+    fontSize: 20,
+    color: C.textSecondary,
+    marginHorizontal: 6,
+    fontWeight: "700",
+  },
   numInput: {
     flex: 1,
     fontSize: 22,
@@ -1844,7 +2147,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     alignItems: "flex-start",
   },
-  infoNoteText: { fontSize: 16, color: "#0C4A6E", flex: 1, lineHeight: 22, fontWeight: "600" },
+  infoNoteText: {
+    fontSize: 16,
+    color: "#0C4A6E",
+    flex: 1,
+    lineHeight: 22,
+    fontWeight: "600",
+  },
   warnNote: {
     flexDirection: "row",
     gap: 8,
@@ -1854,7 +2163,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     alignItems: "flex-start",
   },
-  warnNoteText: { fontSize: 16, color: "#78350F", flex: 1, lineHeight: 22, fontWeight: "600" },
+  warnNoteText: {
+    fontSize: 16,
+    color: "#78350F",
+    flex: 1,
+    lineHeight: 22,
+    fontWeight: "600",
+  },
 
   // Toggle
   toggleRow: {

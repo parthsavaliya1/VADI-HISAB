@@ -24,8 +24,6 @@ export default function Index() {
   const loaderWidth = useRef(new Animated.Value(0)).current;
   const leafFloat = useRef(new Animated.Value(0)).current;
 
-  
-
   useEffect(() => {
     Animated.sequence([
       Animated.parallel([
@@ -65,7 +63,7 @@ export default function Index() {
           duration: 1800,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
 
     setTimeout(() => {
@@ -134,7 +132,6 @@ export default function Index() {
             />
           </View>
         </Animated.View>
-
       </View>
 
       <View style={styles.bottomBrand}>

@@ -10,7 +10,7 @@ import axios, { AxiosError } from "axios";
 // 🚀 PROD: Set EXPO_PUBLIC_API_URL=https://your-api.onrender.com/api
 const BASE_URL =
   (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ||
-  "http://192.168.1.8:8000/api";
+  "http://192.168.29.55:8000/api";
 
 // ─── Axios Instance ───────────────────────────
 export const API = axios.create({
@@ -65,7 +65,9 @@ API.interceptors.response.use(
 
     if (error.code === "ECONNREFUSED") {
       return Promise.reject(
-        new Error("Connection refused — check server is running and port is correct"),
+        new Error(
+          "Connection refused — check server is running and port is correct",
+        ),
       );
     }
     if (error.code === "ENETUNREACH" || error.code === "ENOTFOUND") {
@@ -97,7 +99,11 @@ export const getFriendlyErrorMessage = (err: unknown): string => {
   const e = err as AxiosError | Error | any;
 
   // No response / classic axios network error / timeout
-  if (e.code === "ECONNABORTED" || e.message === "Network Error" || !e.response) {
+  if (
+    e.code === "ECONNABORTED" ||
+    e.message === "Network Error" ||
+    !e.response
+  ) {
     return "ઇન્ટરનેટ કનેક્શન ચેક કરો (મોબાઇલ ડેટા / Wi‑Fi) અને ફરી પ્રયત્ન કરો.";
   }
 
@@ -107,7 +113,6 @@ export const getFriendlyErrorMessage = (err: unknown): string => {
 
   return "કંઈક ખોટું થયું. થોડી વારમાં ફરી પ્રયત્ન કરો.";
 };
-
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📦 SHARED / COMMON TYPES
@@ -147,7 +152,6 @@ export type District =
   | "Surendranagar"
   | "Other";
 
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🔐 AUTH TYPES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -183,7 +187,6 @@ export interface CurrentUser {
   updatedAt: string;
 }
 
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🔐 AUTH APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -200,7 +203,6 @@ export const verifyOtp = async (
   otp: string,
   sessionId: string,
 ): Promise<VerifyOtpResponse> => {
-
   console.log("verifyOtp: phone", phone, "otp", otp, "sessionId", sessionId);
 
   const res = await API.post<VerifyOtpResponse>("/auth/verify-otp", {
@@ -213,7 +215,9 @@ export const verifyOtp = async (
 };
 
 /** POST /auth/consent — call once after first profile setup */
-export const saveConsent = async (consent: boolean): Promise<ConsentResponse> => {
+export const saveConsent = async (
+  consent: boolean,
+): Promise<ConsentResponse> => {
   const res = await API.post<ConsentResponse>("/auth/consent", { consent });
   return res.data;
 };
@@ -233,7 +237,6 @@ export const logout = async (): Promise<void> => {
   await TokenStore.clear();
 };
 
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📍 LOCATIONS (District / Taluka / Village — dynamic from API)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -248,8 +251,12 @@ export const getLocationsDistricts = async (): Promise<DropdownItem[]> => {
 };
 
 /** GET /locations/talukas?district=X — returns [{ value, label }] */
-export const getLocationsTalukas = async (district: string): Promise<DropdownItem[]> => {
-  const res = await API.get<DropdownItem[]>("/locations/talukas", { params: { district } });
+export const getLocationsTalukas = async (
+  district: string,
+): Promise<DropdownItem[]> => {
+  const res = await API.get<DropdownItem[]>("/locations/talukas", {
+    params: { district },
+  });
   return Array.isArray(res.data) ? res.data : [];
 };
 
@@ -263,7 +270,6 @@ export const getLocationsVillages = async (
   });
   return Array.isArray(res.data) ? res.data : [];
 };
-
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 👤 PROFILE TYPES
@@ -309,7 +315,6 @@ export interface ProfileResponse {
   message: string;
   profile: FarmerProfile;
 }
-
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 👤 PROFILE APIs
@@ -372,7 +377,6 @@ export const getVadiScore = async (): Promise<VadiScoreResponse> => {
   const res = await API.get<VadiScoreResponse>("/vadi-score/me");
   return res.data;
 };
-
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🌾 CROP TYPES
@@ -512,14 +516,16 @@ export interface HarvestPayload {
   harvestDate?: string;
 }
 
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🌾 CROP APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /** POST /crops */
 export const createCrop = async (payload: CropPayload): Promise<Crop> => {
-  const res = await API.post<{ success: boolean; data: Crop }>("/crops", payload);
+  const res = await API.post<{ success: boolean; data: Crop }>(
+    "/crops",
+    payload,
+  );
   return res.data.data;
 };
 
@@ -532,7 +538,14 @@ export const getCrops = async (
   year?: string,
 ): Promise<CropListResponse> => {
   const res = await API.get<CropListResponse>("/crops", {
-    params: { page, limit, season, status, financialYear: year || undefined, year: year || undefined },
+    params: {
+      page,
+      limit,
+      season,
+      status,
+      financialYear: year || undefined,
+      year: year || undefined,
+    },
   });
   return res.data;
 };
@@ -548,7 +561,10 @@ export const updateCrop = async (
   id: string,
   payload: Partial<CropPayload>,
 ): Promise<Crop> => {
-  const res = await API.put<{ success: boolean; data: Crop }>(`/crops/${id}`, payload);
+  const res = await API.put<{ success: boolean; data: Crop }>(
+    `/crops/${id}`,
+    payload,
+  );
   return res.data.data;
 };
 
@@ -595,7 +611,9 @@ export const getCropYears = async (): Promise<string[]> => {
  * Full per-crop income/expense/profit breakdown for a financial year.
  * @param financialYear e.g. "2025-26" — defaults to current FY
  */
-export const getYearlyReport = async (financialYear?: string): Promise<YearlyReportResponse> => {
+export const getYearlyReport = async (
+  financialYear?: string,
+): Promise<YearlyReportResponse> => {
   const res = await API.get<YearlyReportResponse>("/crops/report/yearly", {
     params: { financialYear: financialYear || getCurrentFinancialYear() },
   });
@@ -633,7 +651,7 @@ export interface CompareReportResponse {
 export const getCompareReport = async (
   financialYear?: string,
   cropName?: string,
-  peerUserId?: string
+  peerUserId?: string,
 ): Promise<CompareReportResponse> => {
   const res = await API.get<CompareReportResponse>("/crops/report/compare", {
     params: {
@@ -660,10 +678,11 @@ export interface ComparePeersResponse {
 
 /** GET /crops/report/compare/users — list other data-sharing farmers for peer comparison */
 export const getComparePeers = async (): Promise<ComparePeersResponse> => {
-  const res = await API.get<ComparePeersResponse>("/crops/report/compare/users");
+  const res = await API.get<ComparePeersResponse>(
+    "/crops/report/compare/users",
+  );
   return res.data;
 };
-
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 💰 EXPENSE TYPES
@@ -679,10 +698,31 @@ export type ExpenseCategory =
   | "Other";
 
 export type SeedType = "Company Brand" | "Local/Desi" | "Hybrid";
-export type FertilizerProduct = "Urea" | "DAP" | "NPK" | "Organic" | "Sulphur" | "Micronutrients";
-export type PesticideCategory = "Insecticide" | "Fungicide" | "Herbicide" | "Growth Booster";
-export type LabourTask = "Weeding" | "Sowing" | "Spraying" | "Harvesting" | "Irrigation";
-export type AdvanceReason = "Medical" | "Grocery" | "Mobile Recharge" | "Festival" | "Loan" | "Other";
+export type FertilizerProduct =
+  | "Urea"
+  | "DAP"
+  | "NPK"
+  | "Organic"
+  | "Sulphur"
+  | "Micronutrients";
+export type PesticideCategory =
+  | "Insecticide"
+  | "Fungicide"
+  | "Herbicide"
+  | "Growth Booster";
+export type LabourTask =
+  | "Weeding"
+  | "Sowing"
+  | "Spraying"
+  | "Harvesting"
+  | "Irrigation";
+export type AdvanceReason =
+  | "Medical"
+  | "Grocery"
+  | "Mobile Recharge"
+  | "Festival"
+  | "Loan"
+  | "Other";
 // MachineryImplement reuses the same options as RentalAssetType (tractor income)
 export type MachineryImplement = RentalAssetType;
 
@@ -829,14 +869,18 @@ export interface ExpenseSummaryResponse {
   grandTotal: number;
 }
 
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 💰 EXPENSE APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /** POST /expenses */
-export const createExpense = async (payload: ExpensePayload): Promise<Expense> => {
-  const res = await API.post<{ success: boolean; data: Expense }>("/expenses", payload);
+export const createExpense = async (
+  payload: ExpensePayload,
+): Promise<Expense> => {
+  const res = await API.post<{ success: boolean; data: Expense }>(
+    "/expenses",
+    payload,
+  );
   return res.data.data;
 };
 
@@ -907,13 +951,21 @@ export const getExpenseAnalytics = async (
 
 /** GET /expenses/:id */
 export const getExpenseById = async (id: string): Promise<Expense> => {
-  const res = await API.get<{ success: boolean; data: Expense }>(`/expenses/${id}`);
+  const res = await API.get<{ success: boolean; data: Expense }>(
+    `/expenses/${id}`,
+  );
   return res.data.data;
 };
 
 /** PUT /expenses/:id — update expense; server re-computes amount. */
-export const updateExpense = async (id: string, payload: ExpensePayload): Promise<Expense> => {
-  const res = await API.put<{ success: boolean; data: Expense }>(`/expenses/${id}`, payload);
+export const updateExpense = async (
+  id: string,
+  payload: ExpensePayload,
+): Promise<Expense> => {
+  const res = await API.put<{ success: boolean; data: Expense }>(
+    `/expenses/${id}`,
+    payload,
+  );
   return res.data.data;
 };
 
@@ -922,12 +974,15 @@ export const deleteExpense = async (id: string): Promise<void> => {
   await API.delete(`/expenses/${id}`);
 };
 
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🌱 INCOME TYPES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export type IncomeCategory = "Crop Sale" | "Subsidy" | "Rental Income" | "Other";
+export type IncomeCategory =
+  | "Crop Sale"
+  | "Subsidy"
+  | "Rental Income"
+  | "Other";
 
 export type SubsidySchemeType =
   | "PM-KISAN"
@@ -1090,14 +1145,16 @@ export interface IncomeAnalyticsResponse {
   sampleSize: number;
 }
 
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🌱 INCOME APIs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /** POST /income */
 export const createIncome = async (payload: IncomePayload): Promise<Income> => {
-  const res = await API.post<{ success: boolean; data: Income }>("/income", payload);
+  const res = await API.post<{ success: boolean; data: Income }>(
+    "/income",
+    payload,
+  );
   return res.data.data;
 };
 
@@ -1154,7 +1211,9 @@ export const getIncomeAnalytics = async (
 
 /** GET /income/:id */
 export const getIncomeById = async (id: string): Promise<Income> => {
-  const res = await API.get<{ success: boolean; data: Income }>(`/income/${id}`);
+  const res = await API.get<{ success: boolean; data: Income }>(
+    `/income/${id}`,
+  );
   return res.data.data;
 };
 
@@ -1166,7 +1225,10 @@ export const updateIncome = async (
   id: string,
   payload: Partial<IncomePayload>,
 ): Promise<Income> => {
-  const res = await API.put<{ success: boolean; data: Income }>(`/income/${id}`, payload);
+  const res = await API.put<{ success: boolean; data: Income }>(
+    `/income/${id}`,
+    payload,
+  );
   return res.data.data;
 };
 
@@ -1219,7 +1281,9 @@ export const getNotifications = async (
 };
 
 /** PATCH /notifications/:id/read */
-export const markNotificationRead = async (id: string): Promise<AppNotification> => {
+export const markNotificationRead = async (
+  id: string,
+): Promise<AppNotification> => {
   const res = await API.patch<{ success: boolean; data: AppNotification }>(
     `/notifications/${id}/read`,
   );

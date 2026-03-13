@@ -1,7 +1,6 @@
-import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
+import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
-import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -9,6 +8,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
+  Dimensions,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -21,18 +21,18 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Dimensions } from "react-native";
+import Toast from "react-native-toast-message";
 
 import { useProfile } from "@/contexts/ProfileContext";
 import {
   createCrop,
-  getCurrentFinancialYear,
-  getFinancialYearOptions,
   getCropById,
   getCrops,
+  getCurrentFinancialYear,
+  getFinancialYearOptions,
   getMyProfile,
-  updateProfile,
   updateCrop,
+  updateProfile,
   type CropPayload,
   type CropSeason,
   type ProfileFarm,
@@ -106,7 +106,19 @@ const CROPS: {
     value: "Groundnut",
     label: "મગફળી",
     emoji: "🥜",
-    subtypes: ["BT-32", "BT-37", "BT-38", "BT-39", "BT-45", "BT-128", "જિવિસ", "રોહિણી", "મિનક્ષી", "ગિર્ણાર", "રેન્બો"],
+    subtypes: [
+      "BT-32",
+      "BT-37",
+      "BT-38",
+      "BT-39",
+      "BT-45",
+      "BT-128",
+      "જિવિસ",
+      "રોહિણી",
+      "મિનક્ષી",
+      "ગિર્ણાર",
+      "રેન્બો",
+    ],
   },
   // 2. કપાસ
   {
@@ -477,7 +489,9 @@ export default function AddCrop() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<ProfileFarm | null>(null);
-  const [usedAreaByFarm, setUsedAreaByFarm] = useState<Record<string, number>>({});
+  const [usedAreaByFarm, setUsedAreaByFarm] = useState<Record<string, number>>(
+    {},
+  );
   const [leaseModalVisible, setLeaseModalVisible] = useState(false);
   const [leaseFarmName, setLeaseFarmName] = useState("");
   const [leaseFarmBigha, setLeaseFarmBigha] = useState("");
@@ -563,7 +577,9 @@ export default function AddCrop() {
   // Load profile when reaching area step or when editing (to match farm)
   useEffect(() => {
     if ((step === 2 || isEdit) && !profile) {
-      getMyProfile().then(setProfile).catch(() => {});
+      getMyProfile()
+        .then(setProfile)
+        .catch(() => {});
     }
   }, [step, isEdit, profile, setProfile]);
 
@@ -635,8 +651,15 @@ export default function AddCrop() {
     if (step === 0 && !form.season) return "કૃપા કરીને સિઝન પસંદ કરો.";
     if (step === 1 && !form.cropValue && !form.customCrop.trim())
       return "કૃપા કરીને પાક પસંદ કરો.";
-    const hasSubtypes = (CROPS.find((c) => c.value === form.cropValue)?.subtypes ?? []).length > 0;
-    if (step === 1 && hasSubtypes && !form.subType && !form.customSubType.trim())
+    const hasSubtypes =
+      (CROPS.find((c) => c.value === form.cropValue)?.subtypes ?? []).length >
+      0;
+    if (
+      step === 1 &&
+      hasSubtypes &&
+      !form.subType &&
+      !form.customSubType.trim()
+    )
       return "કૃપા કરીને પાકનો પ્રકાર પસંદ કરો અથવા ટાઈપ કરો.";
     if (
       step === 2 &&
@@ -652,9 +675,12 @@ export default function AddCrop() {
       Number(form.area) > maxBighaForSelectedFarm
     )
       return `આ વાડી પર ઉપલબ્ધ વિસ્તાર ${Math.round(maxBighaForSelectedFarm)} વીઘા છે. ${Math.round(Number(form.area))} વીઘા દાખલ કર્યા છે.`;
-    if (step === 2 && !form.bhagmaOption) return "કૃપા કરીને ભાગમા અપ્યું તે પસંદ કરો.";
+    if (step === 2 && !form.bhagmaOption)
+      return "કૃપા કરીને ભાગમા અપ્યું તે પસંદ કરો.";
     if (step === 2 && form.bhagmaOption === "ha") {
-      const valid = ["25", "33.33", "50"].includes(form.bhagmaPercentage.trim());
+      const valid = ["25", "33.33", "50"].includes(
+        form.bhagmaPercentage.trim(),
+      );
       if (!valid)
         return "કૃપા કરીને ભાગમા (બીજા / ત્રિજા / ચોથા ભાગે) પસંદ કરો.";
     }
@@ -809,8 +835,13 @@ export default function AddCrop() {
         <View style={styles.decorCircle1} />
         <View style={styles.decorCircle2} />
         <View style={styles.headerRow}>
-          <AppBackButton onPress={handleBack} iconColor={C.green700} backgroundColor={C.surface} borderColor={C.green100} />
-            <View style={{ alignItems: "center" }}>
+          <AppBackButton
+            onPress={handleBack}
+            iconColor={C.green700}
+            backgroundColor={C.surface}
+            borderColor={C.green100}
+          />
+          <View style={{ alignItems: "center" }}>
             <Text style={styles.headerTitle}>
               {isEdit ? "✏️ પાક ફેરફાર" : "🌱 નવો પાક ઉમેરો"}
             </Text>
@@ -952,8 +983,8 @@ export default function AddCrop() {
                       color={C.green700}
                     />
                     <Text style={styles.infoText}>
-                      <Text style={{ fontWeight: "700" }}>{form.year}</Text> વર્ષ
-                      ·{" "}
+                      <Text style={{ fontWeight: "700" }}>{form.year}</Text>{" "}
+                      વર્ષ ·{" "}
                       <Text style={{ fontWeight: "700" }}>
                         {SEASONS.find((s) => s.value === form.season)?.label}
                       </Text>{" "}
@@ -1033,7 +1064,8 @@ export default function AddCrop() {
                     — બીજ / જાત —
                   </Text>
                   <Text style={styles.stepDesc}>
-                    {finalCropEmoji} {finalCropLabel} નો જાત / બીજ પ્રકાર પસંદ કરો અથવા ટાઈપ કરો
+                    {finalCropEmoji} {finalCropLabel} નો જાત / બીજ પ્રકાર પસંદ
+                    કરો અથવા ટાઈપ કરો
                   </Text>
                   <View
                     style={styles.fieldCard}
@@ -1048,7 +1080,9 @@ export default function AddCrop() {
                             key={st}
                             label={st}
                             cropEmoji={finalCropEmoji}
-                            selected={form.subType === st && !form.customSubType}
+                            selected={
+                              form.subType === st && !form.customSubType
+                            }
                             onPress={() =>
                               setForm((p) => ({
                                 ...p,
@@ -1082,8 +1116,14 @@ export default function AddCrop() {
                         placeholderTextColor="#9CA3AF"
                       />
                       {form.customSubType.length > 0 && (
-                        <TouchableOpacity onPress={() => set("customSubType", "")}>
-                          <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                        <TouchableOpacity
+                          onPress={() => set("customSubType", "")}
+                        >
+                          <Ionicons
+                            name="close-circle"
+                            size={18}
+                            color="#9CA3AF"
+                          />
                         </TouchableOpacity>
                       )}
                     </View>
@@ -1097,7 +1137,9 @@ export default function AddCrop() {
           {step === 2 && (
             <View>
               <Text style={styles.stepTitle}>વાડી અને વિસ્તાર</Text>
-              <Text style={styles.stepDesc}>વાડી પસંદ કરો અને વીઘામાં વિસ્તાર દાખલ કરો</Text>
+              <Text style={styles.stepDesc}>
+                વાડી પસંદ કરો અને વીઘામાં વિસ્તાર દાખલ કરો
+              </Text>
 
               {/* Crop summary card — graphical */}
               <View style={styles.cropSummaryCard}>
@@ -1107,7 +1149,8 @@ export default function AddCrop() {
                     <Text style={styles.cropSummaryCrop}>{finalCropLabel}</Text>
                     <Text style={styles.cropSummaryMeta}>
                       {finalSubType ? `${finalSubType} · ` : ""}
-                      {SEASONS.find((s) => s.value === form.season)?.label} {form.year}
+                      {SEASONS.find((s) => s.value === form.season)?.label}{" "}
+                      {form.year}
                     </Text>
                   </View>
                 </View>
@@ -1124,18 +1167,33 @@ export default function AddCrop() {
                       return (
                         <TouchableOpacity
                           key={idx}
-                          style={[styles.farmChip, isSelected && styles.farmChipActive]}
+                          style={[
+                            styles.farmChip,
+                            isSelected && styles.farmChipActive,
+                          ]}
                           onPress={() => {
                             setSelectedFarm(farm);
                             setForm((p) => ({ ...p, area: "" }));
                           }}
                           activeOpacity={0.85}
                         >
-                          <Text style={[styles.farmChipName, isSelected && styles.farmChipNameActive]}>
+                          <Text
+                            style={[
+                              styles.farmChipName,
+                              isSelected && styles.farmChipNameActive,
+                            ]}
+                          >
                             {farm.name}
-                            {(farm as any).category === "lease" ? " (ભાડા)" : ""}
+                            {(farm as any).category === "lease"
+                              ? " (ભાડા)"
+                              : ""}
                           </Text>
-                          <Text style={[styles.farmChipArea, isSelected && styles.farmChipAreaActive]}>
+                          <Text
+                            style={[
+                              styles.farmChipArea,
+                              isSelected && styles.farmChipAreaActive,
+                            ]}
+                          >
                             ઉપલબ્ધ: {available} વીઘા
                           </Text>
                         </TouchableOpacity>
@@ -1146,13 +1204,11 @@ export default function AddCrop() {
               )}
               {selectedFarm && maxBighaForSelectedFarm !== null && (
                 <Text style={styles.availableHint}>
-                  મહત્તમ {maxBighaForSelectedFarm} વીઘા દાખલ કરી શકો (અન્ય સક્રિય પાક સિવાય)
+                  મહત્તમ {maxBighaForSelectedFarm} વીઘા દાખલ કરી શકો (અન્ય
+                  સક્રિય પાક સિવાય)
                 </Text>
               )}
-              <View
-                ref={areaRef}
-                style={styles.areaCard}
-              >
+              <View ref={areaRef} style={styles.areaCard}>
                 <View style={styles.areaInputRow}>
                   <TextInput
                     style={styles.areaInput}
@@ -1172,7 +1228,8 @@ export default function AddCrop() {
                   !isNaN(Number(form.area)) &&
                   Number(form.area) > 0 && (
                     <Text style={styles.areaHint}>
-                      {Math.round(Number(form.area))} વીઘા જમીન પર {finalCropLabel} ઉગાડવામાં આવશે
+                      {Math.round(Number(form.area))} વીઘા જમીન પર{" "}
+                      {finalCropLabel} ઉગાડવામાં આવશે
                       {selectedFarm ? ` (${selectedFarm.name})` : ""}
                     </Text>
                   )}
@@ -1181,7 +1238,9 @@ export default function AddCrop() {
               <View style={styles.presetRow}>
                 {["1", "2", "5", "10", "15", "25"].map((n) => {
                   const num = Number(n);
-                  const allowed = maxBighaForSelectedFarm == null || num <= maxBighaForSelectedFarm;
+                  const allowed =
+                    maxBighaForSelectedFarm == null ||
+                    num <= maxBighaForSelectedFarm;
                   return (
                     <TouchableOpacity
                       key={n}
@@ -1226,7 +1285,8 @@ export default function AddCrop() {
                     <Text
                       style={[
                         styles.bhagmaChipText,
-                        form.bhagmaOption === "ha" && styles.bhagmaChipTextActive,
+                        form.bhagmaOption === "ha" &&
+                          styles.bhagmaChipTextActive,
                       ]}
                     >
                       હા
@@ -1249,7 +1309,8 @@ export default function AddCrop() {
                     <Text
                       style={[
                         styles.bhagmaChipText,
-                        form.bhagmaOption === "na" && styles.bhagmaChipTextActive,
+                        form.bhagmaOption === "na" &&
+                          styles.bhagmaChipTextActive,
                       ]}
                     >
                       ના
@@ -1264,7 +1325,8 @@ export default function AddCrop() {
                       key={opt.value}
                       style={[
                         styles.bhagmaShareChip,
-                        form.bhagmaPercentage === opt.value && styles.bhagmaShareChipActive,
+                        form.bhagmaPercentage === opt.value &&
+                          styles.bhagmaShareChipActive,
                       ]}
                       onPress={() => set("bhagmaPercentage", opt.value)}
                       activeOpacity={0.7}
@@ -1272,7 +1334,8 @@ export default function AddCrop() {
                       <Text
                         style={[
                           styles.bhagmaShareChipText,
-                          form.bhagmaPercentage === opt.value && styles.bhagmaShareChipTextActive,
+                          form.bhagmaPercentage === opt.value &&
+                            styles.bhagmaShareChipTextActive,
                         ]}
                       >
                         {opt.label}
@@ -1304,7 +1367,11 @@ export default function AddCrop() {
                   <SummaryRow icon="🏷️" title="પ્રકાર" value={finalSubType} />
                 )}
                 {selectedFarm && (
-                  <SummaryRow icon="🌾" title="વાડી" value={selectedFarm.name} />
+                  <SummaryRow
+                    icon="🌾"
+                    title="વાડી"
+                    value={selectedFarm.name}
+                  />
                 )}
                 <SummaryRow
                   icon="🌦️"
@@ -1396,9 +1463,14 @@ export default function AddCrop() {
         animationType="fade"
         onRequestClose={() => setLeaseModalVisible(false)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setLeaseModalVisible(false)}>
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setLeaseModalVisible(false)}
+        >
           <View style={styles.leaseModalCard}>
-            <Text style={styles.leaseModalTitle}>ભાડા / કોન્ટ્રાક્ટ વાડી ઉમેરો</Text>
+            <Text style={styles.leaseModalTitle}>
+              ભાડા / કોન્ટ્રાક્ટ વાડી ઉમેરો
+            </Text>
             <Text style={styles.leaseModalSub}>
               વાડીનું નામ અને વીઘા દાખલ કરો. આ તમારી પ્રોફાઇલમાં ઉમેરાશે.
             </Text>
@@ -1430,7 +1502,10 @@ export default function AddCrop() {
               >
                 <Text style={styles.leaseCancelText}>રદ કરો</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.leaseAddBtn} onPress={handleLeaseAdd}>
+              <TouchableOpacity
+                style={styles.leaseAddBtn}
+                onPress={handleLeaseAdd}
+              >
                 <Text style={styles.leaseAddText}>ઉમેરો</Text>
               </TouchableOpacity>
             </View>
@@ -1491,7 +1566,12 @@ const styles = StyleSheet.create({
     color: C.textPrimary,
     textAlign: "center",
   },
-  headerSub: { fontSize: 13, color: C.textMuted, marginTop: 2, fontWeight: "700" },
+  headerSub: {
+    fontSize: 13,
+    color: C.textMuted,
+    marginTop: 2,
+    fontWeight: "700",
+  },
 
   dotsRow: {
     flexDirection: "row",
@@ -1674,7 +1754,7 @@ const styles = StyleSheet.create({
   cropGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
     marginBottom: 16,
   },
   cropCard: {
@@ -1712,7 +1792,7 @@ const styles = StyleSheet.create({
   subTypeGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 8,
     marginBottom: 16,
   },
   subTypeCard: {
@@ -1842,7 +1922,12 @@ const styles = StyleSheet.create({
   cropSummaryIconRow: { flexDirection: "row", alignItems: "center" },
   cropSummaryEmoji: { fontSize: 40, marginRight: 14 },
   cropSummaryTextWrap: { flex: 1 },
-  cropSummaryCrop: { fontSize: 20, fontWeight: "800", color: C.textPrimary, marginBottom: 2 },
+  cropSummaryCrop: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: C.textPrimary,
+    marginBottom: 2,
+  },
   cropSummaryMeta: { fontSize: 14, fontWeight: "600", color: C.green700 },
 
   // Mini summary pill (legacy, kept for any other use)
@@ -1902,7 +1987,12 @@ const styles = StyleSheet.create({
     color: C.textSecondary,
     marginBottom: 12,
   },
-  farmChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 18 },
+  farmChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 18,
+  },
   farmChip: {
     paddingVertical: 14,
     paddingHorizontal: 18,
@@ -1946,8 +2036,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  bhagmaShareChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
-  bhagmaShareChipText: { fontSize: 15, fontWeight: "700", color: C.textPrimary },
+  bhagmaShareChipActive: {
+    borderColor: C.green700,
+    backgroundColor: C.green50,
+  },
+  bhagmaShareChipText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: C.textPrimary,
+  },
   bhagmaShareChipTextActive: { color: C.green900 },
   bhagmaCard: {
     marginTop: 0,
@@ -1964,7 +2061,12 @@ const styles = StyleSheet.create({
     textAlign: "left",
     marginBottom: 6,
   },
-  bhagmaChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginBottom: 0 },
+  bhagmaChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 14,
+    marginBottom: 0,
+  },
   bhagmaChip: {
     flex: 1,
     minWidth: 120,
@@ -1978,7 +2080,12 @@ const styles = StyleSheet.create({
   bhagmaChipActive: { borderColor: C.green700, backgroundColor: C.green50 },
   bhagmaChipText: { fontSize: 16, fontWeight: "700", color: C.textPrimary },
   bhagmaChipTextActive: { color: C.green900 },
-  presetRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 8 },
+  presetRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 8,
+  },
   presetChip: {
     paddingHorizontal: 18,
     paddingVertical: 14,

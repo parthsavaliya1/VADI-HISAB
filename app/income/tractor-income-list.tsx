@@ -11,6 +11,7 @@ import { formatWholeNumber } from "@/utils/format";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
@@ -68,8 +69,28 @@ function getRentalAmount(i: Income): number {
 }
 
 function TractorIncomeRow({ item }: { item: Income }) {
+  const { t } = useTranslation();
   const r = item.rentalIncome;
-  const work = r?.assetType ?? "Tractor";
+  const TRACTOR_SERVICE_GU: Record<string, string> = {
+    Tractor: "ટ્રેક્ટર",
+    Rotavator: "રોટાવેટર",
+    RAP: "રૅપ",
+    Samar: "સમાર",
+    "Sah Nakhya": "સહ નાખ્યા",
+    Vavetar: "વાવેતર",
+    "Kyara Bandhya": "ક્યારા બાંધ્યા",
+    Thresher: "થ્રેશર",
+    Bagu: "બાગુ",
+    Fukani: "ફૂકણી",
+    "Kheti Kari": "ખેતી કરી",
+    "Other Equipment": "અન્ય ઉપકરણ",
+  };
+
+  const work =
+    (r?.assetType && TRACTOR_SERVICE_GU[r.assetType]) ||
+    r?.assetType ||
+    "ટ્રેક્ટર";
+
   const farmerName = r?.rentedToName?.trim();
   const status = r?.paymentStatus ?? "Pending";
   const amount = getRentalAmount(item);
@@ -93,19 +114,25 @@ function TractorIncomeRow({ item }: { item: Income }) {
             <View
               style={[
                 styles.statusBadge,
-                status === "Completed" ? styles.statusCompleted : styles.statusPending,
+                status === "Completed"
+                  ? styles.statusCompleted
+                  : styles.statusPending,
               ]}
             >
               <View
                 style={[
                   styles.statusDot,
-                  status === "Completed" ? styles.statusDotCompleted : styles.statusDotPending,
+                  status === "Completed"
+                    ? styles.statusDotCompleted
+                    : styles.statusDotPending,
                 ]}
               />
               <Text
                 style={[
                   styles.statusText,
-                  status === "Completed" ? styles.statusTextCompleted : styles.statusTextPending,
+                  status === "Completed"
+                    ? styles.statusTextCompleted
+                    : styles.statusTextPending,
                 ]}
               >
                 {status === "Completed" ? "આપી દીધા" : "બાકી"}
@@ -146,7 +173,9 @@ export default function TractorIncomeListScreen() {
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
     getCurrentFinancialYear(),
   );
-  const [statusFilter, setStatusFilter] = useState<"Pending" | "Completed">("Pending");
+  const [statusFilter, setStatusFilter] = useState<"Pending" | "Completed">(
+    "Pending",
+  );
 
   const fetchAll = useCallback(async () => {
     try {
@@ -198,29 +227,29 @@ export default function TractorIncomeListScreen() {
       <View style={styles.toolbar}>
         <View style={styles.yearRow}>
           <View style={styles.yearChips}>
-            {getFinancialYearOptionsExtended().slice(1).map((fy) => {
-              const active = selectedFinancialYear === fy;
-              return (
-                <TouchableOpacity
-                  key={fy}
-                  style={[styles.yearChip, active && styles.yearChipActive]}
-                  onPress={() => setSelectedFinancialYear(fy)}
-                >
-                  <Text
-                    style={[
-                      styles.yearChipText,
-                      active && styles.yearChipTextActive,
-                    ]}
+            {getFinancialYearOptionsExtended()
+              .slice(1)
+              .map((fy) => {
+                const active = selectedFinancialYear === fy;
+                return (
+                  <TouchableOpacity
+                    key={fy}
+                    style={[styles.yearChip, active && styles.yearChipActive]}
+                    onPress={() => setSelectedFinancialYear(fy)}
                   >
-                    {fy}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    <Text
+                      style={[
+                        styles.yearChipText,
+                        active && styles.yearChipTextActive,
+                      ]}
+                    >
+                      {fy}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
           </View>
         </View>
-
-       
       </View>
 
       {loading ? (
@@ -238,38 +267,42 @@ export default function TractorIncomeListScreen() {
             <View style={styles.summaryDivider} />
             <View style={styles.summaryColumnSmall}>
               <Text style={styles.summarySmallLabel}>બાકી</Text>
-              <Text style={styles.summarySmallValue}>₹ {formatINR(pendingTotal)}</Text>
+              <Text style={styles.summarySmallValue}>
+                ₹ {formatINR(pendingTotal)}
+              </Text>
             </View>
             <View style={styles.summaryColumnSmall}>
               <Text style={styles.summarySmallLabel}>આપી દીધા</Text>
-              <Text style={styles.summarySmallValue}>₹ {formatINR(paidTotal)}</Text>
+              <Text style={styles.summarySmallValue}>
+                ₹ {formatINR(paidTotal)}
+              </Text>
             </View>
           </View>
 
-           <View style={styles.statusRow}>
-          {[
-            { key: "Pending" as const, label: "બાકી" },
-            { key: "Completed" as const, label: "આપી લીધા" },
-          ].map((opt) => {
-            const active = statusFilter === opt.key;
-            return (
-              <TouchableOpacity
-                key={opt.key}
-                style={[styles.statusChip, active && styles.statusChipActive]}
-                onPress={() => setStatusFilter(opt.key)}
-              >
-                <Text
-                  style={[
-                    styles.statusChipText,
-                    active && styles.statusChipTextActive,
-                  ]}
+          <View style={styles.statusRow}>
+            {[
+              { key: "Pending" as const, label: "બાકી" },
+              { key: "Completed" as const, label: "આપી લીધા" },
+            ].map((opt) => {
+              const active = statusFilter === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.statusChip, active && styles.statusChipActive]}
+                  onPress={() => setStatusFilter(opt.key)}
                 >
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  <Text
+                    style={[
+                      styles.statusChipText,
+                      active && styles.statusChipTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
           <FlatList
             data={filtered}
@@ -574,4 +607,3 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
 });
-

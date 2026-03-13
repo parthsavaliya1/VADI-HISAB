@@ -1,5 +1,3 @@
-
-
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -22,10 +20,10 @@ import { getCropColors } from "@/utils/cropColors";
 import { formatArea, formatWholeNumber } from "@/utils/format";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import * as Location from "expo-location";
-import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Location from "expo-location";
+import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -113,12 +111,18 @@ function getWeatherTheme(weather: WeatherState): "rain" | "clear" | "hot" {
 }
 
 /** Crop display name from translations */
-function cropDisplayName(name: string, t: (s: string, k: string) => string): string {
+function cropDisplayName(
+  name: string,
+  t: (s: string, k: string) => string,
+): string {
   return t("cropNames", name) || name;
 }
 
 /** Season label from translations */
-function seasonCategoryLabel(season: string | undefined, t: (s: string, k: string) => string): string {
+function seasonCategoryLabel(
+  season: string | undefined,
+  t: (s: string, k: string) => string,
+): string {
   if (season === "Chomasu") return t("common", "kharif");
   if (season === "Siyalo") return t("common", "rabi");
   if (season === "Unalo") return t("common", "summer");
@@ -126,8 +130,13 @@ function seasonCategoryLabel(season: string | undefined, t: (s: string, k: strin
 }
 
 /** Area unit in Gujarati (વીઘા / એકર) */
-function areaUnitLabel(unit: string | undefined, t: (s: string, k: string) => string): string {
-  return unit?.toLowerCase() === "acre" ? t("common", "acre") : t("common", "bigha");
+function areaUnitLabel(
+  unit: string | undefined,
+  t: (s: string, k: string) => string,
+): string {
+  return unit?.toLowerCase() === "acre"
+    ? t("common", "acre")
+    : t("common", "bigha");
 }
 
 /** Display vigha/bigha area as integer (no decimals). */
@@ -138,14 +147,19 @@ function formatVighaDisplay(area: number | string | undefined): string {
 }
 
 /** Total land in bigha for per-bigha calculations (acre → bigha ≈ ×1.6) */
-function totalLandBigha(profile: { totalLand?: { value: number; unit?: string } } | null): number {
+function totalLandBigha(
+  profile: { totalLand?: { value: number; unit?: string } } | null,
+): number {
   const tl = profile?.totalLand;
   if (!tl || !tl.value || tl.value <= 0) return 0;
   return tl.unit === "acre" ? tl.value * 1.6 : tl.value;
 }
 
 /** Crop area in bigha (Acre → ×1.6, Hectare → ×6.17) */
-function cropAreaBigha(area: number | undefined, areaUnit: string | undefined): number {
+function cropAreaBigha(
+  area: number | undefined,
+  areaUnit: string | undefined,
+): number {
   const a = Number(area);
   if (!a || a <= 0) return 0;
   if (areaUnit === "Acre") return a * 1.6;
@@ -259,7 +273,10 @@ const RENTAL_ASSET_LABELS: Record<string, string> = {
   "Other Equipment": "અન્ય સાધન",
 };
 
-function formatRelativeDate(iso: string, _t: (s: string, k: string) => string): string {
+function formatRelativeDate(
+  iso: string,
+  _t: (s: string, k: string) => string,
+): string {
   return new Date(iso).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
@@ -283,7 +300,8 @@ function getCropName(
   t: (s: string, k: string) => string,
 ): string {
   if (!cropId) return "";
-  if (typeof cropId === "object") return cropDisplayName(cropId.cropName ?? "", t);
+  if (typeof cropId === "object")
+    return cropDisplayName(cropId.cropName ?? "", t);
   if (crops?.length) {
     const c = crops.find((x) => x._id === cropId);
     if (c) return cropDisplayName(c.cropName ?? "", t);
@@ -327,10 +345,10 @@ function expenseLabel(e: Expense): string {
     Other: "અન્ય",
   };
 
-          if (e.category === "Labour") {
-            if (e.expenseSource === "generalExpense") {
-              return e.notes?.trim() || "વધારો નો ખર્ચ";
-            }
+  if (e.category === "Labour") {
+    if (e.expenseSource === "generalExpense") {
+      return e.notes?.trim() || "વધારો નો ખર્ચ";
+    }
 
     if (e.labourDaily?.task) {
       return `મજૂરી - ${LABOUR_TASK_LABELS[e.labourDaily.task] ?? e.labourDaily.task}`;
@@ -350,7 +368,9 @@ function expenseLabel(e: Expense): string {
     Labour: "મજૂરી",
     Machinery: `ટ્રેક્ટર - ${MACHINERY_LABELS[e.machinery?.implement ?? ""] ?? e.machinery?.implement ?? ""}`,
     Irrigation: "સિંચાઈ",
-    Other: e.other?.description ? `અન્ય ખર્ચ - ${e.other.description}` : "અન્ય ખર્ચ",
+    Other: e.other?.description
+      ? `અન્ય ખર્ચ - ${e.other.description}`
+      : "અન્ય ખર્ચ",
   };
   return m[e.category] ?? e.category;
 }
@@ -374,9 +394,11 @@ function isDedicatedBhagyaUpadExpense(expense: Expense): boolean {
   if (expense.labourContract?.sourceTag === "bhagyaUpad") return true;
 
   // Legacy bhagya-no-upad rows created before source tagging.
-  return !!expense.labourContract?.advanceReason
-    && expense.labourContract.advanceReason !== "Other"
-    && !expense.notes?.trim();
+  return (
+    !!expense.labourContract?.advanceReason &&
+    expense.labourContract.advanceReason !== "Other" &&
+    !expense.notes?.trim()
+  );
 }
 
 // ── Income helpers ────────────────────────────
@@ -388,7 +410,8 @@ function incomeAmount(i: Income): number {
   }
   if (i.category === "Crop Sale") return (i.cropSale as any)?.totalAmount ?? 0;
   if (i.category === "Subsidy") return i.subsidy?.amount ?? 0;
-  if (i.category === "Rental Income") return (i.rentalIncome as any)?.totalAmount ?? 0;
+  if (i.category === "Rental Income")
+    return (i.rentalIncome as any)?.totalAmount ?? 0;
   if (i.category === "Other") return i.otherIncome?.amount ?? 0;
   return 0;
 }
@@ -402,9 +425,7 @@ function incomeLabel(i: Income): string {
       const r = i.rentalIncome as any;
       if (!r) return "ભાડા";
       const work =
-        RENTAL_ASSET_LABELS[r.assetType ?? ""] ??
-        r.assetType ??
-        "ભાડા";
+        RENTAL_ASSET_LABELS[r.assetType ?? ""] ?? r.assetType ?? "ભાડા";
       const name = r.rentedToName?.trim();
       return name ? `${work} - ${name}` : `${work}`;
     })(),
@@ -645,9 +666,13 @@ function CropPickerModal({
         <View style={styles.sheetHeader}>
           <View>
             <Text style={styles.sheetTitle}>
-              {isExpense ? `💸 ${t("dashboard", "addExpense")}` : `💰 ${t("dashboard", "addIncome")}`}
+              {isExpense
+                ? `💸 ${t("dashboard", "addExpense")}`
+                : `💰 ${t("dashboard", "addIncome")}`}
             </Text>
-            <Text style={styles.sheetSubtitle}>{t("dashboard", "selectCropFirst")}</Text>
+            <Text style={styles.sheetSubtitle}>
+              {t("dashboard", "selectCropFirst")}
+            </Text>
           </View>
           <TouchableOpacity style={styles.sheetCloseBtn} onPress={onClose}>
             <Ionicons name="close" size={20} color={C.textMuted} />
@@ -657,7 +682,9 @@ function CropPickerModal({
         {crops.length === 0 && !onSelectGeneralExpense ? (
           <View style={styles.sheetEmpty}>
             <Text style={{ fontSize: 58, marginBottom: 14 }}>🌱</Text>
-            <Text style={styles.sheetEmptyText}>{t("dashboard", "noCrops")}</Text>
+            <Text style={styles.sheetEmptyText}>
+              {t("dashboard", "noCrops")}
+            </Text>
             <TouchableOpacity
               style={[styles.sheetEmptyBtn, styles.sheetEmptyBtnAdd]}
               onPress={() => {
@@ -692,25 +719,49 @@ function CropPickerModal({
                     </Text>
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.sheetCropName}>{cropDisplayName(crop.cropName, t)}</Text>
-                    <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
-            <Text style={styles.sheetCropMeta}>
+                    <Text style={styles.sheetCropName}>
+                      {cropDisplayName(crop.cropName, t)}
+                    </Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 6,
+                      }}
+                    >
+                      <Text style={styles.sheetCropMeta}>
                         {crop.season === "Chomasu"
                           ? `☔ ${t("common", "kharif")}`
                           : crop.season === "Siyalo"
                             ? `❄️ ${t("common", "rabi")}`
                             : `☀️ ${t("common", "summer")}`}
                         {" · "}
-                        <Text style={styles.bighaFont}>{formatVighaDisplay(crop.area)} </Text>
+                        <Text style={styles.bighaFont}>
+                          {formatVighaDisplay(crop.area)}{" "}
+                        </Text>
                         {areaUnitLabel(crop.areaUnit, t)}
                       </Text>
-                      {crop.landType === "bhagma" && crop.bhagmaPercentage != null && (
-                        <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
-                          <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
-                            {tParam("dashboard", "bhagmaPct", { pct: crop.bhagmaPercentage ?? 0 })}
-                          </Text>
-                        </View>
-                      )}
+                      {crop.landType === "bhagma" &&
+                        crop.bhagmaPercentage != null && (
+                          <View
+                            style={[
+                              styles.bhagmaBadge,
+                              { backgroundColor: C.expensePale },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.bhagmaBadgeText,
+                                { color: C.expense },
+                              ]}
+                            >
+                              {tParam("dashboard", "bhagmaPct", {
+                                pct: crop.bhagmaPercentage ?? 0,
+                              })}
+                            </Text>
+                          </View>
+                        )}
                     </View>
                   </View>
                   <View
@@ -756,38 +807,66 @@ function CropPickerModal({
             {/* સામાન્ય ખર્ચ only when Add Expense; સામાન્ય આવક only when Add Income */}
             {isExpense && onSelectGeneralExpense && (
               <TouchableOpacity
-                style={[styles.sheetCropRow, styles.sheetGeneralRow]}
+                style={styles.sheetGeneralCard}
                 onPress={() => {
                   onSelectGeneralExpense();
                   onClose();
                 }}
                 activeOpacity={0.75}
               >
-                <View style={[styles.sheetCropEmojiBg, { backgroundColor: C.expensePale }]}>
-                  <Ionicons name="receipt-outline" size={30} color={C.expense} />
+                <View
+                  style={[
+                    styles.sheetCropEmojiBg,
+                    { backgroundColor: C.expensePale },
+                  ]}
+                >
+                  <Ionicons
+                    name="receipt-outline"
+                    size={30}
+                    color={C.expense}
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sheetCropName}>{t("dashboard", "generalExpense")}</Text>
+                  <Text style={styles.sheetCropName}>
+                    {t("dashboard", "generalExpense")}
+                  </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={C.expense} style={{ marginLeft: 6 }} />
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={C.expense}
+                  style={{ marginLeft: 6 }}
+                />
               </TouchableOpacity>
             )}
             {!isExpense && onSelectGeneralIncome && (
               <TouchableOpacity
-                style={[styles.sheetCropRow, styles.sheetGeneralRow]}
+                style={styles.sheetGeneralCardIncome}
                 onPress={() => {
                   onSelectGeneralIncome();
                   onClose();
                 }}
                 activeOpacity={0.75}
               >
-                <View style={[styles.sheetCropEmojiBg, { backgroundColor: C.incomePale }]}>
+                <View
+                  style={[
+                    styles.sheetCropEmojiBg,
+                    { backgroundColor: C.incomePale },
+                  ]}
+                >
                   <Ionicons name="wallet-outline" size={30} color={C.income} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sheetCropName}>{t("dashboard", "generalIncome")}</Text>
+                  <Text style={styles.sheetCropName}>
+                    {t("dashboard", "generalIncome")}
+                  </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={C.income} style={{ marginLeft: 6 }} />
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={C.income}
+                  style={{ marginLeft: 6 }}
+                />
               </TouchableOpacity>
             )}
             <View style={{ height: 20 }} />
@@ -818,27 +897,49 @@ function QuickActions({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>⚡ {t("dashboard", "quickActions")}</Text>
+      <Text style={styles.sectionTitle}>
+        ⚡ {t("dashboard", "quickActions")}
+      </Text>
       <View style={{ height: 14 }} />
       <View style={styles.qaRow}>
         <PressableCard onPress={onAddExpense} style={styles.qaHalf}>
-          <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: C.expensePale, borderColor: "#FFCDD2" }]}>
+          <View
+            style={[
+              styles.qaCard,
+              styles.qaCommonCard,
+              { backgroundColor: C.expensePale, borderColor: "#FFCDD2" },
+            ]}
+          >
             <View style={[styles.qaIcon, { backgroundColor: "#FFCDD2" }]}>
-              <Ionicons name="remove-circle-outline" size={20} color={C.expense} />
+              <Ionicons
+                name="remove-circle-outline"
+                size={20}
+                color={C.expense}
+              />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.qaLabel, { color: C.expense }]}>{t("dashboard", "expense")}</Text>
+              <Text style={[styles.qaLabel, { color: C.expense }]}>
+                {t("dashboard", "expense")}
+              </Text>
             </View>
           </View>
         </PressableCard>
 
         <PressableCard onPress={onAddIncome} style={styles.qaHalf}>
-          <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: C.incomePale, borderColor: C.green100 }]}>
+          <View
+            style={[
+              styles.qaCard,
+              styles.qaCommonCard,
+              { backgroundColor: C.incomePale, borderColor: C.green100 },
+            ]}
+          >
             <View style={[styles.qaIcon, { backgroundColor: C.green100 }]}>
               <Ionicons name="add-circle-outline" size={20} color={C.income} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.qaLabel, { color: C.income }]}>{t("dashboard", "income")}</Text>
+              <Text style={[styles.qaLabel, { color: C.income }]}>
+                {t("dashboard", "income")}
+              </Text>
             </View>
           </View>
         </PressableCard>
@@ -846,48 +947,99 @@ function QuickActions({
 
       {showTractor ? (
         <View style={[styles.qaRow, { marginTop: 10 }]}>
-          <PressableCard onPress={() => router.push("/income/tractor-income-list" as any)} style={styles.qaHalf}>
-            <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: C.tractorOrangePale, borderColor: C.tractorOrangeBorder }]}>
+          <PressableCard
+            onPress={() => router.push("/income/tractor-income-list" as any)}
+            style={styles.qaHalf}
+          >
+            <View
+              style={[
+                styles.qaCard,
+                styles.qaCommonCard,
+                {
+                  backgroundColor: C.tractorOrangePale,
+                  borderColor: C.tractorOrangeBorder,
+                },
+              ]}
+            >
               <View style={[styles.qaIcon, { backgroundColor: "#FFE0B2" }]}>
-                <MaterialCommunityIcons name="tractor-variant" size={20} color={C.tractorOrange} />
+                <MaterialCommunityIcons
+                  name="tractor-variant"
+                  size={20}
+                  color={C.tractorOrange}
+                />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.qaLabel, { color: C.tractorOrange }]}>ટ્રેક્ટર આવક</Text>
+                <Text style={[styles.qaLabel, { color: C.tractorOrange }]}>
+                  ટ્રેક્ટર આવક
+                </Text>
               </View>
             </View>
           </PressableCard>
 
-          <PressableCard onPress={() => router.push("/expense/bhagya-upad-list" as any)} style={styles.qaHalf}>
-            <View style={[styles.qaCard, styles.qaCommonCard, { backgroundColor: "#F0F9FF", borderColor: "#BAE6FD" }]}>
+          <PressableCard
+            onPress={() => router.push("/expense/bhagya-upad-list" as any)}
+            style={styles.qaHalf}
+          >
+            <View
+              style={[
+                styles.qaCard,
+                styles.qaCommonCard,
+                { backgroundColor: "#F0F9FF", borderColor: "#BAE6FD" },
+              ]}
+            >
               <View style={[styles.qaIcon, { backgroundColor: "#E0F2FE" }]}>
                 <Ionicons name="wallet-outline" size={20} color="#0369A1" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.qaLabel, { color: "#0369A1" }]}>{t("dashboard", "bhagyaUpad")}</Text>
+                <Text style={[styles.qaLabel, { color: "#0369A1" }]}>
+                  {t("dashboard", "bhagyaUpad")}
+                </Text>
               </View>
             </View>
           </PressableCard>
         </View>
       ) : (
-        <PressableCard onPress={() => router.push("/expense/bhagya-upad-list" as any)} style={{ marginTop: 10 }}>
-          <View style={[styles.qaCardFull, styles.qaCommonCard, { backgroundColor: "#F0F9FF", borderColor: "#BAE6FD" }]}>
+        <PressableCard
+          onPress={() => router.push("/expense/bhagya-upad-list" as any)}
+          style={{ marginTop: 10 }}
+        >
+          <View
+            style={[
+              styles.qaCardFull,
+              styles.qaCommonCard,
+              { backgroundColor: "#F0F9FF", borderColor: "#BAE6FD" },
+            ]}
+          >
             <View style={[styles.qaIcon, { backgroundColor: "#E0F2FE" }]}>
               <Ionicons name="wallet-outline" size={20} color="#0369A1" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.qaLabel, { color: "#0369A1" }]}>{t("dashboard", "bhagyaUpad")}</Text>
+              <Text style={[styles.qaLabel, { color: "#0369A1" }]}>
+                {t("dashboard", "bhagyaUpad")}
+              </Text>
             </View>
           </View>
         </PressableCard>
       )}
 
-      <PressableCard onPress={() => router.push("/crop/add-crop")} style={{ marginTop: 10 }}>
-        <View style={[styles.qaCardFull, styles.qaCommonCard, styles.qaCardFullAddCrop]}>
+      <PressableCard
+        onPress={() => router.push("/crop/add-crop")}
+        style={{ marginTop: 10 }}
+      >
+        <View
+          style={[
+            styles.qaCardFull,
+            styles.qaCommonCard,
+            styles.qaCardFullAddCrop,
+          ]}
+        >
           <View style={[styles.qaIcon, styles.qaCardFullAddCropIcon]}>
             <Ionicons name="leaf" size={23} color="#5D4037" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.qaLabel, styles.qaCardFullAddCropText]}>નવો પાક ઉમેરો</Text>
+            <Text style={[styles.qaLabel, styles.qaCardFullAddCropText]}>
+              નવો પાક ઉમેરો
+            </Text>
           </View>
         </View>
       </PressableCard>
@@ -910,7 +1062,9 @@ function RecentTransactions({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>🧾 {t("dashboard", "recentTxns")}</Text>
+        <Text style={styles.sectionTitle}>
+          🧾 {t("dashboard", "recentTxns")}
+        </Text>
         <TouchableOpacity
           style={styles.seeAllBtn}
           onPress={() => router.push("/all-transactions" as any)}
@@ -975,16 +1129,13 @@ function RecentTransactions({
               </View>
               <View style={styles.txnInfo}>
                 <Text style={styles.txnLabel}>{t.label}</Text>
-                {t.crop ?(
- <Text style={styles.txnMeta}>
- {t.crop} · {t.date}
-</Text>
-                ): (
+                {t.crop ? (
                   <Text style={styles.txnMeta}>
- {t.date}
-</Text>
+                    {t.crop} · {t.date}
+                  </Text>
+                ) : (
+                  <Text style={styles.txnMeta}>{t.date}</Text>
                 )}
-               
               </View>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
@@ -1020,7 +1171,11 @@ export default function Dashboard() {
   const { profile, setProfile } = useProfile();
   const { transactionsRefreshKey } = useRefresh();
   const [crops, setCrops] = useState<Crop[]>([]);
-  const [summary, setSummary] = useState<{ totalIncome: number; totalExpense: number; netProfit: number }>({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
+  const [summary, setSummary] = useState<{
+    totalIncome: number;
+    totalExpense: number;
+    netProfit: number;
+  }>({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
   const [bhagyaUpadTotal, setBhagyaUpadTotal] = useState(0);
   const [tractorIncomeTotal, setTractorIncomeTotal] = useState(0);
   const [tractorPendingTotal, setTractorPendingTotal] = useState(0);
@@ -1032,7 +1187,9 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerType, setPickerType] = useState<"expense" | "income">("expense");
-  const [weather, setWeather] = useState<WeatherState>(() => getWeatherDefault(t));
+  const [weather, setWeather] = useState<WeatherState>(() =>
+    getWeatherDefault(t),
+  );
   const [financialYear, setFinancialYear] = useState(getCurrentFinancialYear());
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
@@ -1042,78 +1199,108 @@ export default function Dashboard() {
   const cropScrollRef = useRef<ScrollView>(null);
 
   // ── Load all data via api.ts (filtered by selected financial year) ───────────
-  const loadData = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    try {
-      const [prof, cropRes, yearlyReport, expRes, incRes, notificationRes, bhagyaExpRes] = await Promise.all([
-        getMyProfile(),
-        getCrops(1, 100, undefined, undefined, financialYear),
-        getYearlyReport(financialYear),
-        getExpenses(undefined, undefined, undefined, 1, 30, financialYear),
-        getIncomes(1, 30, undefined, undefined, undefined, financialYear),
-        getNotifications(1, 20),
-        getExpenses(undefined, "Labour", undefined, 1, 500, financialYear),
-      ]);
-      setProfile(prof);
-      setUnreadNotificationCount(notificationRes.pagination?.unreadCount ?? 0);
-      const reportCrops = yearlyReport.crops ?? [];
-      const bhagyaUpadTotal = (bhagyaExpRes.data ?? [])
-        .filter(isDedicatedBhagyaUpadExpense)
-        .reduce((sum, expense) => sum + expenseAmount(expense as any), 0);
-      const reportSummary = yearlyReport.summary ?? {
-        totalIncome: 0,
-        cropExpense: 0,
-        bhagyaUpadTotal: 0,
-        tractorIncome: 0,
-      };
-      // Main summary: total income includes extra; total expense = sum of individual crop expenses only (matches what user sees on each crop card)
-      const cropExpense = reportSummary.cropExpense ?? reportCrops.reduce((s: number, r: any) => s + (r.expense ?? 0), 0);
-      const allIncome = reportSummary.totalIncome ?? 0;
-      setSummary({
-        totalIncome: allIncome,
-        totalExpense: cropExpense, // કુલ ખર્ચ = crop expense only
-        netProfit: allIncome - cropExpense, // ચોખ્ખો નફો = આવક - ખર્ચ
-      });
-      setBhagyaUpadTotal(bhagyaUpadTotal);
-      setTractorIncomeTotal(reportSummary.tractorIncome ?? 0);
-      setCrops(
-        cropRes.data.map((c: Crop) => {
-          const report = reportCrops.find((r) => r._id === c._id);
-          return {
-            ...c,
-            income: report?.income ?? 0,
-            expense: report?.expense ?? 0,
-            profit: report?.profit ?? (report ? (report.income ?? 0) - (report.expense ?? 0) : 0),
-            ...(report?.labourShare != null && { labourShare: report.labourShare as number }),
-            ...(report?.farmerDirectExpense != null && { farmerDirectExpense: report.farmerDirectExpense as number }),
-          };
-        }),
-      );
-      const expenses = Array.isArray(expRes?.data) ? expRes.data : [];
-      const incomes = Array.isArray(incRes?.data) ? incRes.data : [];
+  const loadData = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) setRefreshing(true);
+      try {
+        const [
+          prof,
+          cropRes,
+          yearlyReport,
+          expRes,
+          incRes,
+          notificationRes,
+          bhagyaExpRes,
+        ] = await Promise.all([
+          getMyProfile(),
+          getCrops(1, 100, undefined, undefined, financialYear),
+          getYearlyReport(financialYear),
+          getExpenses(undefined, undefined, undefined, 1, 30, financialYear),
+          getIncomes(1, 30, undefined, undefined, undefined, financialYear),
+          getNotifications(1, 20),
+          getExpenses(undefined, "Labour", undefined, 1, 500, financialYear),
+        ]);
+        setProfile(prof);
+        setUnreadNotificationCount(
+          notificationRes.pagination?.unreadCount ?? 0,
+        );
+        const reportCrops = yearlyReport.crops ?? [];
+        const bhagyaUpadTotal = (bhagyaExpRes.data ?? [])
+          .filter(isDedicatedBhagyaUpadExpense)
+          .reduce((sum, expense) => sum + expenseAmount(expense as any), 0);
+        const reportSummary = yearlyReport.summary ?? {
+          totalIncome: 0,
+          cropExpense: 0,
+          bhagyaUpadTotal: 0,
+          tractorIncome: 0,
+        };
+        // Main summary: total income includes extra; total expense = sum of individual crop expenses only (matches what user sees on each crop card)
+        const cropExpense =
+          reportSummary.cropExpense ??
+          reportCrops.reduce((s: number, r: any) => s + (r.expense ?? 0), 0);
+        const allIncome = reportSummary.totalIncome ?? 0;
+        setSummary({
+          totalIncome: allIncome,
+          totalExpense: cropExpense, // કુલ ખર્ચ = crop expense only
+          netProfit: allIncome - cropExpense, // ચોખ્ખો નફો = આવક - ખર્ચ
+        });
+        setBhagyaUpadTotal(bhagyaUpadTotal);
+        setTractorIncomeTotal(reportSummary.tractorIncome ?? 0);
+        setCrops(
+          cropRes.data.map((c: Crop) => {
+            const report = reportCrops.find((r) => r._id === c._id);
+            return {
+              ...c,
+              income: report?.income ?? 0,
+              expense: report?.expense ?? 0,
+              profit:
+                report?.profit ??
+                (report ? (report.income ?? 0) - (report.expense ?? 0) : 0),
+              ...(report?.labourShare != null && {
+                labourShare: report.labourShare as number,
+              }),
+              ...(report?.farmerDirectExpense != null && {
+                farmerDirectExpense: report.farmerDirectExpense as number,
+              }),
+            };
+          }),
+        );
+        const expenses = Array.isArray(expRes?.data) ? expRes.data : [];
+        const incomes = Array.isArray(incRes?.data) ? incRes.data : [];
 
-      // Tractor income: split total by payment status (Pending vs Completed)
-      const rentalIncomes = incomes.filter((i: any) => i.category === "Rental Income");
-      let pendingTotal = 0;
-      let paidTotal = 0;
-      for (const inc of rentalIncomes) {
-        const r: any = inc.rentalIncome ?? {};
-        const amt = Number(r.totalAmount ?? 0);
-        if (!Number.isFinite(amt) || amt <= 0) continue;
-        if (r.paymentStatus === "Pending") pendingTotal += amt;
-        if (r.paymentStatus === "Completed") paidTotal += amt;
+        // Tractor income: split total by payment status (Pending vs Completed)
+        const rentalIncomes = incomes.filter(
+          (i: any) => i.category === "Rental Income",
+        );
+        let pendingTotal = 0;
+        let paidTotal = 0;
+        for (const inc of rentalIncomes) {
+          const r: any = inc.rentalIncome ?? {};
+          const amt = Number(r.totalAmount ?? 0);
+          if (!Number.isFinite(amt) || amt <= 0) continue;
+          if (r.paymentStatus === "Pending") pendingTotal += amt;
+          if (r.paymentStatus === "Completed") paidTotal += amt;
+        }
+        setTractorPendingTotal(pendingTotal);
+        setTractorPaidTotal(paidTotal);
+        setTxns(
+          buildTransactions(
+            expenses,
+            incomes as Income[],
+            t,
+            cropRes.data ?? [],
+          ),
+        );
+      } catch (err) {
+        console.log("[Dashboard] loadData error:", (err as Error).message);
+      } finally {
+        setLoadingProfile(false);
+        setLoadingTxns(false);
+        setRefreshing(false);
       }
-      setTractorPendingTotal(pendingTotal);
-      setTractorPaidTotal(paidTotal);
-      setTxns(buildTransactions(expenses, incomes as Income[], t, cropRes.data ?? []));
-    } catch (err) {
-      console.log("[Dashboard] loadData error:", (err as Error).message);
-    } finally {
-      setLoadingProfile(false);
-      setLoadingTxns(false);
-      setRefreshing(false);
-    }
-  }, [t, tParam, financialYear]);
+    },
+    [t, tParam, financialYear],
+  );
 
   useEffect(() => {
     loadData();
@@ -1122,9 +1309,11 @@ export default function Dashboard() {
   useFocusEffect(
     useCallback(() => {
       getNotifications(1, 20)
-        .then((res) => setUnreadNotificationCount(res.pagination?.unreadCount ?? 0))
+        .then((res) =>
+          setUnreadNotificationCount(res.pagination?.unreadCount ?? 0),
+        )
         .catch(() => {});
-    }, [])
+    }, []),
   );
 
   useEffect(() => {
@@ -1171,7 +1360,8 @@ export default function Dashboard() {
           const humidity = Math.round(Number(c.relative_humidity_2m)) ?? 0;
           const windKmh = Math.round(Number(c.wind_speed_10m) ?? 0);
           const code = Number(c.weather_code) ?? 0;
-          const condition = t("weather", String(code)) || t("weather", "partlyCloudy");
+          const condition =
+            t("weather", String(code)) || t("weather", "partlyCloudy");
           setWeather({
             temp: `${temp}°C`,
             condition,
@@ -1281,7 +1471,9 @@ export default function Dashboard() {
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarText}>{avatarChar}</Text>
             </View>
-            <Text style={styles.stickyName}>{farmerName || t("dashboard", "farmer")}</Text>
+            <Text style={styles.stickyName}>
+              {farmerName || t("dashboard", "farmer")}
+            </Text>
           </View>
           <TouchableOpacity style={styles.notifBtn} onPress={openNotifications}>
             <Ionicons
@@ -1289,7 +1481,9 @@ export default function Dashboard() {
               size={28}
               color={C.green700}
             />
-            {unreadNotificationCount > 0 ? <View style={styles.notifDot} /> : null}
+            {unreadNotificationCount > 0 ? (
+              <View style={styles.notifDot} />
+            ) : null}
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -1318,34 +1512,64 @@ export default function Dashboard() {
                     {farmerName || t("dashboard", "farmer")}
                   </Text>
                 )}
-                
               </View>
               <View style={styles.headerRight}>
-                <TouchableOpacity style={styles.notifBtn} onPress={openNotifications}>
+                <TouchableOpacity
+                  style={styles.notifBtn}
+                  onPress={openNotifications}
+                >
                   <Ionicons
                     name="notifications-outline"
                     size={28}
                     color={C.green700}
                   />
-                  {unreadNotificationCount > 0 ? <View style={styles.notifDot} /> : null}
+                  {unreadNotificationCount > 0 ? (
+                    <View style={styles.notifDot} />
+                  ) : null}
                 </TouchableOpacity>
               </View>
             </View>
             {(() => {
               const theme = getWeatherTheme(weather);
-              const rainStyle = theme === "rain" ? styles.weatherBarRain : undefined;
-              const clearStyle = theme === "clear" ? styles.weatherBarClear : undefined;
-              const hotStyle = theme === "hot" ? styles.weatherBarHot : undefined;
-              const weatherBarStyle = [styles.weatherBar, rainStyle, clearStyle, hotStyle];
-              const iconName = theme === "rain" ? "rainy-outline" : theme === "hot" ? "sunny" : "partly-sunny-outline";
-              const iconColor = theme === "rain" ? "#7EB8DA" : theme === "hot" ? "#C4A574" : "#B8C99E";
+              const rainStyle =
+                theme === "rain" ? styles.weatherBarRain : undefined;
+              const clearStyle =
+                theme === "clear" ? styles.weatherBarClear : undefined;
+              const hotStyle =
+                theme === "hot" ? styles.weatherBarHot : undefined;
+              const weatherBarStyle = [
+                styles.weatherBar,
+                rainStyle,
+                clearStyle,
+                hotStyle,
+              ];
+              const iconName =
+                theme === "rain"
+                  ? "rainy-outline"
+                  : theme === "hot"
+                    ? "sunny"
+                    : "partly-sunny-outline";
+              const iconColor =
+                theme === "rain"
+                  ? "#7EB8DA"
+                  : theme === "hot"
+                    ? "#C4A574"
+                    : "#B8C99E";
               return (
                 <View style={weatherBarStyle}>
-                  <Ionicons name={iconName as any} size={24} color={iconColor} />
+                  <Ionicons
+                    name={iconName as any}
+                    size={24}
+                    color={iconColor}
+                  />
                   <Text style={styles.weatherTemp}>{weather.temp}</Text>
                   <Text style={styles.weatherCond}>{weather.condition}</Text>
                   <View style={styles.weatherDivider} />
-                  <Ionicons name="water-outline" size={14} color={C.textMuted} />
+                  <Ionicons
+                    name="water-outline"
+                    size={14}
+                    color={C.textMuted}
+                  />
                   <Text style={styles.weatherStat}>{weather.humidity}</Text>
                   <Ionicons name="flag-outline" size={14} color={C.textMuted} />
                   <Text style={styles.weatherStat}>{weather.wind}</Text>
@@ -1380,11 +1604,19 @@ export default function Dashboard() {
           {getFinancialYearOptions().map((y) => (
             <TouchableOpacity
               key={y}
-              style={[styles.fyChip, financialYear === y && styles.fyChipActive]}
+              style={[
+                styles.fyChip,
+                financialYear === y && styles.fyChipActive,
+              ]}
               onPress={() => setFinancialYear(y)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.fyChipText, financialYear === y && styles.fyChipTextActive]}>
+              <Text
+                style={[
+                  styles.fyChipText,
+                  financialYear === y && styles.fyChipTextActive,
+                ]}
+              >
                 {y}
               </Text>
             </TouchableOpacity>
@@ -1410,7 +1642,13 @@ export default function Dashboard() {
               />
               <View style={{ flex: 1 }}>
                 <View style={styles.profitAmountRow}>
-                  <View style={{ flexDirection: "row", alignItems: "flex-end", flex: 1 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "flex-end",
+                      flex: 1,
+                    }}
+                  >
                     <Text
                       style={[
                         styles.profitSign,
@@ -1426,7 +1664,9 @@ export default function Dashboard() {
                   </View>
                   <View style={styles.profitPakBadge}>
                     <Text style={styles.profitPakValue}>{crops.length}</Text>
-                    <Text style={styles.profitPakLabel}>{t("dashboard", "crops")}</Text>
+                    <Text style={styles.profitPakLabel}>
+                      {t("dashboard", "crops")}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.profitSubRow}>
@@ -1446,10 +1686,7 @@ export default function Dashboard() {
                       },
                     ] as const
                   ).map((item, i) => (
-                    <View
-                      key={i}
-                      style={styles.profitSubItem}
-                    >
+                    <View key={i} style={styles.profitSubItem}>
                       <Ionicons name={item.icon} size={22} color={item.color} />
                       <View>
                         <Text
@@ -1467,16 +1704,30 @@ export default function Dashboard() {
                 {landBigha > 0 && (
                   <View style={styles.profitPerBighaRow}>
                     <View style={styles.profitPerBighaItem}>
-                      <Text style={[styles.profitPerBighaValue, { color: C.income }]}>
+                      <Text
+                        style={[
+                          styles.profitPerBighaValue,
+                          { color: C.income },
+                        ]}
+                      >
                         {formatWholeNumber(incomePerBigha)}
                       </Text>
-                      <Text style={styles.profitPerBighaLabel}>{t("dashboard", "incomePerBighaShort")}</Text>
+                      <Text style={styles.profitPerBighaLabel}>
+                        {t("dashboard", "incomePerBighaShort")}
+                      </Text>
                     </View>
                     <View style={styles.profitPerBighaItem}>
-                      <Text style={[styles.profitPerBighaValue, { color: C.expense }]}>
+                      <Text
+                        style={[
+                          styles.profitPerBighaValue,
+                          { color: C.expense },
+                        ]}
+                      >
                         {formatWholeNumber(expensePerBigha)}
                       </Text>
-                      <Text style={styles.profitPerBighaLabel}>{t("dashboard", "expensePerBighaShort")}</Text>
+                      <Text style={styles.profitPerBighaLabel}>
+                        {t("dashboard", "expensePerBighaShort")}
+                      </Text>
                     </View>
                   </View>
                 )}
@@ -1500,7 +1751,9 @@ export default function Dashboard() {
                     }
                     style={styles.bhagyaUpadRow}
                   >
-                    <Text style={styles.bhagyaUpadLabel}>{t("dashboard", "bhagyaUpad")}</Text>
+                    <Text style={styles.bhagyaUpadLabel}>
+                      {t("dashboard", "bhagyaUpad")}
+                    </Text>
                     <Text style={styles.bhagyaUpadValue}>
                       ₹{formatWholeNumber(bhagyaUpadTotal)}
                     </Text>
@@ -1541,13 +1794,19 @@ export default function Dashboard() {
           return (
             <View style={styles.myCropsSection}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.myCropsSectionTitle}>🌱 {t("dashboard", "myCrops")}</Text>
+                <Text style={styles.myCropsSectionTitle}>
+                  🌱 {t("dashboard", "myCrops")}
+                </Text>
                 <TouchableOpacity
                   style={styles.seeAllBtn}
                   onPress={() => router.push("/crop" as any)}
                 >
                   <Text style={styles.seeAll}>{t("dashboard", "seeAll")}</Text>
-                  <Ionicons name="chevron-forward" size={22} color={C.green700} />
+                  <Ionicons
+                    name="chevron-forward"
+                    size={22}
+                    color={C.green700}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -1557,10 +1816,14 @@ export default function Dashboard() {
                   style={styles.emptyCropCard}
                 >
                   <Text style={styles.emptyCropEmoji}>🌱</Text>
-                  <Text style={styles.emptyCropText}>{t("dashboard", "noCrops")}</Text>
+                  <Text style={styles.emptyCropText}>
+                    {t("dashboard", "noCrops")}
+                  </Text>
                   <View style={styles.emptyCropBtn}>
                     <Ionicons name="add" size={20} color="#5D4037" />
-                    <Text style={styles.emptyCropBtnText}>{t("dashboard", "addNewCrop")}</Text>
+                    <Text style={styles.emptyCropBtnText}>
+                      {t("dashboard", "addNewCrop")}
+                    </Text>
                   </View>
                 </PressableCard>
               ) : (
@@ -1575,29 +1838,52 @@ export default function Dashboard() {
                     snapToAlignment="start"
                     decelerationRate="fast"
                     onScroll={(e) => {
-                      const idx = Math.round(e.nativeEvent.contentOffset.x / CROP_PAGE_WIDTH);
-                      setSelected(Math.min(Math.max(0, idx), activeCrops.length - 1));
+                      const idx = Math.round(
+                        e.nativeEvent.contentOffset.x / CROP_PAGE_WIDTH,
+                      );
+                      setSelected(
+                        Math.min(Math.max(0, idx), activeCrops.length - 1),
+                      );
                     }}
                     scrollEventThrottle={32}
                     onMomentumScrollEnd={(e) => {
-                      const idx = Math.round(e.nativeEvent.contentOffset.x / CROP_PAGE_WIDTH);
-                      setSelected(Math.min(Math.max(0, idx), activeCrops.length - 1));
+                      const idx = Math.round(
+                        e.nativeEvent.contentOffset.x / CROP_PAGE_WIDTH,
+                      );
+                      setSelected(
+                        Math.min(Math.max(0, idx), activeCrops.length - 1),
+                      );
                     }}
                   >
                     {activeCrops.slice(0, 10).map((crop, i) => {
                       const colors = getCropColors(crop.cropName);
                       const isSel = selectedCrop === i;
                       const cropDate = formatDisplayDate(crop.createdAt);
-                      const farmLabel = (crop as any).farmName || (crop as any).farm_name || "—";
-                      const areaLine = [farmLabel !== "—" ? farmLabel : null, `${formatVighaDisplay(crop.area)} ${areaUnitLabel(crop.areaUnit, t)}`].filter(Boolean).join(" · ");
+                      const farmLabel =
+                        (crop as any).farmName ||
+                        (crop as any).farm_name ||
+                        "—";
+                      const areaLine = [
+                        farmLabel !== "—" ? farmLabel : null,
+                        `${formatVighaDisplay(crop.area)} ${areaUnitLabel(crop.areaUnit, t)}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ");
                       return (
                         <PressableCard
                           key={crop._id}
                           onPress={() => {
                             setSelected(i);
-                            cropScrollRef.current?.scrollTo({ x: i * CROP_PAGE_WIDTH, animated: true });
+                            cropScrollRef.current?.scrollTo({
+                              x: i * CROP_PAGE_WIDTH,
+                              animated: true,
+                            });
                           }}
-                          style={[styles.cropCard, { width: CROP_CARD_WIDTH }, isSel && styles.cropCardSel]}
+                          style={[
+                            styles.cropCard,
+                            { width: CROP_CARD_WIDTH },
+                            isSel && styles.cropCardSel,
+                          ]}
                         >
                           <LinearGradient
                             colors={colors}
@@ -1613,12 +1899,25 @@ export default function Dashboard() {
                             <View style={styles.cropCardRight}>
                               <Text style={styles.cropName} numberOfLines={2}>
                                 {cropDisplayName(crop.cropName, t)}
-                                {crop.subType ? <Text style={styles.cropSubType}>{" - "}{crop.subType}</Text> : null}
+                                {crop.subType ? (
+                                  <Text style={styles.cropSubType}>
+                                    {" - "}
+                                    {crop.subType}
+                                  </Text>
+                                ) : null}
                               </Text>
-                              <Text style={styles.cropMetaLine}>{cropDate}</Text>
-                              {areaLine ? <Text style={styles.cropMetaLine}>{areaLine}</Text> : null}
+                              <Text style={styles.cropMetaLine}>
+                                {cropDate}
+                              </Text>
+                              {areaLine ? (
+                                <Text style={styles.cropMetaLine}>
+                                  {areaLine}
+                                </Text>
+                              ) : null}
                               <View style={styles.cropBadge}>
-                                <Text style={styles.cropBadgeText}>● {t("common", "statusActive")}</Text>
+                                <Text style={styles.cropBadgeText}>
+                                  ● {t("common", "statusActive")}
+                                </Text>
                               </View>
                             </View>
                           </LinearGradient>
@@ -1634,11 +1933,18 @@ export default function Dashboard() {
                           onPress={() => {
                             const next = selectedCrop - 1;
                             setSelected(next);
-                            cropScrollRef.current?.scrollTo({ x: next * CROP_PAGE_WIDTH, animated: true });
+                            cropScrollRef.current?.scrollTo({
+                              x: next * CROP_PAGE_WIDTH,
+                              animated: true,
+                            });
                           }}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="arrow-back" size={24} color="#000000" />
+                          <Ionicons
+                            name="arrow-back"
+                            size={24}
+                            color="#000000"
+                          />
                         </TouchableOpacity>
                       )}
                       {selectedCrop < activeCrops.length - 1 && (
@@ -1647,11 +1953,18 @@ export default function Dashboard() {
                           onPress={() => {
                             const next = selectedCrop + 1;
                             setSelected(next);
-                            cropScrollRef.current?.scrollTo({ x: next * CROP_PAGE_WIDTH, animated: true });
+                            cropScrollRef.current?.scrollTo({
+                              x: next * CROP_PAGE_WIDTH,
+                              animated: true,
+                            });
                           }}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="arrow-forward" size={24} color="#000000" />
+                          <Ionicons
+                            name="arrow-forward"
+                            size={24}
+                            color="#000000"
+                          />
                         </TouchableOpacity>
                       )}
                     </>
@@ -1665,137 +1978,269 @@ export default function Dashboard() {
         {/* ── Selected Crop Detail: Income, Expense, Net ── */}
         {(() => {
           const activeCrops = crops.filter((c) => c.status === "Active");
-          const safeIdx = Math.min(selectedCrop, Math.max(0, activeCrops.length - 1));
-          return activeCrops.length > 0 &&
-          activeCrops[safeIdx] &&
-          (() => {
-            const c = activeCrops[safeIdx];
-            const inc = (c as any).income ?? 0;
-            const exp = (c as any).expense ?? 0;
-            const net = inc - exp;
-            const areaBigha = cropAreaBigha(c.area, c.areaUnit);
-            const incPerBigha = areaBigha > 0 ? inc / areaBigha : 0;
-            const expPerBigha = areaBigha > 0 ? exp / areaBigha : 0;
-            const detailColors = getCropColors(c.cropName);
-            return (
-              <View style={styles.section}>
-                <LinearGradient
-                  colors={detailColors}
-                  style={[styles.detailCard, styles.detailCardGrad]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <View style={styles.detailHeader}>
-                    <View style={styles.detailEmojiWrap}>
-                      <Text style={styles.detailEmoji}>
-                        {c.cropEmoji ?? "🌱"}
-                      </Text>
-                    </View>
-                    <View style={styles.detailHeaderText}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <Text style={styles.detailName}>{cropDisplayName(c.cropName, t)}{c.subType ? <Text style={styles.detailSubType}>{" - "}{c.subType}</Text> : null}</Text>
-                        {!c.subType && <Text style={styles.detailCategory}>{seasonCategoryLabel(c.season, t)}</Text>}
-                        {c.landType === "bhagma" && c.bhagmaPercentage != null && (
-                          <View style={[styles.bhagmaBadge, { backgroundColor: C.expensePale }]}>
-                            <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
-                              {tParam("dashboard", "bhagmaPct", { pct: c.bhagmaPercentage ?? 0 })}
+          const safeIdx = Math.min(
+            selectedCrop,
+            Math.max(0, activeCrops.length - 1),
+          );
+          return (
+            activeCrops.length > 0 &&
+            activeCrops[safeIdx] &&
+            (() => {
+              const c = activeCrops[safeIdx];
+              const inc = (c as any).income ?? 0;
+              const exp = (c as any).expense ?? 0;
+              const net = inc - exp;
+              const areaBigha = cropAreaBigha(c.area, c.areaUnit);
+              const incPerBigha = areaBigha > 0 ? inc / areaBigha : 0;
+              const expPerBigha = areaBigha > 0 ? exp / areaBigha : 0;
+              const detailColors = getCropColors(c.cropName);
+              return (
+                <View style={styles.section}>
+                  <LinearGradient
+                    colors={detailColors}
+                    style={[styles.detailCard, styles.detailCardGrad]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <View style={styles.detailHeader}>
+                      <View style={styles.detailEmojiWrap}>
+                        <Text style={styles.detailEmoji}>
+                          {c.cropEmoji ?? "🌱"}
+                        </Text>
+                      </View>
+                      <View style={styles.detailHeaderText}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <Text style={styles.detailName}>
+                            {cropDisplayName(c.cropName, t)}
+                            {c.subType ? (
+                              <Text style={styles.detailSubType}>
+                                {" - "}
+                                {c.subType}
+                              </Text>
+                            ) : null}
+                          </Text>
+                          {!c.subType && (
+                            <Text style={styles.detailCategory}>
+                              {seasonCategoryLabel(c.season, t)}
                             </Text>
-                          </View>
-                        )}
+                          )}
+                          {c.landType === "bhagma" &&
+                            c.bhagmaPercentage != null && (
+                              <View
+                                style={[
+                                  styles.bhagmaBadge,
+                                  { backgroundColor: C.expensePale },
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.bhagmaBadgeText,
+                                    { color: C.expense },
+                                  ]}
+                                >
+                                  {tParam("dashboard", "bhagmaPct", {
+                                    pct: c.bhagmaPercentage ?? 0,
+                                  })}
+                                </Text>
+                              </View>
+                            )}
+                        </View>
+                        <Text style={styles.detailDate}>
+                          {formatDisplayDate(c.createdAt)}
+                        </Text>
                       </View>
-                      <Text style={styles.detailDate}>{formatDisplayDate(c.createdAt)}</Text>
+                      <TouchableOpacity
+                        style={styles.editBtn}
+                        onPress={() =>
+                          router.push(`/crop/edit-crop?id=${c._id}` as any)
+                        }
+                      >
+                        <Ionicons
+                          name="create-outline"
+                          size={20}
+                          color={C.green700}
+                        />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={styles.editBtn}
-                      onPress={() =>
-                        router.push(`/crop/edit-crop?id=${c._id}` as any)
-                      }
-                    >
-                      <Ionicons name="create-outline" size={20} color={C.green700} />
-                    </TouchableOpacity>
-                  </View>
 
-                  <View style={styles.detailSummarySingleBox}>
-                    <View style={styles.detailSummaryCell}>
-                      <Text style={[styles.detailSummaryCellLabel, { color: C.income }]}>{t("dashboard", "income")}</Text>
-                      <View style={styles.detailSummaryCellValueWrap}>
-                        <Text style={[styles.detailSummaryCellValue, { color: C.income }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
-                          {formatWholeNumber(inc)}
+                    <View style={styles.detailSummarySingleBox}>
+                      <View style={styles.detailSummaryCell}>
+                        <Text
+                          style={[
+                            styles.detailSummaryCellLabel,
+                            { color: C.income },
+                          ]}
+                        >
+                          {t("dashboard", "income")}
                         </Text>
+                        <View style={styles.detailSummaryCellValueWrap}>
+                          <Text
+                            style={[
+                              styles.detailSummaryCellValue,
+                              { color: C.income },
+                            ]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.5}
+                          >
+                            {formatWholeNumber(inc)}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.detailSummaryOp}>−</Text>
+                      <View style={styles.detailSummaryCell}>
+                        <Text
+                          style={[
+                            styles.detailSummaryCellLabel,
+                            { color: C.expense },
+                          ]}
+                        >
+                          {t("dashboard", "expense")}
+                        </Text>
+                        <View style={styles.detailSummaryCellValueWrap}>
+                          <Text
+                            style={[
+                              styles.detailSummaryCellValue,
+                              { color: C.expense },
+                            ]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.5}
+                          >
+                            {formatWholeNumber(exp)}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.detailSummaryOp}>=</Text>
+                      <View style={styles.detailSummaryCell}>
+                        <Text
+                          style={[
+                            styles.detailSummaryCellLabel,
+                            { color: C.textPrimary },
+                          ]}
+                        >
+                          {t("dashboard", "profit")}
+                        </Text>
+                        <View style={styles.detailSummaryCellValueWrap}>
+                          <Text
+                            style={[
+                              styles.detailSummaryCellValue,
+                              { color: C.textPrimary },
+                            ]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.5}
+                          >
+                            {net >= 0 ? "" : "−"}
+                            {formatWholeNumber(Math.abs(net))}
+                          </Text>
+                        </View>
                       </View>
                     </View>
-                    <Text style={styles.detailSummaryOp}>−</Text>
-                    <View style={styles.detailSummaryCell}>
-                      <Text style={[styles.detailSummaryCellLabel, { color: C.expense }]}>{t("dashboard", "expense")}</Text>
-                      <View style={styles.detailSummaryCellValueWrap}>
-                        <Text style={[styles.detailSummaryCellValue, { color: C.expense }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
-                          {formatWholeNumber(exp)}
+                    {c.landType === "bhagma" &&
+                      (c as any).labourShare != null &&
+                      (c as any).labourShare > 0 && (
+                        <View style={styles.detailBhagmaRow}>
+                          <Text style={styles.detailBhagmaLabel}>
+                            {tParam("dashboard", "labourShareLabel", {
+                              pct: c.bhagmaPercentage ?? 0,
+                            })}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.detailBhagmaValue,
+                              { color: C.expense },
+                            ]}
+                          >
+                            ₹{formatWholeNumber((c as any).labourShare)}
+                          </Text>
+                        </View>
+                      )}
+                    {areaBigha > 0 && (
+                      <View style={styles.detailUnitRow}>
+                        <Text style={styles.detailUnitText}>
+                          <Text style={{ color: C.income, fontWeight: "700" }}>
+                            {t("dashboard", "incomePerBigha")}
+                          </Text>{" "}
+                          {formatWholeNumber(incPerBigha)}
+                          {"  ·  "}
+                          <Text style={{ color: C.expense, fontWeight: "700" }}>
+                            {t("dashboard", "expensePerBigha")}
+                          </Text>{" "}
+                          {formatWholeNumber(expPerBigha)}
                         </Text>
                       </View>
-                    </View>
-                    <Text style={styles.detailSummaryOp}>=</Text>
-                    <View style={styles.detailSummaryCell}>
-                      <Text style={[styles.detailSummaryCellLabel, { color: C.textPrimary }]}>{t("dashboard", "profit")}</Text>
-                      <View style={styles.detailSummaryCellValueWrap}>
-                        <Text style={[styles.detailSummaryCellValue, { color: C.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
-                          {net >= 0 ? "" : "−"}{formatWholeNumber(Math.abs(net))}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                  {c.landType === "bhagma" && (c as any).labourShare != null && (c as any).labourShare > 0 && (
-                    <View style={styles.detailBhagmaRow}>
-                      <Text style={styles.detailBhagmaLabel}>{tParam("dashboard", "labourShareLabel", { pct: c.bhagmaPercentage ?? 0 })}</Text>
-                      <Text style={[styles.detailBhagmaValue, { color: C.expense }]}>
-                        ₹{formatWholeNumber((c as any).labourShare)}
-                      </Text>
-                    </View>
-                  )}
-                  {areaBigha > 0 && (
-                    <View style={styles.detailUnitRow}>
-                      <Text style={styles.detailUnitText}>
-                        <Text style={{ color: C.income, fontWeight: "700" }}>{t("dashboard", "incomePerBigha")}</Text> {formatWholeNumber(incPerBigha)}
-                        {"  ·  "}
-                        <Text style={{ color: C.expense, fontWeight: "700" }}>{t("dashboard", "expensePerBigha")}</Text> {formatWholeNumber(expPerBigha)}
-                      </Text>
-                    </View>
-                  )}
+                    )}
 
-                  <View style={styles.detailActions}>
-                    <PressableCard
-                      onPress={() =>
-                        router.push(`/expense/add-expense?cropId=${c._id}` as any)
-                      }
-                      style={styles.detailBtnWrap}
-                    >
-                      <View style={[styles.detailActionBtn, styles.detailExpenseBtnCrop]}>
-                        <Ionicons name="remove-circle-outline" size={20} color="#B71C1C" />
-                        <Text style={styles.detailActionBtnTextExpense}>
-                          ખર્ચ
-                        </Text>
-                      </View>
-                    </PressableCard>
-                    <PressableCard
-                      onPress={() =>
-                        router.push(`/income/add-income?cropId=${c._id}` as any)
-                      }
-                      style={styles.detailBtnWrap}
-                    >
-                      <View style={[styles.detailActionBtn, styles.detailIncomeBtnCrop]}>
-                        <Ionicons name="add-circle-outline" size={20} color="#1B5E20" />
-                        <Text style={styles.detailActionBtnTextIncome}>
-                          આવક
-                        </Text>
-                      </View>
-                    </PressableCard>
-                  </View>
-                </LinearGradient>
-              </View>
-            );
-          })();
+                    <View style={styles.detailActions}>
+                      <PressableCard
+                        onPress={() =>
+                          router.push(
+                            `/expense/add-expense?cropId=${c._id}` as any,
+                          )
+                        }
+                        style={styles.detailBtnWrap}
+                      >
+                        <View
+                          style={[
+                            styles.detailActionBtn,
+                            styles.detailExpenseBtnCrop,
+                          ]}
+                        >
+                          <Ionicons
+                            name="remove-circle-outline"
+                            size={20}
+                            color="#B71C1C"
+                          />
+                          <Text style={styles.detailActionBtnTextExpense}>
+                            ખર્ચ
+                          </Text>
+                        </View>
+                      </PressableCard>
+                      <PressableCard
+                        onPress={() =>
+                          router.push(
+                            `/income/add-income?cropId=${c._id}` as any,
+                          )
+                        }
+                        style={styles.detailBtnWrap}
+                      >
+                        <View
+                          style={[
+                            styles.detailActionBtn,
+                            styles.detailIncomeBtnCrop,
+                          ]}
+                        >
+                          <Ionicons
+                            name="add-circle-outline"
+                            size={20}
+                            color="#1B5E20"
+                          />
+                          <Text style={styles.detailActionBtnTextIncome}>
+                            આવક
+                          </Text>
+                        </View>
+                      </PressableCard>
+                    </View>
+                  </LinearGradient>
+                </View>
+              );
+            })()
+          );
         })()}
 
-        <RecentTransactions t={t} transactions={transactions} loading={loadingTxns} />
+        <RecentTransactions
+          t={t}
+          transactions={transactions}
+          loading={loadingTxns}
+        />
 
         <View style={{ height: 120 }} />
       </Animated.ScrollView>
@@ -1883,6 +2328,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 6,
     gap: 4,
+  },
+  sheetGeneralCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    marginTop: 10,
+    backgroundColor: "#FFF4F4",
+    borderWidth: 2,
+    borderColor: "#FFCDD2",
+  },
+  sheetGeneralCardIncome: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    marginTop: 10,
+    backgroundColor: "#E8F5E9",
+    borderWidth: 2,
+    borderColor: "#66BB6A",
   },
   locationText: { fontSize: 17, color: C.textSecondary },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
@@ -1990,7 +2459,11 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   sectionTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
-  myCropsSectionTitle: { fontSize: 22, fontWeight: "800", color: C.textPrimary },
+  myCropsSectionTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: C.textPrimary,
+  },
   seeAllBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -2112,7 +2585,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#BAE6FD",
   },
-  bhagyaUpadLabel: { fontSize: 15, color: "#0369A1", fontWeight: "700", marginBottom: 2 },
+  bhagyaUpadLabel: {
+    fontSize: 15,
+    color: "#0369A1",
+    fontWeight: "700",
+    marginBottom: 2,
+  },
   bhagyaUpadValue: { fontSize: 17, fontWeight: "800", color: "#0369A1" },
   tractorIncomeRow: {
     flexDirection: "row",
@@ -2146,7 +2624,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tractorPaymentLabel: { fontSize: 13, color: "#9A3412", fontWeight: "600" },
-  tractorPaymentValue: { fontSize: 16, fontWeight: "700", color: "#9A3412", marginTop: 2 },
+  tractorPaymentValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#9A3412",
+    marginTop: 2,
+  },
 
   qaRow: { flexDirection: "row", gap: 10 },
   qaRowCompact: { flexDirection: "column" },
@@ -2243,9 +2726,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(46, 125, 50, 0.12)",
   },
   cropBadgeText: { fontSize: 15, fontWeight: "800", color: C.green700 },
-  cropName: { fontSize: 21, fontWeight: "800", color: C.textPrimary, marginBottom: 2 },
+  cropName: {
+    fontSize: 21,
+    fontWeight: "800",
+    color: C.textPrimary,
+    marginBottom: 2,
+  },
   cropSubType: { fontSize: 14, fontWeight: "600", color: C.textMuted },
-  cropCategory: { fontSize: 15, color: C.textMuted, fontWeight: "600", marginBottom: 6 },
+  cropCategory: {
+    fontSize: 15,
+    color: C.textMuted,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
   cropMetaLine: {
     fontSize: 16,
     color: C.textSecondary,
@@ -2341,11 +2834,31 @@ const styles = StyleSheet.create({
   },
   detailEmoji: { fontSize: 40 },
   detailHeaderText: { flex: 1 },
-  detailName: { fontSize: 24, fontWeight: "800", color: C.textPrimary, marginBottom: 2 },
+  detailName: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: C.textPrimary,
+    marginBottom: 2,
+  },
   detailSubType: { fontSize: 15, fontWeight: "600", color: C.textMuted },
-  detailCategory: { fontSize: 15, color: C.textMuted, fontWeight: "600", marginLeft: 6 },
-  detailMeta: { fontSize: 17, color: C.textMuted, marginTop: 2, fontWeight: "600" },
-  detailDate: { fontSize: 15, color: C.textMuted, marginTop: 6, fontWeight: "600" },
+  detailCategory: {
+    fontSize: 15,
+    color: C.textMuted,
+    fontWeight: "600",
+    marginLeft: 6,
+  },
+  detailMeta: {
+    fontSize: 17,
+    color: C.textMuted,
+    marginTop: 2,
+    fontWeight: "600",
+  },
+  detailDate: {
+    fontSize: 15,
+    color: C.textMuted,
+    marginTop: 6,
+    fontWeight: "600",
+  },
   editBtn: {
     width: 40,
     height: 40,
@@ -2446,8 +2959,16 @@ const styles = StyleSheet.create({
   },
   detailExpenseBtnCrop: { backgroundColor: "#FFEBEE", borderColor: "#EF9A9A" },
   detailIncomeBtnCrop: { backgroundColor: "#E8F5E9", borderColor: "#81C784" },
-  detailActionBtnTextExpense: { fontSize: 20, fontWeight: "800", color: "#B71C1C" },
-  detailActionBtnTextIncome: { fontSize: 20, fontWeight: "800", color: "#1B5E20" },
+  detailActionBtnTextExpense: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#B71C1C",
+  },
+  detailActionBtnTextIncome: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1B5E20",
+  },
   detailExpenseBtn: { backgroundColor: C.expense },
   detailIncomeBtn: { backgroundColor: C.green700 },
   detailActionBtnText: { fontSize: 16, fontWeight: "800", color: "#fff" },
