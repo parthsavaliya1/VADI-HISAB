@@ -4,6 +4,7 @@ import {
   getCurrentFinancialYear,
   getExpenses,
   getFinancialYearOptionsExtended,
+  getYearlyReport,
   type Expense,
 } from "@/utils/api";
 import { formatWholeNumber } from "@/utils/format";
@@ -67,6 +68,7 @@ function getReasonLabel(expense: Expense): string {
     Medical: "દવા/મેડિકલ",
     "Mobile Recharge": "મોબાઇલ રિચાર્જ",
     Festival: "તહેવાર",
+    BhagmaMajuri: "ભાગમા આપેલ પાક ની મજૂરી માટે",
     Other: "અન્ય",
   };
 
@@ -125,6 +127,7 @@ function BhagyaRow({ item }: { item: Expense }) {
 export default function BhagyaUpadListScreen() {
   const { transactionsRefreshKey } = useRefresh();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [bhagmaAavelaPaisa, setBhagmaAavelaPaisa] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
@@ -133,19 +136,29 @@ export default function BhagyaUpadListScreen() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const res = await getExpenses(
-        undefined,
-        "Labour",
-        undefined,
-        1,
-        500,
-        selectedFinancialYear,
-      );
-      const list = (res.data ?? []).filter(isDedicatedBhagyaUpad);
+      const [expRes, reportRes] = await Promise.all([
+        getExpenses(
+          undefined,
+          "Labour",
+          undefined,
+          1,
+          500,
+          selectedFinancialYear,
+        ),
+        getYearlyReport(selectedFinancialYear),
+      ]);
+      const list = (expRes.data ?? []).filter(isDedicatedBhagyaUpad);
       setExpenses(list);
+      const crops = reportRes?.crops ?? [];
+      const bhagmaShare = crops.reduce(
+        (sum, c) => sum + (Number((c as any).labourShare) || 0),
+        0,
+      );
+      setBhagmaAavelaPaisa(bhagmaShare);
     } catch (err) {
       console.warn("[BhagyaUpadList]", (err as Error).message);
       setExpenses([]);
+      setBhagmaAavelaPaisa(0);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -156,7 +169,8 @@ export default function BhagyaUpadListScreen() {
     fetchAll();
   }, [fetchAll, transactionsRefreshKey]);
 
-  const total = expenses.reduce((s, e) => s + getAmount(e), 0);
+  const kulUpad = expenses.reduce((s, e) => s + getAmount(e), 0);
+  const vadhelaPaisa = bhagmaAavelaPaisa - kulUpad;
 
   return (
     <View style={styles.container}>
@@ -200,10 +214,33 @@ export default function BhagyaUpadListScreen() {
         </View>
       ) : (
         <>
-          <View style={styles.summaryBar}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.summaryLabel}>કુલ ભાગ્યા નો ઉપાડ</Text>
-              <Text style={styles.summaryValue}>₹ {formatINR(total)}</Text>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryCardTitle}>ભાગ્યા નો હિસાબ</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabelDark}>ભાગાનો કુલ ઉપાડ</Text>
+              <Text style={styles.summaryValueDark}>₹ {formatINR(kulUpad)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabelDark}>ભાગમા આવેલા પૈસા</Text>
+              <Text style={styles.summaryValueDark}>₹ {formatINR(bhagmaAavelaPaisa)}</Text>
+            </View>
+            <View style={[styles.summaryRow, styles.summaryRowLast]}>
+              <Text
+                style={[
+                  styles.summaryLabelDark,
+                  kulUpad > bhagmaAavelaPaisa ? styles.summaryActionGreen : styles.summaryActionRed,
+                ]}
+              >
+                {kulUpad > bhagmaAavelaPaisa ? "ભાગ્યા પાસેથી લેવાના" : "ભાગ્યા ને દેવાના"}
+              </Text>
+              <Text
+                style={[
+                  styles.summaryValueDark,
+                  kulUpad > bhagmaAavelaPaisa ? styles.summaryActionGreen : styles.summaryActionRed,
+                ]}
+              >
+                ₹ {formatINR(Math.abs(vadhelaPaisa))}
+              </Text>
             </View>
           </View>
 
@@ -316,16 +353,58 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
   },
+  summaryCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  summaryCardTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: C.textPrimary,
+    marginBottom: 12,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  summaryRowLast: {
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+    marginTop: 4,
+    paddingTop: 10,
+  },
   summaryLabel: {
     fontSize: 13,
     color: C.textMuted,
     fontWeight: "700",
   },
+  summaryLabelDark: {
+    fontSize: 14,
+    color: C.textPrimary,
+    fontWeight: "800",
+  },
   summaryValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "900",
     color: C.blue700,
-    marginTop: 2,
+  },
+  summaryValueDark: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: C.textPrimary,
+  },
+  summaryActionGreen: {
+    color: "#059669",
+  },
+  summaryActionRed: {
+    color: "#DC2626",
   },
   addBtn: {
     width: 40,

@@ -178,6 +178,7 @@ const ADVANCE_REASONS: { value: AdvanceReason; label: string }[] = [
   { value: "Mobile Recharge", label: "મોબાઇલ રિચાર્જ" },
   { value: "Festival", label: "તહેવાર" },
   { value: "Loan", label: "ઉધાર" },
+  { value: "BhagmaMajuri", label: "ભાગમા આપેલ પાક ની મજૂરી માટે" },
   { value: "Other", label: "અન્ય" },
 ];
 const MACHINERY_IMPLEMENTS: { value: MachineryImplement; label: string }[] = [
@@ -397,7 +398,7 @@ export default function AddExpense() {
   const isCropExpense = !isGeneralExpense && !!cropId;
   const isBhagmaCrop = selectedCrop?.landType === "bhagma";
 
-  // ભાગ્યા નો ઉપાડ with bhagma crop: same options as bhagma screen in majuri — બિયારણ, ખાતર, જંતુનાશક, મજૂરી (exclude only Machinery). Normal bhagma add expense: Seed/Fertilizer/Pesticide only.
+  // ભાગ્યા નો ઉપાડ with bhagma crop: બિયારણ, ખાતર, જંતુનાશક, મજૂરી (exclude Machinery). Normal bhagma add expense: Seed, Fertilizer, Pesticide, Machinery (ટ્રેક્ટર), Irrigation, Other — only Labour excluded (મજૂરી ભાગ્યાના ખર્ચમાં).
   const visibleCategories = (() => {
     if (isGeneralExpense) return CATEGORIES;
     if (isBhagyaUpad)
@@ -405,9 +406,7 @@ export default function AddExpense() {
         ? CATEGORIES.filter((c) => c.value !== "Machinery")
         : [];
     if (isBhagmaCrop)
-      return CATEGORIES.filter(
-        (c) => c.value !== "Labour" && c.value !== "Machinery",
-      );
+      return CATEGORIES.filter((c) => c.value !== "Labour");
     return CATEGORIES;
   })();
 
@@ -648,6 +647,8 @@ export default function AddExpense() {
   // ScrollView) to find the exact field position and scroll it into view above
   // the keyboard — no hardcoded offsets, works on every screen size.
   const scrollRef = useRef<ScrollView>(null);
+  const needScrollToCategoryRef = useRef(!!paramCropId && !isGeneralExpense && !isEdit);
+  const categorySectionLayoutY = useRef(0);
   const keyboardHeight = useKeyboardHeight();
   const keyboardHeightRef = useRef(keyboardHeight);
   useEffect(() => {
@@ -1185,7 +1186,28 @@ export default function AddExpense() {
             {!isEdit && category === "" ? (
               <>
                 {visibleCategories.length > 0 && (
-                  <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર પસંદ કરો</Text>
+                  <View
+                    onLayout={(e) => {
+                      const { y } = e.nativeEvent.layout;
+                      categorySectionLayoutY.current = y;
+                      if (
+                        needScrollToCategoryRef.current &&
+                        scrollRef.current &&
+                        isCropExpense &&
+                        cropId
+                      ) {
+                        needScrollToCategoryRef.current = false;
+                        setTimeout(() => {
+                          scrollRef.current?.scrollTo({
+                            y: Math.max(0, y - 24),
+                            animated: true,
+                          });
+                        }, 100);
+                      }
+                    }}
+                  >
+                    <Text style={styles.sectionTitle}>ખર્ચ પ્રકાર પસંદ કરો</Text>
+                  </View>
                 )}
                 {isBhagyaUpad && !isBhagmaCrop && (
                   <View
@@ -1250,6 +1272,29 @@ export default function AddExpense() {
                         </View>
                       </TouchableOpacity>
                     ))}
+                  </View>
+                )}
+                {isBhagmaCrop && !isBhagyaUpad && (
+                  <View
+                    style={[
+                      styles.card,
+                      {
+                        marginTop: 12,
+                        marginBottom: 8,
+                        backgroundColor: "#FFF8E1",
+                        borderColor: "#F59E0B",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.generalExpenseInfoText,
+                        { color: "#92400E", fontSize: 14 },
+                      ]}
+                    >
+                      આ પાક ભાગમા આપેલો હોવાથી બધી મજૂરી ભાગ્યા ને ભોગવણી છે એટલે મજૂરી ખર્ચ તમારે ભાગ્યાના ઉપાડ માં એન્ટ્રી મારવાની.{"\n"}
+                      અહીં ઉમેરેલ બધા ખર્ચ તમારામાં ગણાશે.
+                    </Text>
                   </View>
                 )}
               </>

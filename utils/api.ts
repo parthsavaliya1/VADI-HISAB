@@ -722,6 +722,7 @@ export type AdvanceReason =
   | "Mobile Recharge"
   | "Festival"
   | "Loan"
+  | "BhagmaMajuri"
   | "Other";
 // MachineryImplement reuses the same options as RentalAssetType (tractor income)
 export type MachineryImplement = RentalAssetType;

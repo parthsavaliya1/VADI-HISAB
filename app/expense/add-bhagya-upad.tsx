@@ -47,6 +47,7 @@ const BHAGYA_UPAD_TYPES: { value: AdvanceReason; label: string }[] = [
   { value: "Medical", label: "દવા/મેડિકલ" },
   { value: "Mobile Recharge", label: "મોબાઇલ રિચાર્જ" },
   { value: "Festival", label: "તહેવાર" },
+  { value: "BhagmaMajuri", label: "ભાગમા આપેલ પાક ની મજૂરી માટે" },
   { value: "Other", label: "અન્ય" },
 ];
 
@@ -149,8 +150,10 @@ export default function AddBhagyaUpad() {
   }, []);
   const [type, setType] = useState<AdvanceReason | "">("");
   const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [date, setDate] = useState<Date | null>(null);
+  const showNoteField = type === "BhagmaMajuri" || type === "Other";
 
   // Load existing expense when editing
   useEffect(() => {
@@ -165,6 +168,7 @@ export default function AddBhagyaUpad() {
           (doc as any).amount ??
           0;
         setAmount(amt ? String(amt) : "");
+        setNotes(doc.notes ?? "");
         if (doc.date) setDate(new Date(doc.date));
       } catch (e) {
         Alert.alert("ભૂલ", (e as Error).message ?? "ડેટા લોડ ન થઈ શક્યો");
@@ -188,6 +192,7 @@ export default function AddBhagyaUpad() {
       category: "Labour" as const,
       expenseSource: "bhagyaUpad" as const,
       date: (date ?? new Date()).toISOString(),
+      notes: notes.trim() || undefined,
       labourContract: {
         advanceReason: type,
         amountGiven: num,
@@ -245,6 +250,20 @@ export default function AddBhagyaUpad() {
             onSelect={setType}
             placeholder="કરિયાણું, ઉધાર, મેડિકલ, અન્ય..."
           />
+          {showNoteField && (
+            <>
+              <SectionLabel text="નોંધ (સ્પષ્ટતા માટે)" />
+              <TextInput
+                style={styles.notesInput}
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="જરૂરી હોય તો વિગત લખો..."
+                placeholderTextColor="#5B6570"
+                multiline
+                numberOfLines={3}
+              />
+            </>
+          )}
           <SectionLabel text="રકમ *" />
           <View style={styles.numRow} ref={amountRowRef}>
             <Text style={styles.numPrefix}>₹</Text>
