@@ -105,25 +105,33 @@ export default function ReportScreen() {
 
   const loadReport = useCallback(async () => {
     try {
+      setLoading(true);
+      // Load main report first so user sees summary + crops quickly
+      const data = await getYearlyReport(financialYear);
+      setReport(data);
+      setLoading(false);
+      setRefreshing(false);
+
+      // Load analytics, compare, peers, VADI score and multi-year in background
       const years = getFinancialYearOptionsExtended();
       const peerUserId = selectedPeerId === "average" ? undefined : selectedPeerId;
-      const [data, analyticsRes, compareRes, expAnalytics, peersRes, ...yearResults] = await Promise.all([
-        getYearlyReport(financialYear),
+      const [analyticsRes, compareRes, expAnalytics, peersRes, vadiRes, ...yearResults] = await Promise.all([
         getIncomeAnalytics(undefined, undefined, financialYear).catch(() => null),
         getCompareReport(financialYear, undefined, peerUserId).catch(() => null),
         getExpenseAnalytics(financialYear, peerUserId).catch(() => null),
         getComparePeers().catch(() => null),
+        getVadiScore().catch(() => null),
         ...years.map((fy) =>
           getYearlyReport(fy)
             .then((r) => ({ year: fy, summary: r?.summary }))
             .catch(() => ({ year: "", summary: null }))
         ),
       ]);
-      setReport(data);
       setAnalytics(analyticsRes ?? null);
       setCompare(compareRes ?? null);
       setExpenseAnalytics(expAnalytics ?? null);
       setComparePeers(peersRes?.peers ?? []);
+      setVadiScore(vadiRes ?? null);
       setYearlyReports(
         yearResults.map((r: any) => ({
           year: r.year,
@@ -148,12 +156,6 @@ export default function ReportScreen() {
   useEffect(() => {
     loadReport();
   }, [loadReport, transactionsRefreshKey]);
-
-  useEffect(() => {
-    getVadiScore()
-      .then((res) => setVadiScore(res))
-      .catch(() => setVadiScore(null));
-  }, [transactionsRefreshKey]);
 
   const years = getFinancialYearOptionsExtended();
   const summary = report?.summary ?? { totalIncome: 0, totalExpense: 0, netProfit: 0, totalCrops: 0, totalArea: 0 };

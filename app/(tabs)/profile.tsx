@@ -644,13 +644,13 @@ export default function Profile() {
     const loadProfile = async () => {
         setLoading(true); setLoadError("");
         try {
-            const data = await getMyProfile();
+            const [data, score] = await Promise.all([
+                getMyProfile(),
+                getVadiScore().catch(() => null),
+            ]);
             setApiProfile(data);
             setPhone((data as any).phone ?? (data as any).user?.phone ?? "");
-            // Load VADI score once profile is available
-            getVadiScore()
-                .then((score) => setVadiScore(score))
-                .catch(() => {});
+            setVadiScore(score ?? null);
         } catch (err: any) {
             setLoadError(err.message ?? t("profileTab", "loadErr"));
         } finally {
