@@ -52,6 +52,16 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="live-price"
+        options={{
+          title: "જીવંત ભાવ",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="pricetag" size={TAB_ICON_SIZE} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="expense"
         options={{
           href: null,

@@ -1296,3 +1296,45 @@ export const markNotificationRead = async (
 export const markAllNotificationsRead = async (): Promise<void> => {
   await API.patch("/notifications/read-all");
 };
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🌾 APMC / Mandi live crop prices (data.gov.in → AGMARKNET)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export interface ApmcPriceRecord {
+  state?: string;
+  district?: string;
+  market?: string;
+  commodity?: string;
+  variety?: string;
+  arrival_date?: string;
+  min_price?: number;
+  max_price?: number;
+  modal_price?: number;
+  [key: string]: unknown;
+}
+
+export interface ApmcPricesResponse {
+  success: boolean;
+  data: ApmcPriceRecord[];
+  count: number;
+}
+
+/** GET /apmc/prices — live APMC yard prices (proxied from data.gov.in). Requires DATA_GOV_IN_API_KEY on server. */
+export const getApmcPrices = async (params?: {
+  state?: string;
+  district?: string;
+  commodity?: string;
+  market?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<ApmcPricesResponse> => {
+  const res = await API.get<ApmcPricesResponse>("/apmc/prices", { params });
+  return res.data;
+};
+
+/** GET /apmc/commodities — list of common commodities for dropdown. */
+export const getApmcCommodities = async (): Promise<{ success: boolean; data: string[] }> => {
+  const res = await API.get<{ success: boolean; data: string[] }>("/apmc/commodities");
+  return res.data;
+};
