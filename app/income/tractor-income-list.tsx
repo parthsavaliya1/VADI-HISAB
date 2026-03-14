@@ -4,6 +4,7 @@ import {
   getCurrentFinancialYear,
   getFinancialYearOptionsExtended,
   getIncomes,
+  deleteIncome,
   type Income,
   type IncomeCategory,
 } from "@/utils/api";
@@ -14,6 +15,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StatusBar,
@@ -68,7 +70,15 @@ function getRentalAmount(i: Income): number {
   return 0;
 }
 
-function TractorIncomeRow({ item }: { item: Income }) {
+function TractorIncomeRow({
+  item,
+  onEdit,
+  onDelete,
+}: {
+  item: Income;
+  onEdit: (item: Income) => void;
+  onDelete: (item: Income) => void;
+}) {
   const { t } = useTranslation();
   const r = item.rentalIncome;
   const TRACTOR_SERVICE_GU: Record<string, string> = {
@@ -95,13 +105,23 @@ function TractorIncomeRow({ item }: { item: Income }) {
   const status = r?.paymentStatus ?? "Pending";
   const amount = getRentalAmount(item);
 
+  const showActions = () => {
+    Alert.alert("ટ્રેક્ટર આવક", "શું કરવું?", [
+      { text: "રદ કરો", style: "cancel" },
+      { text: "ફેરફાર કરો", onPress: () => onEdit(item) },
+      {
+        text: "કાઢો",
+        style: "destructive",
+        onPress: () => onDelete(item),
+      },
+    ]);
+  };
+
   return (
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.85}
-      onPress={() =>
-        router.push(`/transaction/details?id=${item._id}&type=income` as any)
-      }
+      onPress={showActions}
     >
       <View style={styles.cardBar} />
       <View style={styles.cardBody}>
@@ -166,7 +186,7 @@ function TractorIncomeRow({ item }: { item: Income }) {
 }
 
 export default function TractorIncomeListScreen() {
-  const { transactionsRefreshKey } = useRefresh();
+  const { transactionsRefreshKey, refreshTransactions } = useRefresh();
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -200,6 +220,36 @@ export default function TractorIncomeListScreen() {
   useEffect(() => {
     fetchAll();
   }, [fetchAll, transactionsRefreshKey]);
+
+  const handleEditTractorAvak = useCallback((item: Income) => {
+    router.push(`/income/add-tractor-income?id=${item._id}` as any);
+  }, []);
+
+  const handleDeleteTractorAvak = useCallback(
+    (item: Income) => {
+      Alert.alert(
+        "આવક કાઢો",
+        "શું તમે આ ટ્રેક્ટર આવકની એન્ટ્રી કાઢવા માંગો છો?",
+        [
+          { text: "રદ કરો", style: "cancel" },
+          {
+            text: "કાઢો",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await deleteIncome(item._id);
+                refreshTransactions();
+                fetchAll();
+              } catch (e) {
+                Alert.alert("ભૂલ", (e as Error).message ?? "કાઢવામાં ભૂલ.");
+              }
+            },
+          },
+        ]
+      );
+    },
+    [refreshTransactions, fetchAll]
+  );
 
   const total = incomes.reduce((s, i) => s + getRentalAmount(i), 0);
   const pendingTotal = incomes
@@ -307,7 +357,13 @@ export default function TractorIncomeListScreen() {
           <FlatList
             data={filtered}
             keyExtractor={(item) => item._id}
-            renderItem={({ item }) => <TractorIncomeRow item={item} />}
+            renderItem={({ item }) => (
+              <TractorIncomeRow
+                item={item}
+                onEdit={handleEditTractorAvak}
+                onDelete={handleDeleteTractorAvak}
+              />
+            )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             refreshControl={

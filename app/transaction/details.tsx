@@ -78,7 +78,7 @@ const EXPENSE_CAT_LABELS: Record<string, string> = {
 
 const INCOME_CAT_LABELS: Record<IncomeCategory, string> = {
   "Crop Sale": "પાક વેચાણ",
-  Subsidy: "સબસિડી",
+  Subsidy: "સહાય",
   "Rental Income": "ભાડાની આવક",
   Other: "અન્ય",
 };

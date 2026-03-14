@@ -419,7 +419,7 @@ function incomeAmount(i: Income): number {
 function incomeLabel(i: Income): string {
   const m: Record<IncomeCategory, string> = {
     "Crop Sale": `વેચાણ - ${i.cropSale?.marketName || "VADI"}`,
-    Subsidy: `સ. - ${i.subsidy?.schemeType ?? ""}`,
+    Subsidy: `સહા. - ${i.subsidy?.schemeType ?? ""}`,
     // Tractor / rental income: work type + farmer name (no emoji)
     "Rental Income": (() => {
       const r = i.rentalIncome as any;
