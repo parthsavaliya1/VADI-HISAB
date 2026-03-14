@@ -195,6 +195,15 @@ const MACHINERY_IMPLEMENTS: { value: MachineryImplement; label: string }[] = [
   { value: "Other Equipment", label: "અન્ય ઉપકરણ" },
 ];
 
+// ખર્ચનો પ્રકાર / વિવરણ — અન્ય ખર્ચ માટે ડ્રોપડાઉન
+const OTHER_EXPENSE_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "light_bill", label: "લાઇટ બિલ" },
+  { value: "sadhan_kharidi", label: "સાધન ખરીદી" },
+  { value: "repairing", label: "મરામત" },
+  { value: "maintenance", label: "જાળવણી / માંજણ" },
+  { value: "other", label: "અન્ય" },
+];
+
 // ─── Crop dropdown: same format as dashboard CropPickerModal (Gujarati name, સિઝન, વીઘા) ───
 const CROP_NAME_GUJ: Record<string, string> = {
   Cotton: "કપાસ",
@@ -380,6 +389,7 @@ export default function AddExpense() {
   const [crops, setCrops] = useState<Crop[]>([]);
   const [selectedCropId, setSelectedCropId] = useState<string | "">("");
   const [generalDescription, setGeneralDescription] = useState("");
+  const [generalExpenseType, setGeneralExpenseType] = useState("");
   const [generalAmount, setGeneralAmount] = useState("");
   const cropId = selectedCropId || paramCropId || undefined;
 
@@ -435,7 +445,10 @@ export default function AddExpense() {
         const doc = await getExpenseById(editId);
         setCategory(doc.category as ExpenseCategory);
         if (!doc.cropId) {
-          setGeneralDescription(doc.notes ?? "");
+          const notes = doc.notes ?? "";
+          setGeneralDescription(notes);
+          const match = OTHER_EXPENSE_TYPE_OPTIONS.find((o) => o.label === notes);
+          setGeneralExpenseType(match ? match.value : (notes ? "other" : ""));
           setGeneralAmount(
             String(doc.labourContract?.amountGiven ?? doc.amount ?? ""),
           );
@@ -500,7 +513,10 @@ export default function AddExpense() {
             setIrrigationAmount(String(doc.irrigation.amount));
           if (doc.other) {
             setOtherAmount(String(doc.other.totalAmount ?? ""));
-            setOtherDescription(doc.other.description ?? "");
+            const desc = doc.other.description ?? "";
+            const match = OTHER_EXPENSE_TYPE_OPTIONS.find((o) => o.label === desc);
+            setOtherExpenseType(match ? match.value : (desc ? "other" : ""));
+            setOtherDescription(desc);
           }
         }
       } catch (e) {
@@ -607,6 +623,7 @@ export default function AddExpense() {
   const [machineRate, setMachineRate] = useState("");
   const [irrigationAmount, setIrrigationAmount] = useState("");
   const [otherAmount, setOtherAmount] = useState("");
+  const [otherExpenseType, setOtherExpenseType] = useState<string>("");
   const [otherDescription, setOtherDescription] = useState("");
 
   const labourTotal =
@@ -684,8 +701,8 @@ export default function AddExpense() {
 
   const validate = (): string | null => {
     if (isGeneralExpense) {
-      if (!generalDescription.trim())
-        return "ખર્ચનો પ્રકાર / વિવરણ લખો (દા.ત. ફાર્મ વિકાસ, સાધન ખરીદી).";
+      if (!generalExpenseType && !generalDescription.trim())
+        return "ખર્ચનો પ્રકાર પસંદ કરો અથવા વિવરણ લખો.";
       if (!generalAmount || Number(generalAmount) <= 0)
         return "ખર્ચની રકમ દાખલ કરો.";
       return null;
@@ -755,7 +772,11 @@ export default function AddExpense() {
         category: "Labour" as const,
         expenseSource: "generalExpense" as const,
         date: effectiveExpenseDate.toISOString(),
-        notes: generalDescription.trim(),
+        notes:
+          generalExpenseType === "other"
+            ? generalDescription.trim()
+            : (OTHER_EXPENSE_TYPE_OPTIONS.find((o) => o.value === generalExpenseType)?.label ??
+              generalDescription.trim()),
         labourContract: {
           advanceReason: "Other" as const,
           amountGiven: Number(generalAmount),
@@ -827,7 +848,10 @@ export default function AddExpense() {
         ...(category === "Other" && {
           other: {
             totalAmount: Number(otherAmount),
-            description: otherDescription.trim() || undefined,
+            description:
+              otherExpenseType === "other"
+                ? (otherDescription.trim() || undefined)
+                : (OTHER_EXPENSE_TYPE_OPTIONS.find((o) => o.value === otherExpenseType)?.label ?? (otherDescription.trim() || undefined)),
           },
         }),
       };
@@ -844,6 +868,7 @@ export default function AddExpense() {
         if (isEdit) router.back();
         if (!isEdit) {
           setGeneralDescription("");
+          setGeneralExpenseType("");
           setGeneralAmount("");
         }
         return;
@@ -1051,18 +1076,37 @@ export default function AddExpense() {
               </Text>
             </View>
             <SectionLabel text="ખર્ચનો પ્રકાર / વિવરણ" />
-            {/* Wrap plain TextInput in a View with ref so makeOnFocus can measure it */}
-            <View ref={generalDescRef}>
-              <TextInput
-                style={styles.notesInput}
-                value={generalDescription}
-                onChangeText={setGeneralDescription}
-                placeholder="દા.ત. ફાર્મ વિકાસ, સાધન ખરીદી, ભાડું, મરામત..."
-                placeholderTextColor="#5B6570"
-                multiline
-                onFocus={makeOnFocus(generalDescRef)}
-              />
-            </View>
+            <SelectPicker
+              options={OTHER_EXPENSE_TYPE_OPTIONS}
+              selected={generalExpenseType}
+              onSelect={(v) => {
+                setGeneralExpenseType(v);
+                if (v !== "other") {
+                  const opt = OTHER_EXPENSE_TYPE_OPTIONS.find((o) => o.value === v);
+                  setGeneralDescription(opt?.label ?? "");
+                } else {
+                  setGeneralDescription("");
+                }
+              }}
+              placeholder="પસંદ કરો..."
+            />
+            <Text style={styles.optionalNote}>
+              નોંધ: દરેક પ્રકાર માટે વિવરણ દાખલ કરવું ઐચ્છિક છે (જરૂરી નથી).
+            </Text>
+            {generalExpenseType === "other" ? (
+              <View ref={generalDescRef}>
+                <Text style={styles.label}>વિવરણ (ઐચ્છિક)</Text>
+                <TextInput
+                  style={styles.notesInput}
+                  value={generalDescription}
+                  onChangeText={setGeneralDescription}
+                  placeholder="દા.ત. ફાર્મ વિકાસ, ભાડું..."
+                  placeholderTextColor="#5B6570"
+                  multiline
+                  onFocus={makeOnFocus(generalDescRef)}
+                />
+              </View>
+            ) : null}
             <SectionLabel text="ખર્ચ રકમ" />
             <NumericInput
               ref={generalAmountRef}
@@ -1077,7 +1121,7 @@ export default function AddExpense() {
               onPress={handleSave}
               disabled={
                 saving ||
-                !generalDescription.trim() ||
+                (!generalExpenseType && !generalDescription.trim()) ||
                 !generalAmount ||
                 Number(generalAmount) <= 0
               }
@@ -1649,6 +1693,24 @@ export default function AddExpense() {
                 >
                   <Text style={styles.cardTitle}>📦 અન્ય ખર્ચ</Text>
                 </View>
+                <SectionLabel text="ખર્ચનો પ્રકાર / વિવરણ" />
+                <SelectPicker
+                  options={OTHER_EXPENSE_TYPE_OPTIONS}
+                  selected={otherExpenseType}
+                  onSelect={(v) => {
+                    setOtherExpenseType(v);
+                    if (v !== "other") {
+                      const opt = OTHER_EXPENSE_TYPE_OPTIONS.find((o) => o.value === v);
+                      setOtherDescription(opt?.label ?? "");
+                    } else {
+                      setOtherDescription("");
+                    }
+                  }}
+                  placeholder="પસંદ કરો..."
+                />
+                <Text style={styles.optionalNote}>
+                  નોંધ: દરેક પ્રકાર માટે વિવરણ દાખલ કરવું ઐચ્છિક છે (જરૂરી નથી).
+                </Text>
                 <SectionLabel text="રકમ" />
                 <NumericInput
                   ref={otherAmountRef}
@@ -1658,17 +1720,21 @@ export default function AddExpense() {
                   prefix="₹"
                   onFocus={makeOnFocus(otherAmountRef)}
                 />
-                <SectionLabel text="વિવરણ (ઐચ્છિક)" />
-                <View ref={otherDescRef}>
-                  <TextInput
-                    style={styles.notesInput}
-                    value={otherDescription}
-                    onChangeText={setOtherDescription}
-                    placeholder="દા.ત. ઘર બાંધકામ, સાધન ખરીદી..."
-                    placeholderTextColor="#5B6570"
-                    onFocus={makeOnFocus(otherDescRef)}
-                  />
-                </View>
+                {otherExpenseType === "other" ? (
+                  <>
+                    <SectionLabel text="વિવરણ (ઐચ્છિક)" />
+                    <View ref={otherDescRef}>
+                      <TextInput
+                        style={styles.notesInput}
+                        value={otherDescription}
+                        onChangeText={setOtherDescription}
+                        placeholder="દા.ત. ઘર બાંધકામ..."
+                        placeholderTextColor="#5B6570"
+                        onFocus={makeOnFocus(otherDescRef)}
+                      />
+                    </View>
+                  </>
+                ) : null}
               </View>
             )}
           </>
@@ -1901,6 +1967,12 @@ const styles = StyleSheet.create({
     color: C.textSecondary,
     lineHeight: 22,
     fontWeight: "600",
+  },
+  optionalNote: {
+    fontSize: 13,
+    color: C.textMuted,
+    marginBottom: 16,
+    fontStyle: "italic",
   },
   sectionTitle: {
     fontSize: 22,

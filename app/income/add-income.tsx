@@ -138,7 +138,7 @@ interface IncomeDocument {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const CATEGORIES: { value: IncomeCategory; label: string; emoji: string }[] = [
   { value: "Crop Sale", label: "આવક", emoji: "🌾" },
-  { value: "Subsidy", label: "સબસિડી", emoji: "🏛️" },
+  { value: "Subsidy", label: "સહાય", emoji: "🏛️" },
   { value: "Rental Income", label: "ભાડાની આવક", emoji: "🚜" },
   { value: "Other", label: "અન્ય", emoji: "💼" },
 ];
@@ -871,7 +871,7 @@ export default function AddIncomeScreen() {
       parsed.source = generalIncomeType === "pasupan" ? "પશુપાલન" : generalIncomeType === "deri" ? "ડેરી" : (parsed.source != null ? String(parsed.source) : (subData as OtherIncomeData).source?.trim() || "અન્ય");
     }
     if (fieldKey === "subsidy") {
-      if (!parsed.schemeType || parsed.schemeType === "") parsed.schemeType = "સબસિડી";
+      if (!parsed.schemeType || parsed.schemeType === "") parsed.schemeType = "સહાય";
     }
 
     const effectiveCropId = isGeneralIncome ? undefined : (selectedCropId || cropIdParam || undefined);

@@ -41,7 +41,7 @@ const C = {
 
 const CATEGORY_CONFIG: Record<IncomeCategory, { label: string; icon: string }> = {
   "Crop Sale": { label: "પાક વેચાણ", icon: "cash-outline" },
-  Subsidy: { label: "સબસિડી", icon: "ribbon-outline" },
+  Subsidy: { label: "સહાય", icon: "ribbon-outline" },
   "Rental Income": { label: "ભાડા", icon: "car-outline" },
   Other: { label: "અન્ય", icon: "wallet-outline" },
 };

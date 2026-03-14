@@ -8,7 +8,12 @@ import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
-import { createIncome, type RentalAssetType } from "@/utils/api";
+import {
+  createIncome,
+  getIncomeById,
+  updateIncome,
+  type RentalAssetType,
+} from "@/utils/api";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
@@ -16,8 +21,8 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Contacts from "expo-contacts";
 import Toast from "react-native-toast-message";
-import { router } from "expo-router";
-import React, { useCallback, useRef, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -72,6 +77,8 @@ function normalizePhone(phone: string) {
 }
 
 export default function AddTractorIncomeScreen() {
+  const { id: editId } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = !!editId;
   const { refreshTransactions } = useRefresh();
   const [date, setDate] = useState(() => new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -82,11 +89,41 @@ export default function AddTractorIncomeScreen() {
   const [ratePerUnit, setRatePerUnit] = useState("");
   const [paymentStatus, setPaymentStatus] = useState<"Pending" | "Completed">("Pending");
   const [saving, setSaving] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(isEdit);
 
   const total =
     parseFloat(hoursOrDays) > 0 && parseFloat(ratePerUnit) >= 0
       ? parseFloat(hoursOrDays) * parseFloat(ratePerUnit)
       : null;
+
+  useEffect(() => {
+    if (!isEdit || !editId) return;
+    (async () => {
+      try {
+        const inc = await getIncomeById(editId);
+        if (inc.category !== "Rental Income" || !inc.rentalIncome) return;
+        const r = inc.rentalIncome;
+        setDate(inc.date ? new Date(inc.date) : new Date());
+        setAssetType((r.assetType as RentalAssetType) ?? "");
+        setFarmerName(r.rentedToName ?? "");
+        setFarmerPhone(r.farmerPhone ?? "");
+        setHoursOrDays(
+          r.hoursOrDays != null ? String(r.hoursOrDays) : ""
+        );
+        setRatePerUnit(
+          r.ratePerUnit != null ? String(r.ratePerUnit) : ""
+        );
+        setPaymentStatus(
+          r.paymentStatus === "Completed" ? "Completed" : "Pending"
+        );
+      } catch (e) {
+        Alert.alert("ભૂલ", (e as Error).message ?? "ડેટા લોડ ન થઈ શક્યો");
+        router.back();
+      } finally {
+        setLoadingEdit(false);
+      }
+    })();
+  }, [isEdit, editId]);
 
   const pickContact = async () => {
     try {
@@ -126,8 +163,8 @@ export default function AddTractorIncomeScreen() {
     }
     setSaving(true);
     try {
-      await createIncome({
-        category: "Rental Income",
+      const payload = {
+        category: "Rental Income" as const,
         date: date.toISOString(),
         rentalIncome: {
           assetType: assetType as RentalAssetType,
@@ -137,9 +174,15 @@ export default function AddTractorIncomeScreen() {
           hoursOrDays: parseFloat(hoursOrDays),
           ratePerUnit: parseFloat(ratePerUnit),
         },
-      });
+      };
+      if (isEdit && editId) {
+        await updateIncome(editId, payload);
+        Toast.show({ type: "success", text1: "સફળ!", text2: "આવક સુધારાઈ!" });
+      } else {
+        await createIncome(payload);
+        Toast.show({ type: "success", text1: "સફળ!", text2: "ટ્રેક્ટર ભાડું સાચવાયું!" });
+      }
       refreshTransactions();
-      Toast.show({ type: "success", text1: "સફળ!", text2: "ટ્રેક્ટર ભાડું સાચવાયું!" });
       router.back();
     } catch (e) {
       Alert.alert("ભૂલ", (e as Error).message ?? "કંઈક ખોટું થયું.");
@@ -197,7 +240,9 @@ export default function AddTractorIncomeScreen() {
             <View style={styles.headerTractorWrap}>
               <MaterialCommunityIcons name="tractor-variant" size={40} color={C.orange700} />
             </View>
-            <Text style={styles.headerTitle}>ટ્રેક્ટર ભાડું / આવક ઉમેરો</Text>
+            <Text style={styles.headerTitle}>
+              {isEdit ? "આવક સુધારો" : "ટ્રેક્ટર ભાડું / આવક ઉમેરો"}
+            </Text>
           </View>
           <TouchableOpacity style={styles.headerDateCard} onPress={() => setShowDatePicker(true)}>
             <Ionicons name="calendar-outline" size={20} color={C.orange700} />
@@ -217,6 +262,15 @@ export default function AddTractorIncomeScreen() {
         )}
       </LinearGradient>
 
+      {loadingEdit ? (
+        <View style={{ padding: 40, alignItems: "center" }}>
+          <ActivityIndicator size="large" color={C.orange700} />
+          <Text style={{ marginTop: 12, fontSize: 15, color: C.textMuted }}>
+            લોડ થઈ રહ્યું છે...
+          </Text>
+        </View>
+      ) : (
+        <>
       <View style={styles.card}>
         <Text style={styles.label}>પ્રકાર</Text>
         <View style={styles.chipRow}>
@@ -311,15 +365,17 @@ export default function AddTractorIncomeScreen() {
       >
         <View style={[styles.saveBtnInner, saving && styles.saveBtnInnerDisabled]}>
           {saving ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#fff" size="small" />
           ) : (
             <>
               <MaterialCommunityIcons name="tractor-variant" size={26} color="#fff" />
-              <Text style={styles.saveBtnText}>સાચવો</Text>
+              <Text style={styles.saveBtnText}>{isEdit ? "અપડેટ કરો" : "સાચવો"}</Text>
             </>
           )}
         </View>
       </TouchableOpacity>
+        </>
+      )}
 
     </ScrollView>
     </KeyboardAvoidingView>

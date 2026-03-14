@@ -684,7 +684,7 @@ export default function ReportScreen() {
               <Text style={[styles.breakdownValue, { color: C.income }]}>{formatINR(cropIncome)}</Text>
             </View>
             <View style={[styles.breakdownRow, styles.breakdownRowIncome]}>
-              <Text style={styles.breakdownLabel}>અન્ય આવક (ભાડા, સબસિડી વગેરે)</Text>
+              <Text style={styles.breakdownLabel}>અન્ય આવક (ભાડા, સહાય વગેરે)</Text>
               <Text style={[styles.breakdownValue, { color: C.income }]}>{formatINR(extraIncome)}</Text>
             </View>
             <View style={[styles.breakdownRow, styles.breakdownRowExpense]}>
