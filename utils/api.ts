@@ -788,7 +788,7 @@ export interface ExpensePayload {
   /** Omit or null for general expense (સામાન્ય ખર્ચ) not linked to any crop */
   cropId?: string | null;
   category: ExpenseCategory;
-  expenseSource?: "cropExpense" | "bhagyaUpad" | "generalExpense";
+  expenseSource?: "cropExpense" | "bhagyaUpad" | "generalExpense" | "tractorExpense";
   date?: string;
   notes?: string;
   seed?: SeedExpensePayload;
@@ -823,7 +823,7 @@ export interface Expense {
   userId: string;
   cropId?: string | null;
   category: ExpenseCategory;
-  expenseSource?: "cropExpense" | "bhagyaUpad" | "generalExpense" | null;
+  expenseSource?: "cropExpense" | "bhagyaUpad" | "generalExpense" | "tractorExpense" | null;
   /**
    * Top-level total cost — single source of truth for all report aggregations.
    * Always set by server pre-save hook regardless of category.
@@ -885,7 +885,7 @@ export const createExpense = async (
   return res.data.data;
 };
 
-/** GET /expenses — filter by cropId / category / year / financialYear */
+/** GET /expenses — filter by cropId / category / year / financialYear / expenseSource */
 export const getExpenses = async (
   cropId?: string,
   category?: ExpenseCategory,
@@ -893,9 +893,10 @@ export const getExpenses = async (
   page = 1,
   limit = 100,
   financialYear?: string,
+  expenseSource?: "cropExpense" | "bhagyaUpad" | "generalExpense" | "tractorExpense",
 ): Promise<ExpenseListResponse> => {
   const res = await API.get<ExpenseListResponse>("/expenses", {
-    params: { cropId, category, year, page, limit, financialYear },
+    params: { cropId, category, year, page, limit, financialYear, expenseSource },
   });
   return res.data;
 };

@@ -970,7 +970,7 @@ function QuickActions({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.qaLabel, { color: C.tractorOrange }]}>
-                  ટ્રેક્ટર આવક
+                  ટ્રેક્ટર હિસાબ
                 </Text>
               </View>
             </View>
@@ -1746,7 +1746,7 @@ export default function Dashboard() {
                     }
                     style={styles.tractorIncomeRow}
                   >
-                    <Text style={styles.tractorIncomeLabel}>ટ્રેક્ટર આવક</Text>
+                    <Text style={styles.tractorIncomeLabel}>ટ્રેક્ટર હિસાબ</Text>
                     <Text style={styles.tractorIncomeValue}>
                       ₹{formatWholeNumber(tractorIncomeTotal)}
                     </Text>

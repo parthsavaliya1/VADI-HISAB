@@ -4,6 +4,7 @@ import {
   getCurrentFinancialYear,
   getFinancialYearOptionsExtended,
   getIncomes,
+  getExpenses,
   deleteIncome,
   type Income,
   type IncomeCategory,
@@ -198,21 +199,40 @@ export default function TractorIncomeListScreen() {
   );
   const [selectedFarmer, setSelectedFarmer] = useState<string>("");
   const [farmerDropdownOpen, setFarmerDropdownOpen] = useState(false);
+  const [tractorExpenseTotal, setTractorExpenseTotal] = useState(0);
 
   const fetchAll = useCallback(async () => {
     try {
-      const res = await getIncomes(
-        1,
-        400,
-        undefined,
-        "Rental Income" as IncomeCategory,
-        undefined,
-        selectedFinancialYear,
+      const [incomeRes, expenseRes] = await Promise.all([
+        getIncomes(
+          1,
+          400,
+          undefined,
+          "Rental Income" as IncomeCategory,
+          undefined,
+          selectedFinancialYear,
+        ),
+        getExpenses(
+          undefined,
+          "Other",
+          undefined,
+          1,
+          500,
+          selectedFinancialYear,
+          "tractorExpense",
+        ),
+      ]);
+      setIncomes(incomeRes.data ?? []);
+      const expenseList = expenseRes.data ?? [];
+      const sum = expenseList.reduce(
+        (s, e) => s + (Number(e.amount) || Number(e.other?.totalAmount) || 0),
+        0
       );
-      setIncomes(res.data ?? []);
+      setTractorExpenseTotal(sum);
     } catch (err) {
       console.warn("[TractorIncomeList]", (err as Error).message);
       setIncomes([]);
+      setTractorExpenseTotal(0);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -277,9 +297,14 @@ export default function TractorIncomeListScreen() {
     .filter((i) => i.rentalIncome?.paymentStatus === "Completed")
     .reduce((s, i) => s + getRentalAmount(i), 0);
 
-  const filtered = incomesByFarmer.filter(
-    (i) => i.rentalIncome?.paymentStatus === statusFilter,
-  );
+  const filtered =
+    selectedFarmer
+      ? incomesByFarmer
+      : incomesByFarmer.filter(
+          (i) => i.rentalIncome?.paymentStatus === statusFilter,
+        );
+  const nafo = total - tractorExpenseTotal;
+  const showTractorSummary = !selectedFarmer;
 
   return (
     <View style={styles.container}>
@@ -287,7 +312,7 @@ export default function TractorIncomeListScreen() {
 
       <View style={styles.headerWrap}>
         <ScreenHeader
-          title="🚜 ટ્રેક્ટર આવક"
+          title="🚜 ટ્રેક્ટર હિસાબ"
           style={{ marginBottom: 0, backgroundColor: C.bg }}
         />
       </View>
@@ -399,50 +424,69 @@ export default function TractorIncomeListScreen() {
               </Text>
             </View>
           ) : null}
-          <View style={styles.summaryBar}>
-            <View style={styles.summaryColumn}>
-              <Text style={styles.summaryLabel}>કુલ આવક</Text>
-              <Text style={styles.summaryValue}>₹ {formatINR(total)}</Text>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryColumnSmall}>
-              <Text style={styles.summarySmallLabel}>બાકી</Text>
-              <Text style={styles.summarySmallValue}>
-                ₹ {formatINR(pendingTotal)}
-              </Text>
-            </View>
-            <View style={styles.summaryColumnSmall}>
-              <Text style={styles.summarySmallLabel}>આપી દીધા</Text>
-              <Text style={styles.summarySmallValue}>
-                ₹ {formatINR(paidTotal)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.statusRow}>
-            {[
-              { key: "Pending" as const, label: "બાકી" },
-              { key: "Completed" as const, label: "આપી લીધા" },
-            ].map((opt) => {
-              const active = statusFilter === opt.key;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.statusChip, active && styles.statusChipActive]}
-                  onPress={() => setStatusFilter(opt.key)}
-                >
-                  <Text
-                    style={[
-                      styles.statusChipText,
-                      active && styles.statusChipTextActive,
-                    ]}
-                  >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {showTractorSummary ? (
+            <>
+              <View style={styles.summaryBox}>
+                <View style={styles.summaryBar}>
+                  <View style={styles.summaryColumn}>
+                    <Text style={styles.summaryLabel}>કુલ આવક</Text>
+                    <Text style={styles.summaryValue}>₹ {formatINR(total)}</Text>
+                  </View>
+                  <View style={styles.summaryDivider} />
+                  <View style={styles.summaryColumn}>
+                    <Text style={styles.summaryLabel}>ખર્ચ</Text>
+                    <Text style={styles.summaryValue}>₹ {formatINR(tractorExpenseTotal)}</Text>
+                  </View>
+                  <View style={styles.summaryDivider} />
+                  <View style={styles.summaryColumn}>
+                    <Text style={styles.summaryLabel}>નફો</Text>
+                    <Text style={[styles.summaryValue, nafo >= 0 ? styles.summaryValueProfit : styles.summaryValueLoss]}>
+                      ₹ {formatINR(nafo)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.summaryBarInner}>
+                  <View style={styles.summaryColumnSmall}>
+                    <Text style={styles.summarySmallLabel}>બાકી</Text>
+                    <Text style={styles.summarySmallValue}>
+                      ₹ {formatINR(pendingTotal)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryDividerVertical} />
+                  <View style={styles.summaryColumnSmall}>
+                    <Text style={styles.summarySmallLabel}>આપી દીધા</Text>
+                    <Text style={styles.summarySmallValue}>
+                      ₹ {formatINR(paidTotal)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.statusRow}>
+                {[
+                  { key: "Pending" as const, label: "બાકી" },
+                  { key: "Completed" as const, label: "આપી લીધા" },
+                ].map((opt) => {
+                  const active = statusFilter === opt.key;
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.statusChip, active && styles.statusChipActive]}
+                      onPress={() => setStatusFilter(opt.key)}
+                    >
+                      <Text
+                        style={[
+                          styles.statusChipText,
+                          active && styles.statusChipTextActive,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
 
           <FlatList
             data={filtered}
@@ -481,11 +525,18 @@ export default function TractorIncomeListScreen() {
       )}
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          style={styles.bottomBtn}
+          style={[styles.bottomBtn, styles.bottomBtnLeft]}
           activeOpacity={0.9}
           onPress={() => router.push("/income/add-tractor-income" as any)}
         >
           <Text style={styles.bottomBtnText}>ભાડું ઉમેરો</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.bottomBtn, styles.bottomBtnRight]}
+          activeOpacity={0.9}
+          onPress={() => router.push("/income/add-tractor-expense" as any)}
+        >
+          <Text style={styles.bottomBtnText}>ખર્ચ</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -644,31 +695,51 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadText: { fontSize: 15, color: C.textMuted },
-  summaryBar: {
-    flexDirection: "row",
-    alignItems: "center",
+  summaryBox: {
     marginHorizontal: 16,
     marginTop: 4,
     marginBottom: 10,
-    padding: 14,
     borderRadius: 16,
     backgroundColor: C.surface,
     borderWidth: 1,
     borderColor: C.border,
+    overflow: "hidden",
   },
-  summaryColumn: { flex: 1.1 },
-  summaryColumnSmall: { flex: 0.9 },
+  summaryBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+  },
+  summaryBarInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    backgroundColor: C.orange50,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  summaryDividerVertical: {
+    width: 1,
+    height: 28,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 10,
+  },
+  summaryColumn: { flex: 1 },
+  summaryColumnSmall: { flex: 1 },
   summaryLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: C.textMuted,
     fontWeight: "700",
   },
   summaryValue: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: "900",
     color: C.orange700,
     marginTop: 2,
   },
+  summaryValueProfit: { color: "#166534" },
+  summaryValueLoss: { color: "#B91C1C" },
   summarySmallLabel: {
     fontSize: 11,
     color: C.textMuted,
@@ -809,6 +880,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    flexDirection: "row",
+    gap: 12,
     paddingHorizontal: 16,
     paddingBottom: 18,
     paddingTop: 8,
@@ -817,14 +890,17 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
   },
   bottomBtn: {
+    flex: 1,
     borderRadius: 16,
     backgroundColor: C.orange700,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
   },
+  bottomBtnLeft: {},
+  bottomBtnRight: {},
   bottomBtnText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "800",
     color: "#fff",
   },

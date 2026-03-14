@@ -175,17 +175,20 @@ export default function ReportScreen() {
     compare && (compare.mode === "peer" && compare.peerIncomePerBigha != null)
       ? compare.peerIncomePerBigha
       : compare?.avgIncomePerBigha ?? 0;
-  const compareDiff = compare ? (compare.myIncomePerBigha ?? 0) - targetIncomePerBigha : 0;
+  const landBigha = totalLandBigha(profile);
+  const myIncomePerBighaFromSummary = landBigha > 0 ? displayTotalIncome / landBigha : (compare?.myIncomePerBigha ?? 0);
+  const compareDiff = compare ? myIncomePerBighaFromSummary - targetIncomePerBigha : 0;
   const compareDiffText = `${formatINR(Math.abs(compareDiff))} ${compareDiff >= 0 ? "વધારે" : "ઓછું"}`;
   const incomePctVsAvg =
     targetIncomePerBigha > 0 && compare
-      ? Math.round(((compare.myIncomePerBigha ?? 0) - targetIncomePerBigha) / targetIncomePerBigha * 100)
+      ? Math.round((myIncomePerBighaFromSummary - targetIncomePerBigha) / targetIncomePerBigha * 100)
       : 0;
 
   const expenseAnalyticsData = expenseAnalytics && (expenseAnalytics.myArea ?? 0) > 0 && expenseAnalytics.sampleSize > 0;
   const myBy = expenseAnalyticsData ? (expenseAnalytics?.myPerBighaByCategory || {}) : {};
   const avgBy = expenseAnalyticsData ? (expenseAnalytics?.avgPerBighaByCategory || {}) : {};
-  const myExpenseTotal = Object.values(myBy).reduce((s, v) => s + v, 0);
+  const myExpenseTotalFromApi = Object.values(myBy).reduce((s, v) => s + v, 0);
+  const myExpenseTotal = landBigha > 0 ? displayExpense / landBigha : myExpenseTotalFromApi;
   const avgExpenseTotal = Object.values(avgBy).reduce((s, v) => s + v, 0);
   const expensePctVsAvg = avgExpenseTotal > 0 ? Math.round((myExpenseTotal - avgExpenseTotal) / avgExpenseTotal * 100) : 0;
   const expenseLowerIsBetter = myExpenseTotal <= avgExpenseTotal;
@@ -527,8 +530,8 @@ export default function ReportScreen() {
           )}
 
           {/* 3. Income per bigha — common design (uses selected peer or average) */}
-          {compare && compare.myTotalArea > 0 && (() => {
-            const myVal = compare.myIncomePerBigha ?? 0;
+          {compare && (compare.myTotalArea > 0 || landBigha > 0) && (() => {
+            const myVal = myIncomePerBighaFromSummary;
             const targetVal =
               compare.mode === "peer" && compare.peerIncomePerBigha != null
                 ? compare.peerIncomePerBigha
