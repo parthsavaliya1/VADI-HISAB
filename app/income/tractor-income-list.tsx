@@ -196,6 +196,8 @@ export default function TractorIncomeListScreen() {
   const [statusFilter, setStatusFilter] = useState<"Pending" | "Completed">(
     "Pending",
   );
+  const [selectedFarmer, setSelectedFarmer] = useState<string>("");
+  const [farmerDropdownOpen, setFarmerDropdownOpen] = useState(false);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -251,15 +253,31 @@ export default function TractorIncomeListScreen() {
     [refreshTransactions, fetchAll]
   );
 
-  const total = incomes.reduce((s, i) => s + getRentalAmount(i), 0);
-  const pendingTotal = incomes
+  const farmerNames = React.useMemo(() => {
+    const names = new Set<string>();
+    incomes.forEach((i) => {
+      const n = i.rentalIncome?.rentedToName?.trim();
+      if (n) names.add(n);
+    });
+    return ["", ...Array.from(names).sort()];
+  }, [incomes]);
+
+  const incomesByFarmer =
+    selectedFarmer === ""
+      ? incomes
+      : incomes.filter(
+          (i) => i.rentalIncome?.rentedToName?.trim() === selectedFarmer,
+        );
+
+  const total = incomesByFarmer.reduce((s, i) => s + getRentalAmount(i), 0);
+  const pendingTotal = incomesByFarmer
     .filter((i) => i.rentalIncome?.paymentStatus === "Pending")
     .reduce((s, i) => s + getRentalAmount(i), 0);
-  const paidTotal = incomes
+  const paidTotal = incomesByFarmer
     .filter((i) => i.rentalIncome?.paymentStatus === "Completed")
     .reduce((s, i) => s + getRentalAmount(i), 0);
 
-  const filtered = incomes.filter(
+  const filtered = incomesByFarmer.filter(
     (i) => i.rentalIncome?.paymentStatus === statusFilter,
   );
 
@@ -300,6 +318,71 @@ export default function TractorIncomeListScreen() {
               })}
           </View>
         </View>
+        <View style={styles.farmerFilterRow}>
+          <Text style={styles.filterLabel}>ખેડૂત પસંદ કરો</Text>
+          <View style={styles.farmerDropdownWrap}>
+            <TouchableOpacity
+              style={styles.farmerDropdownBtn}
+              onPress={() => setFarmerDropdownOpen((p) => !p)}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.farmerDropdownText,
+                  !selectedFarmer && styles.farmerDropdownPlaceholder,
+                ]}
+                numberOfLines={1}
+              >
+                {selectedFarmer === ""
+                  ? "બધા ખેડૂતો"
+                  : selectedFarmer}
+              </Text>
+              <Ionicons
+                name={farmerDropdownOpen ? "chevron-up" : "chevron-down"}
+                size={20}
+                color={C.textSecondary}
+              />
+            </TouchableOpacity>
+            {farmerDropdownOpen && (
+              <View style={styles.farmerDropdownList}>
+                {farmerNames.map((name) => {
+                  const isAll = name === "";
+                  const active = selectedFarmer === name;
+                  return (
+                    <TouchableOpacity
+                      key={isAll ? "__all__" : name}
+                      style={[
+                        styles.farmerDropdownItem,
+                        active && styles.farmerDropdownItemActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedFarmer(name);
+                        setFarmerDropdownOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.farmerDropdownItemText,
+                          active && styles.farmerDropdownItemTextActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {isAll ? "બધા ખેડૂતો" : name}
+                      </Text>
+                      {active && (
+                        <Ionicons
+                          name="checkmark"
+                          size={20}
+                          color={C.orange700}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        </View>
       </View>
 
       {loading ? (
@@ -309,6 +392,13 @@ export default function TractorIncomeListScreen() {
         </View>
       ) : (
         <>
+          {selectedFarmer ? (
+            <View style={styles.farmerSummaryLabel}>
+              <Text style={styles.farmerSummaryLabelText}>
+                ખેડૂત: {selectedFarmer} નો સારાંશ
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.summaryBar}>
             <View style={styles.summaryColumn}>
               <Text style={styles.summaryLabel}>કુલ આવક</Text>
@@ -411,12 +501,6 @@ const styles = StyleSheet.create({
   },
   toolbar: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   yearRow: { marginBottom: 8 },
-  yearLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: C.textMuted,
-    marginBottom: 6,
-  },
   yearChips: {
     flexDirection: "row",
     gap: 8,
@@ -442,6 +526,88 @@ const styles = StyleSheet.create({
   },
   yearChipTextActive: {
     color: "#fff",
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: C.textMuted,
+    marginBottom: 6,
+  },
+  farmerFilterRow: {
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  farmerDropdownWrap: {
+    position: "relative",
+    zIndex: 10,
+  },
+  farmerDropdownBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1.5,
+    borderColor: C.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: C.surface,
+  },
+  farmerDropdownText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: C.textPrimary,
+    flex: 1,
+  },
+  farmerDropdownPlaceholder: {
+    color: C.textMuted,
+  },
+  farmerDropdownList: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "100%",
+    marginTop: 4,
+    backgroundColor: C.surface,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    maxHeight: 220,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  farmerDropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  farmerDropdownItemActive: {
+    backgroundColor: C.orange100,
+  },
+  farmerDropdownItemText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: C.textPrimary,
+    flex: 1,
+  },
+  farmerDropdownItemTextActive: {
+    fontWeight: "800",
+    color: C.orange700,
+  },
+  farmerSummaryLabel: {
+    marginHorizontal: 16,
+    marginBottom: 6,
+  },
+  farmerSummaryLabelText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: C.orange700,
   },
   statusRow: {
     flexDirection: "row",

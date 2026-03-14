@@ -124,12 +124,14 @@ export default function ReportScreen() {
       setCompare(compareRes ?? null);
       setExpenseAnalytics(expAnalytics ?? null);
       setComparePeers(peersRes?.peers ?? []);
+      const excludeTractorInReport = !profile?.tractorAvailable;
       setYearlyReports(
-        yearResults.map((r: any) => ({
-          year: r.year,
-          income: r.summary?.totalIncome ?? 0,
-          expense: r.summary?.totalExpense ?? 0,
-        })).filter((r: any) => r.year)
+        yearResults.map((r: any) => {
+          const totalIncome = r.summary?.totalIncome ?? 0;
+          const tractorIncome = r.summary?.tractorIncome ?? 0;
+          const income = totalIncome - (excludeTractorInReport ? tractorIncome : 0);
+          return { year: r.year, income, expense: r.summary?.totalExpense ?? 0 };
+        }).filter((r: any) => r.year)
       );
     } catch (err) {
       console.warn("[Report] load error:", (err as Error).message);
@@ -143,7 +145,7 @@ export default function ReportScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [financialYear, selectedPeerId]);
+  }, [financialYear, selectedPeerId, profile?.tractorAvailable]);
 
   useEffect(() => {
     loadReport();
@@ -156,13 +158,16 @@ export default function ReportScreen() {
   }, [transactionsRefreshKey]);
 
   const years = getFinancialYearOptionsExtended();
-  const summary = report?.summary ?? { totalIncome: 0, totalExpense: 0, netProfit: 0, totalCrops: 0, totalArea: 0 };
+  const summary = report?.summary ?? { totalIncome: 0, totalExpense: 0, netProfit: 0, totalCrops: 0, totalArea: 0, tractorIncome: 0 };
+  const tractorIncome = summary.tractorIncome ?? 0;
+  const excludeTractor = !profile?.tractorAvailable;
+  const displayTotalIncome = (summary.totalIncome ?? 0) - (excludeTractor ? tractorIncome : 0);
   const cropIncome = summary.cropIncome ?? 0;
   const extraIncome = summary.extraIncome ?? 0;
   const cropExpense = summary.cropExpense ?? 0;
   const extraExpense = summary.extraExpense ?? 0;
   const displayExpense = summary.cropExpense ?? summary.totalExpense;
-  const displayNetProfit = summary.totalIncome - displayExpense;
+  const displayNetProfit = displayTotalIncome - displayExpense;
   const crops = (report?.crops ?? []) as CropReportRow[];
   const showRanking = analytics != null && analytics.percentileRank != null;
   const rankingTopPercent = analytics?.percentileRank != null ? Math.max(1, Math.round(100 - analytics.percentileRank)) : null;
@@ -267,7 +272,7 @@ export default function ReportScreen() {
             <View style={styles.summaryRow}>
               <View style={[styles.summaryBox, styles.summaryBoxIncome]}>
                 <Ionicons name="trending-up" size={18} color={C.income} />
-                <Text style={[styles.summaryValue, { color: C.income }]}>{formatINR(summary.totalIncome)}</Text>
+                <Text style={[styles.summaryValue, { color: C.income }]}>{formatINR(displayTotalIncome)}</Text>
                 <Text style={styles.summaryLabel}>કુલ આવક</Text>
               </View>
               <View style={[styles.summaryBox, styles.summaryBoxExpense]}>

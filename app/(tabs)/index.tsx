@@ -1234,18 +1234,23 @@ export default function Dashboard() {
           bhagyaUpadTotal: 0,
           tractorIncome: 0,
         };
-        // Main summary: total income includes extra; total expense = sum of individual crop expenses only (matches what user sees on each crop card)
+        const tractorIncomeFromReport = reportSummary.tractorIncome ?? 0;
+        const excludeTractor = !prof?.tractorAvailable;
+        // When tractor is disabled in profile, exclude tractor from all calculations
+        const allIncome =
+          (reportSummary.totalIncome ?? 0) -
+          (excludeTractor ? tractorIncomeFromReport : 0);
+        // Main summary: total income includes extra (minus tractor when disabled); total expense = sum of individual crop expenses only
         const cropExpense =
           reportSummary.cropExpense ??
           reportCrops.reduce((s: number, r: any) => s + (r.expense ?? 0), 0);
-        const allIncome = reportSummary.totalIncome ?? 0;
         setSummary({
           totalIncome: allIncome,
-          totalExpense: cropExpense, // કુલ ખર્ચ = crop expense only
-          netProfit: allIncome - cropExpense, // ચોખ્ખો નફો = આવક - ખર્ચ
+          totalExpense: cropExpense,
+          netProfit: allIncome - cropExpense,
         });
         setBhagyaUpadTotal(bhagyaUpadTotal);
-        setTractorIncomeTotal(reportSummary.tractorIncome ?? 0);
+        setTractorIncomeTotal(excludeTractor ? 0 : tractorIncomeFromReport);
         setCrops(
           cropRes.data.map((c: Crop) => {
             const report = reportCrops.find((r) => r._id === c._id);
@@ -1266,12 +1271,15 @@ export default function Dashboard() {
           }),
         );
         const expenses = Array.isArray(expRes?.data) ? expRes.data : [];
-        const incomes = Array.isArray(incRes?.data) ? incRes.data : [];
+        let incomes = Array.isArray(incRes?.data) ? incRes.data : [];
+        if (excludeTractor) {
+          incomes = incomes.filter((i: any) => i.category !== "Rental Income");
+        }
 
-        // Tractor income: split total by payment status (Pending vs Completed)
-        const rentalIncomes = incomes.filter(
-          (i: any) => i.category === "Rental Income",
-        );
+        // Tractor income: split total by payment status (only when tractor enabled)
+        const rentalIncomes = excludeTractor
+          ? []
+          : incomes.filter((i: any) => i.category === "Rental Income");
         let pendingTotal = 0;
         let paidTotal = 0;
         for (const inc of rentalIncomes) {
@@ -1281,8 +1289,8 @@ export default function Dashboard() {
           if (r.paymentStatus === "Pending") pendingTotal += amt;
           if (r.paymentStatus === "Completed") paidTotal += amt;
         }
-        setTractorPendingTotal(pendingTotal);
-        setTractorPaidTotal(paidTotal);
+        setTractorPendingTotal(excludeTractor ? 0 : pendingTotal);
+        setTractorPaidTotal(excludeTractor ? 0 : paidTotal);
         setTxns(
           buildTransactions(
             expenses,
@@ -1731,7 +1739,7 @@ export default function Dashboard() {
                     </View>
                   </View>
                 )}
-                {tractorIncomeTotal > 0 && (
+                {profile?.tractorAvailable && tractorIncomeTotal > 0 && (
                   <PressableCard
                     onPress={() =>
                       router.push("/income/tractor-income-list" as any)
@@ -1759,7 +1767,8 @@ export default function Dashboard() {
                     </Text>
                   </PressableCard>
                 )}
-                {(tractorPendingTotal > 0 || tractorPaidTotal > 0) && (
+                {profile?.tractorAvailable &&
+                  (tractorPendingTotal > 0 || tractorPaidTotal > 0) && (
                   <View style={styles.tractorPaymentRow}>
                     <View style={styles.tractorPaymentCol}>
                       <Text style={styles.tractorPaymentLabel}>બાકી ભાડા</Text>
