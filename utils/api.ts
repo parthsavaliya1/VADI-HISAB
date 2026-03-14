@@ -10,12 +10,13 @@ import axios, { AxiosError } from "axios";
 // 🚀 PROD: Set EXPO_PUBLIC_API_URL=https://your-api.onrender.com/api
 const BASE_URL =
   (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ||
-  "https://vadi-hisab-be.onrender.com/api";
+  "http://192.168.29.55:8000/api";
 
 // ─── Axios Instance ───────────────────────────
+// Timeout 45s: Render.com free tier cold start can take 30–60s; 15s was too short
 export const API = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 45000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -98,12 +99,15 @@ API.interceptors.response.use(
 export const getFriendlyErrorMessage = (err: unknown): string => {
   const e = err as AxiosError | Error | any;
 
-  // No response / classic axios network error / timeout
+  // No response / classic axios network error / timeout (incl. server cold start on Render)
   if (
     e.code === "ECONNABORTED" ||
     e.message === "Network Error" ||
     !e.response
   ) {
+    if (e.code === "ECONNABORTED") {
+      return "સર્વરને જવાબ આપતા વધુ સમય લાગ્યો. થોડી વાર પછી ફરી પ્રયત્ન કરો.";
+    }
     return "ઇન્ટરનેટ કનેક્શન ચેક કરો (મોબાઇલ ડેટા / Wi‑Fi) અને ફરી પ્રયત્ન કરો.";
   }
 
