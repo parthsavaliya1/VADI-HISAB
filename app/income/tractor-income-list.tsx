@@ -160,7 +160,7 @@ function TractorIncomeRow({
               </Text>
             </View>
           </View>
-          <Text style={styles.amount}>₹ {formatINR(amount)}</Text>
+          <Text style={styles.amount}>{formatINR(amount)}</Text>
         </View>
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
@@ -297,12 +297,9 @@ export default function TractorIncomeListScreen() {
     .filter((i) => i.rentalIncome?.paymentStatus === "Completed")
     .reduce((s, i) => s + getRentalAmount(i), 0);
 
-  const filtered =
-    selectedFarmer
-      ? incomesByFarmer
-      : incomesByFarmer.filter(
-          (i) => i.rentalIncome?.paymentStatus === statusFilter,
-        );
+  const filtered = incomesByFarmer.filter(
+    (i) => i.rentalIncome?.paymentStatus === statusFilter,
+  );
   const nafo = total - tractorExpenseTotal;
   const showTractorSummary = !selectedFarmer;
 
@@ -418,11 +415,54 @@ export default function TractorIncomeListScreen() {
       ) : (
         <>
           {selectedFarmer ? (
-            <View style={styles.farmerSummaryLabel}>
-              <Text style={styles.farmerSummaryLabelText}>
-                ખેડૂત: {selectedFarmer} નો સારાંશ
-              </Text>
-            </View>
+            <>
+              <View style={styles.farmerSummaryLabel}>
+                <Text style={styles.farmerSummaryLabelText}>
+                  ખેડૂત: {selectedFarmer} નો સારાંશ
+                </Text>
+              </View>
+              <View style={styles.summaryBox}>
+                <View style={styles.summaryBarInner}>
+                  <View style={styles.summaryColumnSmall}>
+                    <Text style={styles.summarySmallLabel}>બાકી</Text>
+                    <Text style={styles.summarySmallValue}>
+                      {formatINR(pendingTotal)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryDividerVertical} />
+                  <View style={styles.summaryColumnSmall}>
+                    <Text style={styles.summarySmallLabel}>જમા</Text>
+                    <Text style={styles.summarySmallValue}>
+                      {formatINR(paidTotal)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.statusRow}>
+                {[
+                  { key: "Pending" as const, label: "બાકી" },
+                  { key: "Completed" as const, label: "આપી લીધા" },
+                ].map((opt) => {
+                  const active = statusFilter === opt.key;
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.statusChip, active && styles.statusChipActive]}
+                      onPress={() => setStatusFilter(opt.key)}
+                    >
+                      <Text
+                        style={[
+                          styles.statusChipText,
+                          active && styles.statusChipTextActive,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
           ) : null}
           {showTractorSummary ? (
             <>
@@ -430,18 +470,18 @@ export default function TractorIncomeListScreen() {
                 <View style={styles.summaryBar}>
                   <View style={styles.summaryColumn}>
                     <Text style={styles.summaryLabel}>કુલ આવક</Text>
-                    <Text style={styles.summaryValue}>₹ {formatINR(total)}</Text>
+                    <Text style={styles.summaryValue}>{formatINR(total)}</Text>
                   </View>
                   <View style={styles.summaryDivider} />
                   <View style={styles.summaryColumn}>
                     <Text style={styles.summaryLabel}>ખર્ચ</Text>
-                    <Text style={styles.summaryValue}>₹ {formatINR(tractorExpenseTotal)}</Text>
+                    <Text style={styles.summaryValue}>{formatINR(tractorExpenseTotal)}</Text>
                   </View>
                   <View style={styles.summaryDivider} />
                   <View style={styles.summaryColumn}>
                     <Text style={styles.summaryLabel}>નફો</Text>
                     <Text style={[styles.summaryValue, nafo >= 0 ? styles.summaryValueProfit : styles.summaryValueLoss]}>
-                      ₹ {formatINR(nafo)}
+                      {formatINR(nafo)}
                     </Text>
                   </View>
                 </View>
@@ -449,14 +489,14 @@ export default function TractorIncomeListScreen() {
                   <View style={styles.summaryColumnSmall}>
                     <Text style={styles.summarySmallLabel}>બાકી</Text>
                     <Text style={styles.summarySmallValue}>
-                      ₹ {formatINR(pendingTotal)}
+                      {formatINR(pendingTotal)}
                     </Text>
                   </View>
                   <View style={styles.summaryDividerVertical} />
                   <View style={styles.summaryColumnSmall}>
                     <Text style={styles.summarySmallLabel}>આપી દીધા</Text>
                     <Text style={styles.summarySmallValue}>
-                      ₹ {formatINR(paidTotal)}
+                      {formatINR(paidTotal)}
                     </Text>
                   </View>
                 </View>
@@ -715,7 +755,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 14,
-    backgroundColor: C.orange50,
+    backgroundColor: C.surface,
     borderTopWidth: 1,
     borderTopColor: C.border,
   },

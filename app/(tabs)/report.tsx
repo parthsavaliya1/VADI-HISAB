@@ -6,6 +6,7 @@ import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getCompareReport,
   getComparePeers,
+  getExpenses,
   getExpenseAnalytics,
   getFinancialYearOptions,
   getFinancialYearOptionsExtended,
@@ -14,6 +15,7 @@ import {
   getYearlyReport,
   getVadiScore,
   type CropReportRow,
+  type Expense,
   type VadiScoreResponse,
 } from "@/utils/api";
 import { formatWholeNumber } from "@/utils/format";
@@ -74,6 +76,8 @@ const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
   Other: "અન્ય",
 };
 const EXPENSE_CATEGORY_ORDER = ["Seed", "Fertilizer", "Pesticide", "Labour", "Machinery", "Irrigation", "Other"];
+/** Only crop expense categories for પાક માટે ખર્ચ વિભાજન — exclude Other and tractor */
+const CROP_EXPENSE_CATEGORY_ORDER = ["Seed", "Fertilizer", "Pesticide", "Labour", "Machinery", "Irrigation"];
 const BAR_MAX_WIDTH = SCREEN_W - 32 - 100;
 
 function formatINR(n: number): string {
@@ -102,18 +106,20 @@ export default function ReportScreen() {
   const [peerPickerVisible, setPeerPickerVisible] = useState(false);
   const [peerSearch, setPeerSearch] = useState("");
   const [vadiScore, setVadiScore] = useState<VadiScoreResponse | null>(null);
+  const [tractorExpenseReport, setTractorExpenseReport] = useState(0);
 
   const loadReport = useCallback(async () => {
     try {
       const years = getFinancialYearOptionsExtended();
       const peerUserId = selectedPeerId === "average" ? undefined : selectedPeerId;
-      const [data, analyticsRes, compareRes, expAnalytics, peersRes, ...yearResults] = await Promise.all([
+      const [data, analyticsRes, compareRes, expAnalytics, peersRes, tractorExpRes, ...yearResults] = await Promise.all([
         getYearlyReport(financialYear),
         getIncomeAnalytics(undefined, undefined, financialYear).catch(() => null),
         getCompareReport(financialYear, undefined, peerUserId).catch(() => null),
         getExpenseAnalytics(financialYear, peerUserId).catch(() => null),
         getComparePeers().catch(() => null),
-        ...years.map((fy) =>
+        getExpenses(undefined, "Other", undefined, 1, 500, financialYear, "tractorExpense").catch(() => ({ data: [] as Expense[] })),
+        ...years.map((fy: string) =>
           getYearlyReport(fy)
             .then((r) => ({ year: fy, summary: r?.summary }))
             .catch(() => ({ year: "", summary: null }))
@@ -124,14 +130,22 @@ export default function ReportScreen() {
       setCompare(compareRes ?? null);
       setExpenseAnalytics(expAnalytics ?? null);
       setComparePeers(peersRes?.peers ?? []);
+      const tractorExpenseSum = (tractorExpRes?.data ?? []).reduce(
+        (s: number, e: Expense) => s + (Number(e.amount) || Number((e as any).other?.totalAmount) || 0),
+        0
+      );
+      setTractorExpenseReport(tractorExpenseSum);
       const excludeTractorInReport = !profile?.tractorAvailable;
       setYearlyReports(
-        yearResults.map((r: any) => {
+        yearResults.map((r: { year: string; summary: any }) => {
           const totalIncome = r.summary?.totalIncome ?? 0;
           const tractorIncome = r.summary?.tractorIncome ?? 0;
           const income = totalIncome - (excludeTractorInReport ? tractorIncome : 0);
-          return { year: r.year, income, expense: r.summary?.totalExpense ?? 0 };
-        }).filter((r: any) => r.year)
+          const cropExp = r.summary?.cropExpense ?? 0;
+          const tractorExp = r.year === financialYear && !excludeTractorInReport ? tractorExpenseSum : 0;
+          const expense = r.year === financialYear ? cropExp + tractorExp : (r.summary?.totalExpense ?? 0);
+          return { year: r.year, income, expense };
+        }).filter((r: { year: string }) => r.year)
       );
     } catch (err) {
       console.warn("[Report] load error:", (err as Error).message);
@@ -166,7 +180,7 @@ export default function ReportScreen() {
   const extraIncome = summary.extraIncome ?? 0;
   const cropExpense = summary.cropExpense ?? 0;
   const extraExpense = summary.extraExpense ?? 0;
-  const displayExpense = summary.cropExpense ?? summary.totalExpense;
+  const displayExpense = cropExpense + (excludeTractor ? 0 : tractorExpenseReport);
   const displayNetProfit = displayTotalIncome - displayExpense;
   const crops = (report?.crops ?? []) as CropReportRow[];
   const showRanking = analytics != null && analytics.percentileRank != null;
@@ -194,8 +208,15 @@ export default function ReportScreen() {
   const expenseLowerIsBetter = myExpenseTotal <= avgExpenseTotal;
 
   const expenseHigherCategories = expenseAnalyticsData
-    ? EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > (avgBy[cat] || 0) && (myBy[cat] || 0) > 0)
+    ? CROP_EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > (avgBy[cat] || 0) && (myBy[cat] || 0) > 0)
     : [];
+
+  const cropOnlyByCategory: Record<string, number> = {};
+  CROP_EXPENSE_CATEGORY_ORDER.forEach((cat) => {
+    const v = expenseAnalytics?.myByCategory?.[cat];
+    if (v != null && v > 0) cropOnlyByCategory[cat] = v;
+  });
+  const cropOnlyExpenseTotal = Object.values(cropOnlyByCategory).reduce((s, v) => s + v, 0);
 
   const selectedPeer = selectedPeerId === "average"
     ? null
@@ -293,8 +314,8 @@ export default function ReportScreen() {
             </View>
           </View>
 
-          {/* Expense category pie chart — Labour 30%, Machinery 39%, etc. */}
-          <ExpensePieChart byCategory={expenseAnalytics?.myByCategory ?? {}} centerTotal={displayExpense} />
+          {/* પાક માટે ખર્ચ વિભાજન — crop expense only (no Other, no tractor) */}
+          <ExpensePieChart byCategory={cropOnlyByCategory} centerTotal={cropOnlyExpenseTotal} title="પાક માટે ખર્ચ વિભાજન" />
 
           {/* Peer selection dropdown — choose average or specific farmer (shown below pie chart) */}
           {comparePeers.length > 0 && (
@@ -329,17 +350,17 @@ export default function ReportScreen() {
             </View>
           </View>
 
-          {/* 1. Expense type comparison — ખર્ચ પ્રકાર તુલના */}
+          {/* પાક માટે ખર્ચ વિભાજન — crop average only, no Other / tractor */}
           {(expenseAnalytics || (report && (report as any).summary)) && (
             <View style={styles.expenseTypeCard}>
-              <Text style={styles.expenseTypeTitle}>💸 ખર્ચ પ્રકાર તુલના</Text>
+              <Text style={styles.expenseTypeTitle}>💸 પાક માટે ખર્ચ વિભાજન</Text>
               {expenseAnalytics && ((expenseAnalytics.myArea ?? 0) > 0 || expenseAnalytics.mySummary?.length) ? (
                 (() => {
                   const usePerBigha = (expenseAnalytics.myArea ?? 0) > 0;
                   const myBy = usePerBigha ? (expenseAnalytics.myPerBighaByCategory || {}) : (expenseAnalytics.myByCategory || {});
                   const avgBy = usePerBigha && expenseAnalytics.sampleSize > 0 ? (expenseAnalytics.avgPerBighaByCategory || {}) : (expenseAnalytics.avgByCategory || {});
                   const hasCompare = expenseAnalytics.sampleSize > 0;
-                  const categories = EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > 0 || (avgBy[cat] || 0) > 0);
+                  const categories = CROP_EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > 0 || (avgBy[cat] || 0) > 0);
                   if (categories.length === 0) {
                     return <Text style={styles.expenseTypeEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>;
                   }
@@ -417,7 +438,7 @@ export default function ReportScreen() {
                   {expenseAnalytics?.mySummary?.length ? (
                     (() => {
                       const myBy = expenseAnalytics.myByCategory || {};
-                      const categories = EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > 0);
+                      const categories = CROP_EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > 0);
                       if (categories.length === 0) {
                         return <Text style={styles.expenseTypeEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>;
                       }
@@ -468,7 +489,7 @@ export default function ReportScreen() {
               <View style={styles.perBighaHeroRow}>
                 <View style={[styles.perBighaHeroBox, styles.perBighaHeroBoxMine]}>
                   <Text style={styles.perBighaHeroLabel}>તમારી</Text>
-                  <Text style={[styles.perBighaHeroValue, { color: C.expense }]}>₹{formatINR(myExpenseTotal)}</Text>
+                  <Text style={[styles.perBighaHeroValue, { color: C.expense }]}>{formatINR(myExpenseTotal)}</Text>
                 </View>
                 <View style={styles.perBighaVsBadge}>
                   <Text style={styles.perBighaVsText}>VS</Text>
@@ -479,7 +500,7 @@ export default function ReportScreen() {
                       ? peerNameOnly
                       : "સરેરાશ ખેડૂત"}
                   </Text>
-                  <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>₹{formatINR(avgExpenseTotal)}</Text>
+                  <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>{formatINR(avgExpenseTotal)}</Text>
                 </View>
               </View>
 
@@ -550,7 +571,7 @@ export default function ReportScreen() {
                 <View style={styles.perBighaHeroRow}>
                   <View style={[styles.perBighaHeroBox, styles.perBighaHeroBoxMine]}>
                     <Text style={styles.perBighaHeroLabel}>તમારી</Text>
-                    <Text style={[styles.perBighaHeroValue, { color: C.green700 }]}>₹{formatINR(myVal)}</Text>
+                    <Text style={[styles.perBighaHeroValue, { color: C.green700 }]}>{formatINR(myVal)}</Text>
                   </View>
                   <View style={styles.perBighaVsBadge}>
                     <Text style={styles.perBighaVsText}>VS</Text>
@@ -560,7 +581,7 @@ export default function ReportScreen() {
                       {targetLabel}
                     </Text>
                     <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>
-                      ₹{formatINR(targetVal)}
+                      {formatINR(targetVal)}
                     </Text>
                   </View>
                 </View>

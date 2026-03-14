@@ -337,7 +337,7 @@ export default function AddTractorIncomeScreen() {
       {total !== null && (
         <View style={styles.totalCard}>
           <Text style={styles.totalLabel}>કુલ રકમ</Text>
-          <Text style={styles.totalValue}>₹ {Math.round(total).toLocaleString("en-IN")}</Text>
+          <Text style={styles.totalValue}>{Math.round(total).toLocaleString("en-IN")}</Text>
         </View>
       )}
 

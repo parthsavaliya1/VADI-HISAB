@@ -266,7 +266,7 @@ export default function AddBhagyaUpad() {
           )}
           <SectionLabel text="રકમ *" />
           <View style={styles.numRow} ref={amountRowRef}>
-            <Text style={styles.numPrefix}>₹</Text>
+            <Text style={styles.numPrefix} />
             <TextInput
               style={styles.numInput}
               value={amount}

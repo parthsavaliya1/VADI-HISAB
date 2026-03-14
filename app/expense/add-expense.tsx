@@ -1724,7 +1724,6 @@ export default function AddExpense() {
                   value={irrigationAmount}
                   onChange={setIrrigationAmount}
                   placeholder="0"
-                  prefix="₹"
                   onFocus={makeOnFocus(irrigationRef)}
                 />
               </View>
@@ -1762,7 +1761,6 @@ export default function AddExpense() {
                   value={otherAmount}
                   onChange={setOtherAmount}
                   placeholder="0"
-                  prefix="₹"
                   onFocus={makeOnFocus(otherAmountRef)}
                 />
                 {otherExpenseType === "other" ? (

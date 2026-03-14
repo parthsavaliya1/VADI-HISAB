@@ -105,7 +105,7 @@ function BhagyaRow({ item }: { item: Expense }) {
             <Text style={styles.cardTitle} numberOfLines={1}>
               {reason}
             </Text>
-            <Text style={styles.amount}>₹ {formatINR(amount)}</Text>
+            <Text style={styles.amount}>{formatINR(amount)}</Text>
           </View>
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
@@ -218,11 +218,11 @@ export default function BhagyaUpadListScreen() {
             <Text style={styles.summaryCardTitle}>ભાગ્યા નો હિસાબ</Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabelDark}>ભાગાનો કુલ ઉપાડ</Text>
-              <Text style={styles.summaryValueDark}>₹ {formatINR(kulUpad)}</Text>
+              <Text style={styles.summaryValueDark}>{formatINR(kulUpad)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabelDark}>ભાગમા આવેલા પૈસા</Text>
-              <Text style={styles.summaryValueDark}>₹ {formatINR(bhagmaAavelaPaisa)}</Text>
+              <Text style={styles.summaryValueDark}>{formatINR(bhagmaAavelaPaisa)}</Text>
             </View>
             <View style={[styles.summaryRow, styles.summaryRowLast]}>
               <Text
@@ -239,7 +239,7 @@ export default function BhagyaUpadListScreen() {
                   kulUpad > bhagmaAavelaPaisa ? styles.summaryActionGreen : styles.summaryActionRed,
                 ]}
               >
-                ₹ {formatINR(Math.abs(vadhelaPaisa))}
+                {formatINR(Math.abs(vadhelaPaisa))}
               </Text>
             </View>
           </View>

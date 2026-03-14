@@ -1178,6 +1178,7 @@ export default function Dashboard() {
   }>({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
   const [bhagyaUpadTotal, setBhagyaUpadTotal] = useState(0);
   const [tractorIncomeTotal, setTractorIncomeTotal] = useState(0);
+  const [tractorExpenseTotal, setTractorExpenseTotal] = useState(0);
   const [tractorPendingTotal, setTractorPendingTotal] = useState(0);
   const [tractorPaidTotal, setTractorPaidTotal] = useState(0);
   const [transactions, setTxns] = useState<Transaction[]>([]);
@@ -1211,6 +1212,7 @@ export default function Dashboard() {
           incRes,
           notificationRes,
           bhagyaExpRes,
+          tractorExpRes,
         ] = await Promise.all([
           getMyProfile(),
           getCrops(1, 100, undefined, undefined, financialYear),
@@ -1219,6 +1221,7 @@ export default function Dashboard() {
           getIncomes(1, 30, undefined, undefined, undefined, financialYear),
           getNotifications(1, 20),
           getExpenses(undefined, "Labour", undefined, 1, 500, financialYear),
+          getExpenses(undefined, "Other", undefined, 1, 500, financialYear, "tractorExpense"),
         ]);
         setProfile(prof);
         setUnreadNotificationCount(
@@ -1236,18 +1239,24 @@ export default function Dashboard() {
         };
         const tractorIncomeFromReport = reportSummary.tractorIncome ?? 0;
         const excludeTractor = !prof?.tractorAvailable;
-        // When tractor is disabled in profile, exclude tractor from all calculations
+        const tractorExpenseSum = (tractorExpRes?.data ?? []).reduce(
+          (s: number, e: Expense) => s + (Number(e.amount) || Number((e as any).other?.totalAmount) || 0),
+          0
+        );
+        setTractorExpenseTotal(excludeTractor ? 0 : tractorExpenseSum);
+        // Main summary: income = total (includes tractor આવક when enabled); expense = crop expense + tractor ખર્ચ
         const allIncome =
           (reportSummary.totalIncome ?? 0) -
           (excludeTractor ? tractorIncomeFromReport : 0);
-        // Main summary: total income includes extra (minus tractor when disabled); total expense = sum of individual crop expenses only
         const cropExpense =
           reportSummary.cropExpense ??
           reportCrops.reduce((s: number, r: any) => s + (r.expense ?? 0), 0);
+        const totalExpenseWithTractor =
+          cropExpense + (excludeTractor ? 0 : tractorExpenseSum);
         setSummary({
           totalIncome: allIncome,
-          totalExpense: cropExpense,
-          netProfit: allIncome - cropExpense,
+          totalExpense: totalExpenseWithTractor,
+          netProfit: allIncome - totalExpenseWithTractor,
         });
         setBhagyaUpadTotal(bhagyaUpadTotal);
         setTractorIncomeTotal(excludeTractor ? 0 : tractorIncomeFromReport);
@@ -1739,16 +1748,17 @@ export default function Dashboard() {
                     </View>
                   </View>
                 )}
-                {profile?.tractorAvailable && tractorIncomeTotal > 0 && (
+                {profile?.tractorAvailable &&
+                  (tractorIncomeTotal > 0 || tractorExpenseTotal > 0) && (
                   <PressableCard
                     onPress={() =>
                       router.push("/income/tractor-income-list" as any)
                     }
                     style={styles.tractorIncomeRow}
                   >
-                    <Text style={styles.tractorIncomeLabel}>ટ્રેક્ટર હિસાબ</Text>
+                    <Text style={styles.tractorIncomeLabel}>ટ્રેક્ટર નફો</Text>
                     <Text style={styles.tractorIncomeValue}>
-                      ₹{formatWholeNumber(tractorIncomeTotal)}
+                      {formatWholeNumber(tractorIncomeTotal - tractorExpenseTotal)}
                     </Text>
                   </PressableCard>
                 )}
@@ -1763,7 +1773,7 @@ export default function Dashboard() {
                       {t("dashboard", "bhagyaUpad")}
                     </Text>
                     <Text style={styles.bhagyaUpadValue}>
-                      ₹{formatWholeNumber(bhagyaUpadTotal)}
+                      {formatWholeNumber(bhagyaUpadTotal)}
                     </Text>
                   </PressableCard>
                 )}
@@ -1773,13 +1783,13 @@ export default function Dashboard() {
                     <View style={styles.tractorPaymentCol}>
                       <Text style={styles.tractorPaymentLabel}>બાકી ભાડા</Text>
                       <Text style={styles.tractorPaymentValue}>
-                        ₹{formatWholeNumber(tractorPendingTotal)}
+                        {formatWholeNumber(tractorPendingTotal)}
                       </Text>
                     </View>
                     <View style={styles.tractorPaymentCol}>
                       <Text style={styles.tractorPaymentLabel}>આપી દીધા</Text>
                       <Text style={styles.tractorPaymentValue}>
-                        ₹{formatWholeNumber(tractorPaidTotal)}
+                        {formatWholeNumber(tractorPaidTotal)}
                       </Text>
                     </View>
                   </View>

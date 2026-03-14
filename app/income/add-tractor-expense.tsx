@@ -17,7 +17,6 @@ import {
   type Expense,
 } from "@/utils/api";
 import { getCurrentFinancialYear } from "@/utils/api";
-import { useRefresh } from "@/contexts/RefreshContext";
 import Toast from "react-native-toast-message";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -35,7 +34,7 @@ import {
 } from "react-native";
 
 function formatINR(n: number): string {
-  return n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  return Math.round(n).toLocaleString("en-IN");
 }
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("gu-IN", {
@@ -164,7 +163,7 @@ export default function AddTractorExpenseScreen() {
       date: new Date().toISOString().slice(0, 10),
       notes: isOther ? note.trim() : undefined,
       other: {
-        totalAmount: parseFloat(amount),
+        totalAmount: Math.round(Number(amount) || 0),
         description: categoryLabel,
       },
     };
@@ -290,14 +289,14 @@ export default function AddTractorExpenseScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>રકમ (₹)</Text>
+          <Text style={styles.label}>રકમ</Text>
           <TextInput
             style={styles.amountInput}
             placeholder="0"
             placeholderTextColor={C.textMuted}
             value={amount}
-            onChangeText={setAmount}
-            keyboardType="decimal-pad"
+            onChangeText={(t) => setAmount(t.replace(/[^0-9]/g, ""))}
+            keyboardType="number-pad"
           />
         </View>
 
@@ -334,7 +333,7 @@ export default function AddTractorExpenseScreen() {
                     <Text style={styles.historyCardDesc} numberOfLines={1}>{desc}</Text>
                     <Text style={styles.historyCardDate}>{formatDate(ex.date)}</Text>
                   </View>
-                  <Text style={styles.historyCardAmount}>₹ {formatINR(amt)}</Text>
+                  <Text style={styles.historyCardAmount}>{formatINR(amt)}</Text>
                 </TouchableOpacity>
               );
             })

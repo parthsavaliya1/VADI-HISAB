@@ -43,6 +43,8 @@ export interface ExpensePieChartProps {
   byCategory: Record<string, number>;
   /** Optional display total when business summary differs from chart sum */
   centerTotal?: number;
+  /** Optional section title (default: પાક માટે ખર્ચ વિભાજન) */
+  title?: string;
 }
 
 type SliceLayout = {
@@ -96,7 +98,8 @@ function placeBandLabels(
   }
 }
 
-export function ExpensePieChart({ byCategory, centerTotal }: ExpensePieChartProps) {
+export function ExpensePieChart({ byCategory, centerTotal, title }: ExpensePieChartProps) {
+  const sectionTitle = title ?? "પાક માટે ખર્ચ વિભાજન";
   const sliceData = EXPENSE_CATEGORY_ORDER
     .filter((cat) => (byCategory[cat] ?? 0) > 0)
     .map((cat) => ({
@@ -112,7 +115,7 @@ export function ExpensePieChart({ byCategory, centerTotal }: ExpensePieChartProp
   if (!hasData) {
     return (
       <View style={styles.card}>
-        <Text style={styles.title}>💸 ખર્ચ વિભાજન</Text>
+        <Text style={styles.title}>💸 {sectionTitle}</Text>
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyEmoji}>📊</Text>
           <Text style={styles.emptyText}>આ વર્ષ ખર્ચ ડેટા નથી</Text>
@@ -221,7 +224,7 @@ export function ExpensePieChart({ byCategory, centerTotal }: ExpensePieChartProp
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>💸 ખર્ચ વિભાજન</Text>
+      <Text style={styles.title}>💸 {sectionTitle}</Text>
 
       <View style={[styles.pieWrap, { width: chartWidth, height: chartHeight }]}>
         <Svg width={chartWidth} height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
@@ -269,7 +272,7 @@ export function ExpensePieChart({ byCategory, centerTotal }: ExpensePieChartProp
             <Text style={styles.sliceLabelCategory} numberOfLines={1}>
               {slice.label}
             </Text>
-            <Text style={styles.sliceLabelValue}>₹{formatINR(slice.value)}</Text>
+            <Text style={styles.sliceLabelValue}>{formatINR(slice.value)}</Text>
           </View>
         ))}
       </View>
