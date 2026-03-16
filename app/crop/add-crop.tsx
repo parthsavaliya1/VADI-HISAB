@@ -95,7 +95,7 @@ const SEASONS: {
   },
 ];
 
-const CROPS: {
+export const CROPS: {
   value: string;
   label: string;
   emoji: string;

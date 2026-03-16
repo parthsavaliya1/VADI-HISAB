@@ -18,6 +18,7 @@ import {
   type Expense,
   type VadiScoreResponse,
 } from "@/utils/api";
+import { CROPS } from "@/app/crop/add-crop";
 import { formatWholeNumber } from "@/utils/format";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -101,6 +102,8 @@ export default function ReportScreen() {
   const [yearlyReports, setYearlyReports] = useState<{ year: string; income: number; expense: number }[]>([]);
   const [comparePeers, setComparePeers] = useState<ComparePeer[]>([]);
   const [selectedPeerId, setSelectedPeerId] = useState<string | "average">("average");
+  const [selectedCropName, setSelectedCropName] = useState<string>("ALL");
+  const [cropPickerVisible, setCropPickerVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [peerPickerVisible, setPeerPickerVisible] = useState(false);
@@ -120,8 +123,16 @@ export default function ReportScreen() {
       const [data, analyticsRes, compareRes, expAnalytics, peersRes, tractorExpRes, ...yearResults] = await Promise.all([
         getYearlyReport(financialYear),
         getIncomeAnalytics(undefined, undefined, financialYear).catch(() => null),
-        getCompareReport(financialYear, undefined, peerUserId).catch(() => null),
-        getExpenseAnalytics(financialYear, peerUserId).catch(() => null),
+        getCompareReport(
+          financialYear,
+          selectedCropName === "ALL" ? undefined : selectedCropName,
+          peerUserId
+        ).catch(() => null),
+        getExpenseAnalytics(
+          financialYear,
+          peerUserId,
+          selectedCropName === "ALL" ? undefined : selectedCropName
+        ).catch(() => null),
         getComparePeers().catch(() => null),
         getExpenses(undefined, "Other", undefined, 1, 500, financialYear, "tractorExpense").catch(() => ({ data: [] as Expense[] })),
         ...years.map((fy: string) =>
@@ -130,6 +141,7 @@ export default function ReportScreen() {
             .catch(() => ({ year: "", summary: null }))
         ),
       ]);
+      setReport(data ?? null);
       setAnalytics(analyticsRes ?? null);
       setCompare(compareRes ?? null);
       setExpenseAnalytics(expAnalytics ?? null);
@@ -163,7 +175,7 @@ export default function ReportScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [financialYear, selectedPeerId, profile?.tractorAvailable]);
+  }, [financialYear, selectedPeerId, selectedCropName, profile?.tractorAvailable]);
 
   useEffect(() => {
     loadReport();
@@ -181,6 +193,10 @@ export default function ReportScreen() {
   const displayExpense = cropExpense + (excludeTractor ? 0 : tractorExpenseReport);
   const displayNetProfit = displayTotalIncome - displayExpense;
   const crops = (report?.crops ?? []) as CropReportRow[];
+  const cropFilterOptions: { value: string; label: string }[] = [
+    { value: "ALL", label: "બધા પાકો" },
+    ...CROPS.map((c) => ({ value: c.value, label: c.label })),
+  ];
   const showRanking = analytics != null && analytics.percentileRank != null;
   const rankingTopPercent = analytics?.percentileRank != null ? Math.max(1, Math.round(100 - analytics.percentileRank)) : null;
   const targetIncomePerBigha =
@@ -196,16 +212,18 @@ export default function ReportScreen() {
       ? Math.round((myIncomePerBighaFromSummary - targetIncomePerBigha) / targetIncomePerBigha * 100)
       : 0;
 
-  const expenseAnalyticsData = expenseAnalytics && (expenseAnalytics.myArea ?? 0) > 0 && expenseAnalytics.sampleSize > 0;
-  const myBy = expenseAnalyticsData ? (expenseAnalytics?.myPerBighaByCategory || {}) : {};
-  const avgBy = expenseAnalyticsData ? (expenseAnalytics?.avgPerBighaByCategory || {}) : {};
+  const hasMyExpenseAnalytics = expenseAnalytics && (expenseAnalytics.myArea ?? 0) > 0;
+  const hasCompareExpenseAnalytics = hasMyExpenseAnalytics && (expenseAnalytics?.sampleSize ?? 0) > 0;
+  const myBy = hasMyExpenseAnalytics ? (expenseAnalytics?.myPerBighaByCategory || expenseAnalytics?.myByCategory || {}) : {};
+  const avgBy = hasCompareExpenseAnalytics ? (expenseAnalytics?.avgPerBighaByCategory || expenseAnalytics?.avgByCategory || {}) : {};
   const myExpenseTotalFromApi = Object.values(myBy).reduce((s, v) => s + v, 0);
   const myExpenseTotal = landBigha > 0 ? displayExpense / landBigha : myExpenseTotalFromApi;
   const avgExpenseTotal = Object.values(avgBy).reduce((s, v) => s + v, 0);
   const expensePctVsAvg = avgExpenseTotal > 0 ? Math.round((myExpenseTotal - avgExpenseTotal) / avgExpenseTotal * 100) : 0;
   const expenseLowerIsBetter = myExpenseTotal <= avgExpenseTotal;
+  const isAllCrops = selectedCropName === "ALL";
 
-  const expenseHigherCategories = expenseAnalyticsData
+  const expenseHigherCategories = hasCompareExpenseAnalytics
     ? CROP_EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > (avgBy[cat] || 0) && (myBy[cat] || 0) > 0)
     : [];
 
@@ -312,8 +330,12 @@ export default function ReportScreen() {
             </View>
           </View>
 
-          {/* પાક માટે ખર્ચ વિભાજન — crop expense only (no Other, no tractor) */}
-          <ExpensePieChart byCategory={cropOnlyByCategory} centerTotal={cropOnlyExpenseTotal} title="પાક માટે ખર્ચ વિભાજન" />
+          {/* પાક માટે ખર્ચ વિભાજન — now respects crop filter via backend analytics */}
+          <ExpensePieChart
+            byCategory={cropOnlyByCategory}
+            centerTotal={cropOnlyExpenseTotal}
+            title="પાક માટે ખર્ચ વિભાજન"
+          />
 
           {/* Peer selection dropdown — choose average or specific farmer (shown below pie chart) */}
           {comparePeers.length > 0 && (
@@ -326,6 +348,23 @@ export default function ReportScreen() {
               >
                 <Text style={styles.peerDropdownButtonText} numberOfLines={1}>
                   {peerDisplayLabel}
+                </Text>
+                <Ionicons name="chevron-down" size={16} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Crop selection for comparison — same pattern as સરેરાશ ખેડૂત dropdown */}
+          {cropFilterOptions.length > 1 && (
+            <View style={styles.cropFilterRow}>
+              <Text style={styles.peerSelectLabel}>પાક પસંદ કરો:</Text>
+              <TouchableOpacity
+                style={styles.peerDropdownButton}
+                activeOpacity={0.8}
+                onPress={() => setCropPickerVisible(true)}
+              >
+                <Text style={styles.peerDropdownButtonText} numberOfLines={1}>
+                  {cropFilterOptions.find((c) => c.value === selectedCropName)?.label ?? "બધા પાકો"}
                 </Text>
                 <Ionicons name="chevron-down" size={16} color={C.textMuted} />
               </TouchableOpacity>
@@ -348,8 +387,8 @@ export default function ReportScreen() {
             </View>
           </View>
 
-          {/* પાક માટે ખર્ચ વિભાજન — crop average only, no Other / tractor */}
-          {(expenseAnalytics || (report && (report as any).summary)) && (
+          {/* પાક માટે ખર્ચ વિભાજન — detailed categories; uses analytics (per FY or per crop) */}
+          {(hasMyExpenseAnalytics || (report && (report as any).summary)) && (
             <View style={styles.expenseTypeCard}>
               <Text style={styles.expenseTypeTitle}>💸 પાક માટે ખર્ચ વિભાજન</Text>
               {expenseAnalytics && ((expenseAnalytics.myArea ?? 0) > 0 || expenseAnalytics.mySummary?.length) ? (
@@ -479,8 +518,8 @@ export default function ReportScreen() {
             </View>
           )}
 
-          {/* 2. Expense per bigha — common design (uses selected peer or average) */}
-          {expenseAnalyticsData && (
+          {/* 2. Expense per bigha — uses analytics; when crop selected, shows that crop only */}
+          {hasMyExpenseAnalytics && (
             <View style={styles.perBighaCard}>
               <Text style={styles.perBighaTitle}>💸 ખર્ચ પ્રતિ વીઘા</Text>
 
@@ -549,18 +588,19 @@ export default function ReportScreen() {
           )}
 
           {/* 3. Income per bigha — common design (uses selected peer or average) */}
-          {compare && (compare.myTotalArea > 0 || landBigha > 0) && (() => {
-            const myVal = myIncomePerBighaFromSummary;
-            const targetVal =
-              compare.mode === "peer" && compare.peerIncomePerBigha != null
-                ? compare.peerIncomePerBigha
-                : compare.avgIncomePerBigha ?? 0;
+          {compare && (() => {
+            const isCropMode = !isAllCrops;
+            const myVal = isCropMode ? (compare.myIncomePerBigha ?? 0) : myIncomePerBighaFromSummary;
+            const isPeerMode = compare.mode === "peer" && compare.peerUserId;
+            const targetVal = isPeerMode
+              ? (compare.peerIncomePerBigha ?? 0) // if peer has no such crop, show 0
+              : (compare.avgIncomePerBigha ?? 0);
             const maxV = Math.max(1, myVal, targetVal);
             const aboveTarget = myVal >= targetVal;
-            const isPeerMode = compare.mode === "peer" && compare.peerUserId;
             const targetLabel = isPeerMode
               ? `${compare.peerName ?? selectedPeer?.name ?? "પસંદ ખેડૂત"}`
               : "સરેરાશ ખેડૂત";
+            const pctVsTarget = targetVal > 0 ? Math.round((myVal - targetVal) / targetVal * 100) : 0;
 
             return (
               <View style={styles.perBighaCard}>
@@ -584,7 +624,7 @@ export default function ReportScreen() {
                   </View>
                 </View>
 
-                {compare.sampleSize > 0 && (
+                {compare.sampleSize > 0 && targetVal > 0 && (
                   <View
                     style={[
                       styles.perBighaPctBadge,
@@ -605,7 +645,7 @@ export default function ReportScreen() {
                       {isPeerMode && (compare.peerName || selectedPeer)
                         ? `${compare.peerName ?? selectedPeer?.name} કરતાં `
                         : "સરેરાશ કરતાં "}
-                      {Math.abs(incomePctVsAvg)}% {aboveTarget ? "વધારે" : "ઓછું"}
+                      {Math.abs(pctVsTarget)}% {aboveTarget ? "વધારે" : "ઓછું"}
                     </Text>
                   </View>
                 )}
@@ -832,6 +872,49 @@ export default function ReportScreen() {
               <TouchableOpacity
                 style={styles.peerModalClose}
                 onPress={() => setPeerPickerVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.peerModalCloseText}>બંધ કરો</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+
+      {/* Crop picker dropdown modal */}
+      {cropFilterOptions.length > 1 && (
+        <Modal
+          visible={cropPickerVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setCropPickerVisible(false)}
+        >
+          <Pressable style={styles.peerModalBackdrop} onPress={() => setCropPickerVisible(false)}>
+            <Pressable style={styles.peerModalCard}>
+              <Text style={styles.peerModalTitle}>પાક પસંદ કરો</Text>
+              <ScrollView style={styles.peerList}>
+                {cropFilterOptions.map((opt) => {
+                  const active = selectedCropName === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.peerListItem, active && styles.peerListItemActive]}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setSelectedCropName(opt.value);
+                        setCropPickerVisible(false);
+                      }}
+                    >
+                      <View style={styles.peerListTextWrap}>
+                        <Text style={styles.peerListName}>{opt.label}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              <TouchableOpacity
+                style={styles.peerModalClose}
+                onPress={() => setCropPickerVisible(false)}
                 activeOpacity={0.8}
               >
                 <Text style={styles.peerModalCloseText}>બંધ કરો</Text>
@@ -1192,6 +1275,27 @@ const styles = StyleSheet.create({
   rankingCompareLabel: { fontSize: 14, color: C.textMuted, marginBottom: 2 },
   rankingCompareValue: { fontSize: 16, fontWeight: "800", marginBottom: 8 },
   compareChartValue: { fontSize: 18, marginTop: 4 },
+  cropFilterRow: {
+    marginBottom: 14,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  noCropMatchCard: {
+    backgroundColor: "#FEF2F2",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  noCropMatchText: {
+    fontSize: 15,
+    color: C.textSecondary,
+    fontWeight: "700",
+    textAlign: "center",
+  },
   peerDropdownRow: {
     marginTop: 12,
     marginBottom: 14,

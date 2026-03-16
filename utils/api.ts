@@ -960,11 +960,13 @@ export interface ExpenseAnalyticsResponse {
 export const getExpenseAnalytics = async (
   financialYear?: string,
   peerUserId?: string,
+  cropName?: string,
 ): Promise<ExpenseAnalyticsResponse> => {
   const res = await API.get<ExpenseAnalyticsResponse>("/expenses/analytics", {
     params: {
       financialYear: financialYear || getCurrentFinancialYear(),
       peerUserId,
+      cropName,
     },
   });
   return res.data;
