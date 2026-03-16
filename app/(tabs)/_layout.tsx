@@ -1,21 +1,24 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TAB_ICON_SIZE = 26;
 const TAB_LABEL_FONT_SIZE = 13;
 
 export default function TabLayout() {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: "#2e7d32",
         tabBarStyle: {
-          minHeight: 66,
+          minHeight: 66 + insets.bottom, // 👈 dynamic
           paddingTop: 8,
-          paddingBottom: 8,
+          paddingBottom: insets.bottom + 8, // 👈 dynamic
         },
         tabBarLabelStyle: { fontSize: TAB_LABEL_FONT_SIZE, fontWeight: "700" },
         tabBarIconStyle: { marginBottom: -2 },

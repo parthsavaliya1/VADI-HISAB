@@ -35,6 +35,7 @@ import {
   View,
 } from "react-native";
 import { Dimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const C = {
   green700: "#2E7D32",
@@ -129,6 +130,7 @@ function SectionLabel({ text }: { text: string }) {
 }
 
 export default function EditCropScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { t, tParam } = useLanguage();
@@ -344,7 +346,7 @@ export default function EditCropScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : insets.bottom}
     >
       <View style={[styles.headerWrap, { backgroundColor: C.bg }]}>
         <ScreenHeader title={`✏️ ${t("editCrop", "title")}`} style={{ marginBottom: 0, backgroundColor: C.bg }} />
@@ -355,7 +357,10 @@ export default function EditCropScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 40 : 24 },
+          {
+            paddingBottom:
+              (keyboardHeight > 0 ? keyboardHeight + 40 : 24) + insets.bottom,
+          },
         ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

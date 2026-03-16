@@ -1050,11 +1050,11 @@ export default function Profile() {
                         <Text style={styles.contactSimpleTitle}>{t("profileTab", "contactUs")}</Text>
                         <View style={styles.contactRow}>
                             <Ionicons name="mail-outline" size={22} color="#0F766E" />
-                            <Text style={styles.contactDetail}>vadi.farmfresh@gmail.com</Text>
+                            <Text style={styles.contactDetail}>vadi.support@gmail.com</Text>
                         </View>
                         <View style={styles.contactRow}>
                             <Ionicons name="call-outline" size={22} color="#0F766E" />
-                            <Text style={styles.contactDetail}>966208938X</Text>
+                            <Text style={styles.contactDetail}>9662089386</Text>
                         </View>
                     </View>
 

@@ -23,6 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Dimensions } from "react-native";
 
 const C = {
@@ -115,6 +116,7 @@ function SelectPicker({
 }
 
 export default function AddBhagyaUpad() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string }>();
   const editId = Array.isArray(params.id) ? params.id[0] : params.id;
   const isEdit = !!editId;
@@ -236,7 +238,10 @@ export default function AddBhagyaUpad() {
         style={{ flex: 1, backgroundColor: C.bg }}
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 60 : 60 },
+          {
+            paddingBottom:
+              (keyboardHeight > 0 ? keyboardHeight + 90 : 90) + insets.bottom,
+          },
         ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

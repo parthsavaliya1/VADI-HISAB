@@ -140,7 +140,6 @@ export default function ReportScreen() {
       );
       setTractorExpenseReport(tractorExpenseSum);
       const excludeTractorInReport = !profile?.tractorAvailable;
-      setVadiScore(vadiRes ?? null);
       setYearlyReports(
         yearResults.map((r: { year: string; summary: any }) => {
           const totalIncome = r.summary?.totalIncome ?? 0;

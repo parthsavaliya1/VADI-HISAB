@@ -35,6 +35,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const C = {
   bg: "#FFF7ED",
@@ -77,6 +78,7 @@ function normalizePhone(phone: string) {
 }
 
 export default function AddTractorIncomeScreen() {
+  const insets = useSafeAreaInsets();
   const { id: editId } = useLocalSearchParams<{ id?: string }>();
   const isEdit = !!editId;
   const { refreshTransactions } = useRefresh();
@@ -215,14 +217,17 @@ export default function AddTractorIncomeScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : insets.bottom}
     >
     <ScrollView
       ref={scrollRef}
       style={styles.container}
       contentContainerStyle={[
         styles.content,
-        { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 80 },
+        {
+          paddingBottom:
+            (keyboardHeight > 0 ? keyboardHeight + 80 : 80) + insets.bottom,
+        },
       ]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"

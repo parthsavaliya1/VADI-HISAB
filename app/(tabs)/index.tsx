@@ -1249,7 +1249,6 @@ export default function Dashboard() {
           totalExpense: totalExpenseWithTractor,
           netProfit: allIncome - totalExpenseWithTractor,
         });
-        setBhagyaUpadTotal(bhagyaUpadTotal);
         setTractorIncomeTotal(excludeTractor ? 0 : tractorIncomeFromReport);
         setCrops(
           cropRes.data.map((c: Crop) => {

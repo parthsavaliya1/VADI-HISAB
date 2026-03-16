@@ -1,5 +1,6 @@
 import { AppTheme } from "@/constants/theme";
 import { TokenStore } from "@/utils/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useRef } from "react";
@@ -23,6 +24,8 @@ export default function Index() {
   const loaderOpacity = useRef(new Animated.Value(0)).current;
   const loaderWidth = useRef(new Animated.Value(0)).current;
   const leafFloat = useRef(new Animated.Value(0)).current;
+
+  
 
   useEffect(() => {
     Animated.sequence([

@@ -32,6 +32,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function formatINR(n: number): string {
   return Math.round(n).toLocaleString("en-IN");
@@ -81,6 +82,7 @@ const LABEL_TO_CATEGORY: Record<string, TractorExpenseCategory> = Object.fromEnt
 );
 
 export default function AddTractorExpenseScreen() {
+  const insets = useSafeAreaInsets();
   const { id: editId } = useLocalSearchParams<{ id?: string }>();
   const isEdit = !!editId;
   const { refreshTransactions } = useRefresh();
@@ -237,11 +239,14 @@ export default function AddTractorExpenseScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : insets.bottom}
     >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 80 + insets.bottom },
+        ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}

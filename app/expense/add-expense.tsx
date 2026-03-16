@@ -40,6 +40,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
 const BHAGMA_SHARING_KEY = "@vadi_bhagma_sharing";
@@ -357,6 +358,7 @@ const NumericInput = React.forwardRef<
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AddExpense() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     id?: string;
     cropId?: string;
@@ -1785,10 +1787,13 @@ export default function AddExpense() {
       </ScrollView>
 
       {/* ── Bottom bar (hidden for general expense) ── */}
-      {/* FIX 3: removed position:"absolute" — now in normal flow so
-          KeyboardAvoidingView pushes it up when the keyboard opens. */}
       {!isGeneralExpense && (
-        <View style={styles.bottomBar}>
+        <View
+          style={[
+            styles.bottomBar,
+            { paddingBottom: (Platform.OS === "ios" ? 24 : 16) + insets.bottom },
+          ]}
+        >
           <TouchableOpacity
             style={[styles.saveBtn, saving && { opacity: 0.65 }]}
             onPress={handleSave}
