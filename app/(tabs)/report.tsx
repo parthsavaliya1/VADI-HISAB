@@ -62,6 +62,7 @@ const CROP_NAME_GUJARATI: Record<string, string> = {
   Wheat: "ઘઉં",
   Bajra: "બાજરી",
   Maize: "મકાઈ",
+  Kalenji: "કલૌંજી",
 };
 function cropDisplayName(name: string): string {
   return CROP_NAME_GUJARATI[name] ?? name;
