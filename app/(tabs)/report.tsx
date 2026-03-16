@@ -110,6 +110,11 @@ export default function ReportScreen() {
 
   const loadReport = useCallback(async () => {
     try {
+      setLoading(true);
+      // Load main report first so user sees summary + crops quickly
+      
+
+      // Load analytics, compare, peers, VADI score and multi-year in background
       const years = getFinancialYearOptionsExtended();
       const peerUserId = selectedPeerId === "average" ? undefined : selectedPeerId;
       const [data, analyticsRes, compareRes, expAnalytics, peersRes, tractorExpRes, ...yearResults] = await Promise.all([
@@ -125,7 +130,6 @@ export default function ReportScreen() {
             .catch(() => ({ year: "", summary: null }))
         ),
       ]);
-      setReport(data);
       setAnalytics(analyticsRes ?? null);
       setCompare(compareRes ?? null);
       setExpenseAnalytics(expAnalytics ?? null);
@@ -136,6 +140,7 @@ export default function ReportScreen() {
       );
       setTractorExpenseReport(tractorExpenseSum);
       const excludeTractorInReport = !profile?.tractorAvailable;
+      setVadiScore(vadiRes ?? null);
       setYearlyReports(
         yearResults.map((r: { year: string; summary: any }) => {
           const totalIncome = r.summary?.totalIncome ?? 0;
@@ -164,12 +169,6 @@ export default function ReportScreen() {
   useEffect(() => {
     loadReport();
   }, [loadReport, transactionsRefreshKey]);
-
-  useEffect(() => {
-    getVadiScore()
-      .then((res) => setVadiScore(res))
-      .catch(() => setVadiScore(null));
-  }, [transactionsRefreshKey]);
 
   const years = getFinancialYearOptionsExtended();
   const summary = report?.summary ?? { totalIncome: 0, totalExpense: 0, netProfit: 0, totalCrops: 0, totalArea: 0, tractorIncome: 0 };

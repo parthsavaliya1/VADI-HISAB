@@ -1199,7 +1199,7 @@ export default function Dashboard() {
   const slideAnim = useRef(new Animated.Value(30)).current;
   const cropScrollRef = useRef<ScrollView>(null);
 
-  // ── Load all data via api.ts (filtered by selected financial year) ───────────
+  // ── Load data in two waves so UI appears fast: summary + crops first, then transactions ─
   const loadData = useCallback(
     async (isRefresh = false) => {
       if (isRefresh) setRefreshing(true);
@@ -1208,10 +1208,7 @@ export default function Dashboard() {
           prof,
           cropRes,
           yearlyReport,
-          expRes,
-          incRes,
-          notificationRes,
-          bhagyaExpRes,
+          
           tractorExpRes,
         ] = await Promise.all([
           getMyProfile(),
@@ -1224,13 +1221,7 @@ export default function Dashboard() {
           getExpenses(undefined, "Other", undefined, 1, 500, financialYear, "tractorExpense"),
         ]);
         setProfile(prof);
-        setUnreadNotificationCount(
-          notificationRes.pagination?.unreadCount ?? 0,
-        );
         const reportCrops = yearlyReport.crops ?? [];
-        const bhagyaUpadTotal = (bhagyaExpRes.data ?? [])
-          .filter(isDedicatedBhagyaUpadExpense)
-          .reduce((sum, expense) => sum + expenseAmount(expense as any), 0);
         const reportSummary = yearlyReport.summary ?? {
           totalIncome: 0,
           cropExpense: 0,
@@ -1279,6 +1270,22 @@ export default function Dashboard() {
             };
           }),
         );
+        setLoadingProfile(false);
+
+        // Wave 2: expenses, incomes, notifications, bhagya — update transactions when ready
+        const [expRes, incRes, notificationRes, bhagyaExpRes] = await Promise.all([
+          getExpenses(undefined, undefined, undefined, 1, 30, financialYear),
+          getIncomes(1, 30, undefined, undefined, undefined, financialYear),
+          getNotifications(1, 20),
+          getExpenses(undefined, "Labour", undefined, 1, 500, financialYear),
+        ]);
+        setUnreadNotificationCount(
+          notificationRes.pagination?.unreadCount ?? 0,
+        );
+        const bhagyaUpadTotal = (bhagyaExpRes.data ?? [])
+          .filter(isDedicatedBhagyaUpadExpense)
+          .reduce((sum, expense) => sum + expenseAmount(expense as any), 0);
+        setBhagyaUpadTotal(bhagyaUpadTotal);
         const expenses = Array.isArray(expRes?.data) ? expRes.data : [];
         let incomes = Array.isArray(incRes?.data) ? incRes.data : [];
         if (excludeTractor) {

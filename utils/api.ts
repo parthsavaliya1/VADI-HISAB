@@ -232,10 +232,23 @@ export const getMe = async (): Promise<CurrentUser> => {
   return res.data.user;
 };
 
-/** Logout — clears JWT from AsyncStorage */
+/** Logout — clears JWT from AsyncStorage and profile cache */
 export const logout = async (): Promise<void> => {
   await TokenStore.clear();
+  profileCache = { data: null, ts: 0 };
 };
+
+// ─── Profile cache (short TTL so dashboard/profile load fast on tab switch) ───
+const PROFILE_CACHE_TTL_MS = 90_000; // 90 seconds
+let profileCache: { data: FarmerProfile | null; ts: number } = { data: null, ts: 0 };
+function getCachedProfile(): FarmerProfile | null {
+  if (profileCache.data && Date.now() - profileCache.ts < PROFILE_CACHE_TTL_MS)
+    return profileCache.data;
+  return null;
+}
+function setCachedProfile(p: FarmerProfile) {
+  profileCache = { data: p, ts: Date.now() };
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📍 LOCATIONS (District / Taluka / Village — dynamic from API)
@@ -325,13 +338,18 @@ export const completeProfile = async (
   payload: FarmerProfilePayload,
 ): Promise<ProfileResponse> => {
   const res = await API.post<ProfileResponse>("/profile/complete", payload);
+  setCachedProfile(res.data.profile);
   return res.data;
 };
 
-/** GET /profile/me */
+/** GET /profile/me — uses short-lived cache so dashboard/profile load fast on tab switch */
 export const getMyProfile = async (): Promise<FarmerProfile> => {
+  const cached = getCachedProfile();
+  if (cached) return cached;
   const res = await API.get<{ profile: FarmerProfile }>("/profile/me");
-  return res.data.profile;
+  const profile = res.data.profile;
+  setCachedProfile(profile);
+  return profile;
 };
 
 /** PUT /profile/update */
@@ -339,6 +357,7 @@ export const updateProfile = async (
   payload: Partial<FarmerProfilePayload>,
 ): Promise<ProfileResponse> => {
   const res = await API.put<ProfileResponse>("/profile/update", payload);
+  setCachedProfile(res.data.profile);
   return res.data;
 };
 

@@ -5,6 +5,7 @@ import Toast from "react-native-toast-message";
 import {
   deleteExpense,
   getExpenses,
+  getCurrentFinancialYear,
   type Expense,
   type ExpenseCategory,
 } from "@/utils/api";
@@ -254,7 +255,15 @@ export default function ExpenseList() {
 
   const fetchExpenses = useCallback(async () => {
     try {
-      const res = await getExpenses(cropId);
+      const financialYear = getCurrentFinancialYear();
+      const res = await getExpenses(
+        cropId,
+        undefined,
+        undefined,
+        1,
+        100,
+        financialYear
+      );
       setExpenses(res.data ?? []);
     } catch (err: any) {
       Alert.alert("❌ ભૂલ", err?.message ?? "ખર્ચ લોડ થઈ શક્યા નહીં.");
