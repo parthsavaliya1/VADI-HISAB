@@ -65,7 +65,7 @@ export default function LivePriceTabScreen() {
       const msg = e?.response?.data?.message ?? e?.message ?? "ભાવ લોડ ન થઈ શક્યા";
       setError(msg);
       setPrices([]);
-      if (!isRefresh) Alert.alert("જીવંત ભાવ", msg);
+      if (!isRefresh) Alert.alert("બજાર ભાવ", msg);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -80,7 +80,7 @@ export default function LivePriceTabScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
       <View style={[styles.header, { paddingTop: HEADER_PADDING_TOP }]}>
-        <Text style={styles.title}>જીવંત ભાવ (APMC મંડી)</Text>
+        <Text style={styles.title}>બજાર ભાવ (APMC મંડી)</Text>
         <Text style={styles.subtitle}>સરકારી ડેટા — data.gov.in</Text>
       </View>
 

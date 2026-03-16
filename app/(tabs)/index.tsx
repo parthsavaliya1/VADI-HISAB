@@ -1488,9 +1488,15 @@ export default function Dashboard() {
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarText}>{avatarChar}</Text>
             </View>
-            <Text style={styles.stickyName}>
-              {farmerName || t("dashboard", "farmer")}
-            </Text>
+            <TouchableOpacity
+              onPress={() => router.push("/profile" as any)}
+              style={styles.stickyNameTouchable}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.stickyName}>
+                {farmerName || t("dashboard", "farmer")}
+              </Text>
+            </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.notifBtn} onPress={openNotifications}>
             <Ionicons
@@ -1517,6 +1523,13 @@ export default function Dashboard() {
           <View style={styles.decorCircle2} />
           <Animated.View style={{ opacity: headerOpacity }}>
             <View style={styles.headerTop}>
+              <TouchableOpacity
+                style={styles.profileHeaderBtn}
+                onPress={() => router.push("/profile" as any)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="person-circle-outline" size={36} color={C.green700} />
+              </TouchableOpacity>
               <View style={{ flex: 1 }}>
                 {loadingProfile ? (
                   <SkeletonLine
@@ -1525,9 +1538,15 @@ export default function Dashboard() {
                     style={{ marginVertical: 4 }}
                   />
                 ) : (
-                  <Text style={styles.farmerName} numberOfLines={1}>
-                    {farmerName || t("dashboard", "farmer")}
-                  </Text>
+                  <TouchableOpacity
+                    onPress={() => router.push("/profile" as any)}
+                    style={styles.farmerNameTouchable}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.farmerName} numberOfLines={1}>
+                      {farmerName || t("dashboard", "farmer")}
+                    </Text>
+                  </TouchableOpacity>
                 )}
               </View>
               <View style={styles.headerRight}>
@@ -2309,6 +2328,8 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   stickyLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+  profileHeaderBtn: { padding: 4 },
+  stickyNameTouchable: {},
   stickyName: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
 
   headerWrapper: { overflow: "hidden", zIndex: 50 },
@@ -2336,6 +2357,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
+  farmerNameTouchable: {},
   farmerName: {
     fontSize: 28,
     fontWeight: "800",
