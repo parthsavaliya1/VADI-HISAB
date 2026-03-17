@@ -502,6 +502,7 @@ export default function AddCrop() {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView | null>(null);
   const [subTypeOffsetY, setSubTypeOffsetY] = useState<number | null>(null);
+  const [shouldScrollToSubType, setShouldScrollToSubType] = useState(false);
   const { profile, setProfile } = useProfile();
   const keyboardHeight = useKeyboardHeight();
   const keyboardHeightRef = useRef(keyboardHeight);
@@ -589,6 +590,19 @@ export default function AddCrop() {
     const farm = profile.farms.find((f) => f.name === editCropFarmName);
     if (farm) setSelectedFarm(farm);
   }, [isEdit, editCropFarmName, profile?.farms]);
+
+  // When creating and only one farm exists, auto-select it on area step
+  useEffect(() => {
+    if (
+      isEdit ||
+      step !== 2 ||
+      selectedFarm ||
+      !profile?.farms ||
+      profile.farms.length !== 1
+    )
+      return;
+    setSelectedFarm(profile.farms[0]);
+  }, [isEdit, step, selectedFarm, profile?.farms]);
 
   // Fetch active crops for current year to compute used area per farm (exclude current crop when editing)
   const fetchUsedAreaByFarm = useCallback(async () => {
@@ -817,6 +831,17 @@ export default function AddCrop() {
     }
   };
 
+  // When subtype block lays out and scroll is pending, auto-scroll there
+  useEffect(() => {
+    if (!shouldScrollToSubType || subTypeOffsetY == null || !scrollRef.current)
+      return;
+    scrollRef.current.scrollTo({
+      y: Math.max(subTypeOffsetY - 40, 0),
+      animated: true,
+    });
+    setShouldScrollToSubType(false);
+  }, [shouldScrollToSubType, subTypeOffsetY]);
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -913,10 +938,7 @@ export default function AddCrop() {
                   ))}
                 </View>
 
-                {/* Season selector — icon left, label right; selected = zoom + darker */}
-                <Text style={[styles.fieldLabel, { marginTop: 20 }]}>
-                  🌦️ સિઝન
-                </Text>
+                
                 <View style={styles.seasonGrid}>
                   {SEASONS.map((s) => {
                     const active = form.season === s.value;
@@ -1017,17 +1039,11 @@ export default function AddCrop() {
                         subType: "",
                         customSubType: "",
                       }));
-                      if (subTypeOffsetY != null && scrollRef.current) {
-                        scrollRef.current.scrollTo({
-                          y: Math.max(subTypeOffsetY - 40, 0),
-                          animated: true,
-                        });
-                      }
+                      setShouldScrollToSubType(true);
                     }}
                   />
                 ))}
               </View>
-              <Text style={styles.orDivider}>— અથવા, બીજો પાક —</Text>
               <View
                 style={[
                   styles.textBox,
@@ -1060,9 +1076,6 @@ export default function AddCrop() {
               {/* Sub type on same step when crop selected */}
               {(form.cropValue || form.customCrop.trim()) && (
                 <>
-                  <Text style={[styles.orDivider, { marginTop: 20 }]}>
-                    — બીજ / જાત —
-                  </Text>
                   <Text style={styles.stepDesc}>
                     {finalCropEmoji} {finalCropLabel} નો જાત / બીજ પ્રકાર પસંદ
                     કરો અથવા ટાઈપ કરો
@@ -1094,7 +1107,6 @@ export default function AddCrop() {
                         ))}
                       </View>
                     )}
-                    <Text style={styles.orDivider}>— કસ્ટમ પ્રકાર —</Text>
                     <View
                       style={[
                         styles.textBox,
@@ -1137,9 +1149,7 @@ export default function AddCrop() {
           {step === 2 && (
             <View>
               <Text style={styles.stepTitle}>વાડી અને વિસ્તાર</Text>
-              <Text style={styles.stepDesc}>
-                વાડી પસંદ કરો અને વીઘામાં વિસ્તાર દાખલ કરો
-              </Text>
+
 
               {/* Crop summary card — graphical */}
               <View style={styles.cropSummaryCard}>
@@ -1158,7 +1168,9 @@ export default function AddCrop() {
 
               {profile?.farms && profile.farms.length > 0 && (
                 <>
-                  <Text style={styles.myFarmsLabel}>વાડી પસંદ કરો *</Text>
+              
+                  <Text style={styles.myFarmsLabel}>વાડી પસંદ કરો અને વીઘામાં વિસ્તાર દાખલ કરો
+                  *</Text>
                   <View style={styles.farmChipsRow}>
                     {profile.farms.map((farm, idx) => {
                       const used = usedAreaByFarm[farm.name] ?? 0;
@@ -1234,7 +1246,6 @@ export default function AddCrop() {
                     </Text>
                   )}
               </View>
-              <Text style={styles.orDivider}>— ઝડપી પસંદ —</Text>
               <View style={styles.presetRow}>
                 {["1", "2", "5", "10", "15", "25"].map((n) => {
                   const num = Number(n);
@@ -1611,7 +1622,7 @@ const styles = StyleSheet.create({
   },
 
   // Year row
-  yearRow: { flexDirection: "row", gap: 10 },
+  yearRow: { flexDirection: "row", gap: 10,marginBottom: 20 },
   yearChip: {
     flex: 1,
     flexDirection: "row",
@@ -1986,6 +1997,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: C.textSecondary,
     marginBottom: 12,
+    textAlign: "left",
   },
   farmChipsRow: {
     flexDirection: "row",
@@ -2085,6 +2097,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 12,
     marginBottom: 8,
+    marginTop: 12,
   },
   presetChip: {
     paddingHorizontal: 18,
