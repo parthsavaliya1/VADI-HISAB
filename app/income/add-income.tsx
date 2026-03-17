@@ -37,12 +37,12 @@ function financialYearToStartDate(fy: string): Date {
   return new Date(y, 5, 1); // month 5 = June
 }
 
-/** Year options: previous, current, next e.g. ["2024-25", "2025-26", "2026-27"] */
+/** Year options: previous + current only e.g. ["2024-25", "2025-26"] */
 function getYearOptions(): string[] {
   const current = getCurrentFinancialYear();
   const [startY] = current.split("-").map(Number);
   const prev = `${startY - 1}-${String(startY % 100).padStart(2, "0")}`;
-  return [prev, ...getFinancialYearOptions()];
+  return [prev, current];
 }
 import Toast from "react-native-toast-message";
 import {
@@ -846,6 +846,13 @@ export default function AddIncomeScreen() {
     };
 
     const raw = { ...(subData as unknown as Record<string, string>) };
+    // Trim extra spaces from all string fields before parsing/saving
+    Object.keys(raw).forEach((k) => {
+      const v = raw[k];
+      if (typeof v === "string") {
+        raw[k] = v.trim();
+      }
+    });
     const parsed: Record<string, string | number> = { ...raw };
     (numericKeys[fieldKey] ?? []).forEach((f) => {
       if (parsed[f] !== undefined) parsed[f] = parseFloat(raw[f]) || 0;
