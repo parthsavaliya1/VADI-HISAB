@@ -36,6 +36,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const C = {
@@ -214,25 +215,23 @@ export default function AddTractorIncomeScreen() {
   };
 
   const keyboardHeight = useKeyboardHeight();
-  const scrollRef = useRef<ScrollView>(null);
-  const formSectionYRef = useRef(0);
-  const scrollToForm = useCallback(() => {
-    // When keyboard is open, use larger offset so lower fields stay visible above keyboard
-    const offset = keyboardHeight > 0 ? 420 : 100;
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({
-        y: Math.max(0, formSectionYRef.current - offset),
-        animated: true,
-      });
-    }, 280);
-  }, [keyboardHeight]);
+  
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: C.bg }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : insets.bottom}
-    >
+<KeyboardAwareScrollView
+  style={{ flex: 1, backgroundColor: C.bg }}
+  contentContainerStyle={{
+    padding: 16,
+    paddingBottom: 50 + insets.bottom,
+    }}  
+  enableOnAndroid={true}
+  extraScrollHeight={10}
+  extraHeight={80}
+  
+    keyboardShouldPersistTaps="handled"
+  showsVerticalScrollIndicator={false}
+  enableResetScrollToCoords={false}
+>
       <LinearGradient
         colors={["#FFF1E6", "#FFF7ED", "#FFF7ED"]}
         style={[styles.header, { paddingTop: HEADER_PADDING_TOP }]}
@@ -275,20 +274,7 @@ export default function AddTractorIncomeScreen() {
         )}
       </LinearGradient>
 
-      <ScrollView
-        ref={scrollRef}
-        style={styles.container}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingBottom:
-              (keyboardHeight > 0 ? keyboardHeight + 80 : 80) + insets.bottom,
-          },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        showsVerticalScrollIndicator={false}
-      >
+
       {loadingEdit ? (
         <View style={{ padding: 40, alignItems: "center" }}>
           <ActivityIndicator size="large" color={C.orange700} />
@@ -315,7 +301,7 @@ export default function AddTractorIncomeScreen() {
         </View>
       </View>
 
-      <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
+      <View style={styles.card} >
         <Text style={styles.label}>ખેડૂત / ગ્રાહકનું નામ</Text>
         <TouchableOpacity style={styles.contactBtn} onPress={pickContact}>
           <Ionicons name="people-outline" size={24} color={C.orange700} />
@@ -327,7 +313,6 @@ export default function AddTractorIncomeScreen() {
           onChangeText={setFarmerName}
           placeholder="નામ લખો અથવા નીચે પસંદ કરો"
           placeholderTextColor={C.textMuted}
-          onFocus={scrollToForm}
         />
         <TextInput
           style={[styles.input, { marginTop: 12 }]}
@@ -336,7 +321,6 @@ export default function AddTractorIncomeScreen() {
           placeholder="મોબાઇલ નંબર લખો"
           placeholderTextColor={C.textMuted}
           keyboardType="phone-pad"
-          onFocus={scrollToForm}
         />
         
       </View>
@@ -350,7 +334,6 @@ export default function AddTractorIncomeScreen() {
           placeholder="0"
           placeholderTextColor={C.textMuted}
           keyboardType="decimal-pad"
-          onFocus={scrollToForm}
         />
       </View>
 
@@ -363,7 +346,6 @@ export default function AddTractorIncomeScreen() {
           placeholder="0"
           placeholderTextColor={C.textMuted}
           keyboardType="decimal-pad"
-          onFocus={scrollToForm}
         />
       </View>
 
@@ -409,8 +391,7 @@ export default function AddTractorIncomeScreen() {
       </TouchableOpacity>
         </>
       )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
