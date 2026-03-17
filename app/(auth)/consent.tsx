@@ -115,13 +115,37 @@ export default function Consent() {
                 {/* Hero (simple, minimal) */}
                 <Animated.View style={{ opacity: fadeIn, transform: [{ translateY: slideUp }], alignItems: "center", marginBottom: 20 }}>
                     <Text style={styles.heading}>{t.heading}</Text>
-                    <Text style={styles.question}>{t.question}</Text>
                 </Animated.View>
 
                 {/* Card – only short explainer + Yes/No */}
                 <Animated.View style={[styles.card, { opacity: cardFade, transform: [{ translateY: cardSlide }] }]}>
-                    <Text style={styles.whyLabel}>{t.whatIs}</Text>
-                    <Text style={styles.featureDesc}>{t.f3desc}</Text>
+                <Text style={styles.whyLabel}>{t.whatIs}</Text>
+
+{/* Feature list with graphics */}
+<View style={{ marginBottom: 12 }}>
+    
+    <View style={styles.featureRow}>
+        <Text style={styles.featureIcon}>📊</Text>
+        <Text style={styles.featureText}>
+            તમે અન્ય ખેડૂતો સાથે તમારી ખેતી અને આવકની સરખામણી કરી શકશો
+        </Text>
+    </View>
+
+    <View style={styles.featureRow}>
+        <Text style={styles.featureIcon}>🌾</Text>
+        <Text style={styles.featureText}>
+            વધુ સારું નિર્ણય લઈ શકશો
+        </Text>
+    </View>
+
+    <View style={styles.featureRow}>
+        <Text style={styles.featureIcon}>🔒</Text>
+        <Text style={styles.featureText}>
+            તમારું ડેટા સંપૂર્ણ સુરક્ષિત રહેશે
+        </Text>
+    </View>
+
+</View>
 
                     {/* Yes / No */}
                     <View style={styles.choiceRow}>
@@ -164,7 +188,7 @@ export default function Consent() {
 
                     {selected !== null && (
                         <Animated.Text style={[styles.hintText, { color: selected ? "#2E7D32" : "#D32F2F" }]}>
-                            {selected ? t.yesHint : t.noHint}
+                            {selected ? "" : t.noHint}
                         </Animated.Text>
                     )}
 
@@ -215,7 +239,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#E0E0E0",
     },
-    whyLabel: { fontSize: 12, fontWeight: "700", color: "#9E9E9E", letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 },
+    whyLabel: { fontSize: 20, fontWeight: "700", color: "#000000", letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 },
     featureDesc: { fontSize: 13, color: "#4B5563", marginBottom: 14, lineHeight: 19 },
     choiceRow: { flexDirection: "row", gap: 12 },
     choiceBtn: { borderWidth: 2, borderColor: "#E0E0E0", borderRadius: 16, paddingVertical: 16, alignItems: "center", backgroundColor: "#FAFAFA", position: "relative" },
@@ -226,7 +250,7 @@ const styles = StyleSheet.create({
     choiceBtnTextSelected: { color: "#2E7D32" },
     choiceBtnTextSelectedNo: { color: "#D32F2F" },
     choiceCheck: { position: "absolute", top: 8, right: 8, width: 18, height: 18, borderRadius: 9, backgroundColor: "#2E7D32", justifyContent: "center", alignItems: "center" },
-    hintText: { fontSize: 12, textAlign: "center", marginTop: 10, fontWeight: "500" },
+    hintText: { fontSize: 12, textAlign: "center", marginTop: 10, fontWeight: "700" },
     proceedBtn: { borderRadius: 16, overflow: "hidden" },
     proceedBtnDisabled: {},
     proceedGradient: { paddingVertical: 17, alignItems: "center" },
@@ -237,4 +261,22 @@ const styles = StyleSheet.create({
     stepDotActive: { width: 24, backgroundColor: "#2E7D32" },
     stepDotDone: { width: 10, backgroundColor: "#4CAF50" },
     stepDotPending: { width: 10, backgroundColor: "#C8E6C9" },
+    featureRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 10,
+        gap: 10,
+    },
+    
+    featureIcon: {
+        fontSize: 18,
+    },
+    
+    featureText: {
+        fontSize: 13,
+        color: "#000000",
+        fontWeight: "600",
+        flex: 1,
+        lineHeight: 18,
+    },
 });

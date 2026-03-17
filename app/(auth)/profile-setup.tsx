@@ -30,6 +30,7 @@ import {
 import { useLocations } from "@/hooks/useLocations";
 import translations from "@/translations.json";
 import { TRACTOR_SERVICES as API_TRACTOR_SERVICES, type District, type LabourType, type TractorService, type WaterSource, type FarmerProfile, completeProfile, getMe, getMyProfile, updateProfile } from "@/utils/api";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const LANG = "gu" as const;
 const t = translations[LANG].profile;
@@ -55,6 +56,12 @@ const C = {
 
 const WATER_SOURCES = ["Rain", "Borewell", "Canal"];
 const TRACTOR_SERVICES = API_TRACTOR_SERVICES;
+
+const WATER_ICONS: Record<string, string> = {
+    Rain: "weather-rainy",
+    Borewell: "water-well",   // 👈 THIS is for કુવો (well)
+    Canal: "waves",
+  };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -263,9 +270,19 @@ const MultiChipSelector = ({
                         style={[largeChips ? styles.chipLarge : styles.chip, isSelected && (largeChips ? styles.chipLargeSelected : styles.chipSelected)]}
                         android_ripple={{ color: "#C8E6C9", borderless: false }}
                     >
-                        <Text style={[largeChips ? styles.chipTextLarge : styles.chipText, isSelected && styles.chipTextSelected]}>
-                            {labels[opt] ?? opt}
-                        </Text>
+<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+    <MaterialCommunityIcons
+        name={WATER_ICONS[opt] as any}
+        size={18}
+        color={isSelected ? C.green900 : C.textMuted}
+    />
+    <Text style={[
+        largeChips ? styles.chipTextLarge : styles.chipText,
+        isSelected && styles.chipTextSelected
+    ]}>
+        {labels[opt] ?? opt}
+    </Text>
+</View>
                     </Pressable>
                 );
             })}
