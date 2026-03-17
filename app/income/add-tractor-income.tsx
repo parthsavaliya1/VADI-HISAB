@@ -20,6 +20,7 @@ import DateTimePicker, {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Contacts from "expo-contacts";
+import * as Linking from "expo-linking";
 import Toast from "react-native-toast-message";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -54,13 +55,13 @@ const C = {
 const TRACTOR_ASSET_OPTIONS: { value: RentalAssetType; label: string }[] = [
   { value: "Tractor", label: "ટ્રેક્ટર" },
   { value: "Rotavator", label: "રોટાવેટર" },
-  { value: "RAP", label: "રૅપ" },
-  { value: "Samar", label: "સમાર" },
-  { value: "Sah Nakhya", label: "સહ નાખ્યા" },
+  { value: "RAP", label: "રાપ" },
+  { value: "Samar", label: "હમાર" },
+  { value: "Sah Nakhya", label: "સાહ નાખ્યા" },
   { value: "Vavetar", label: "વાવેતર" },
   { value: "Kyara Bandhya", label: "ક્યારા બાંધ્યા" },
   { value: "Thresher", label: "થ્રેશર" },
-  { value: "Bagu", label: "બાગુ" },
+  { value: "Bagu", label: "બગુ" },
   { value: "Fukani", label: "ફૂકણી" },
   { value: "Kheti Kari", label: "ખેતી કરી" },
   { value: "Other Equipment", label: "અન્ય ઉપકરણ" },
@@ -130,14 +131,28 @@ export default function AddTractorIncomeScreen() {
   const pickContact = async () => {
     try {
       const { status } = await Contacts.requestPermissionsAsync();
+
       if (status !== "granted") {
         Alert.alert(
-          "પરવાનગી જરૂરી",
-          "કોન્ટેક્ટ પસંદ કરવા માટે પરવાનગી આપો.",
-          [{ text: "ઠીક" }]
+          "કોન્ટેક્ટ પરવાનગી",
+          "મોબાઇલ કોન્ટેક્ટમાંથી નામ અને નંબર સીધા લેવું હોય તો પરવાનગી આપવી પડશે. નહિ તો ઉપરથી નામ અને મોબાઇલ નંબર હાથથી લખો.",
+          [
+            {
+              text: "સેટિંગ્સ ખોલો",
+              onPress: () => {
+                // Open app settings so user can change contact permission
+                Linking.openSettings();
+              },
+            },
+            {
+              text: "હાથથી લખીશ",
+              style: "cancel",
+            },
+          ]
         );
         return;
       }
+
       const contact = await Contacts.presentContactPickerAsync();
       if (!contact) return;
       const name = contact.name ?? "";
@@ -198,7 +213,6 @@ export default function AddTractorIncomeScreen() {
     if (d) setDate(d);
   };
 
-  const paddingTop = HEADER_PADDING_TOP;
   const keyboardHeight = useKeyboardHeight();
   const scrollRef = useRef<ScrollView>(null);
   const formSectionYRef = useRef(0);
@@ -215,44 +229,38 @@ export default function AddTractorIncomeScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: C.bg }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : insets.bottom}
     >
-    <ScrollView
-      ref={scrollRef}
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingBottom:
-            (keyboardHeight > 0 ? keyboardHeight + 80 : 80) + insets.bottom,
-        },
-      ]}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-      showsVerticalScrollIndicator={false}
-    >
       <LinearGradient
         colors={["#FFF1E6", "#FFF7ED", "#FFF7ED"]}
-        style={[styles.header, { paddingTop }]}
+        style={[styles.header, { paddingTop: HEADER_PADDING_TOP }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerRow}>
-          <AppBackButton onPress={() => router.back()} iconColor={C.orange700} backgroundColor={C.surface} borderColor={C.orange200} />
+          <AppBackButton
+            onPress={() => router.back()}
+            iconColor={C.orange700}
+            backgroundColor={C.surface}
+            borderColor={C.orange200}
+          />
           <View style={styles.headerCenter}>
-            <View style={styles.headerTractorWrap}>
-              <MaterialCommunityIcons name="tractor-variant" size={40} color={C.orange700} />
-            </View>
             <Text style={styles.headerTitle}>
-              {isEdit ? "આવક સુધારો" : "ટ્રેક્ટર ભાડું / આવક ઉમેરો"}
+              {isEdit ? "ભાડું સુધારો" : "ભાડું ઉમેરો"}
             </Text>
           </View>
-          <TouchableOpacity style={styles.headerDateCard} onPress={() => setShowDatePicker(true)}>
+          <TouchableOpacity
+            style={styles.headerDateCard}
+            onPress={() => setShowDatePicker(true)}
+          >
             <Ionicons name="calendar-outline" size={20} color={C.orange700} />
             <Text style={styles.headerDateText}>
-              {date.toLocaleDateString("gu-IN", { day: "2-digit", month: "short" })}
+              {date.toLocaleDateString("gu-IN", {
+                day: "2-digit",
+                month: "short",
+              })}
             </Text>
           </TouchableOpacity>
         </View>
@@ -267,6 +275,20 @@ export default function AddTractorIncomeScreen() {
         )}
       </LinearGradient>
 
+      <ScrollView
+        ref={scrollRef}
+        style={styles.container}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingBottom:
+              (keyboardHeight > 0 ? keyboardHeight + 80 : 80) + insets.bottom,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+      >
       {loadingEdit ? (
         <View style={{ padding: 40, alignItems: "center" }}>
           <ActivityIndicator size="large" color={C.orange700} />
@@ -277,7 +299,7 @@ export default function AddTractorIncomeScreen() {
       ) : (
         <>
       <View style={styles.card}>
-        <Text style={styles.label}>પ્રકાર</Text>
+        <Text style={styles.label}>કરેલું કામ</Text>
         <View style={styles.chipRow}>
           {TRACTOR_ASSET_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -291,11 +313,14 @@ export default function AddTractorIncomeScreen() {
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={styles.typeNote}>ઉદાહરણ: રોટાવેટર, રૅપ, સમાર, સહ નાખ્યા, વાવેતર, ક્યારા બાંધ્યા, થ્રેશર, બાગુ, ફૂકણી, ખેતી કરી, અન્ય ઉપકરણ</Text>
       </View>
 
       <View style={styles.card} onLayout={(e) => { formSectionYRef.current = e.nativeEvent.layout.y; }}>
         <Text style={styles.label}>ખેડૂત / ગ્રાહકનું નામ</Text>
+        <TouchableOpacity style={styles.contactBtn} onPress={pickContact}>
+          <Ionicons name="people-outline" size={24} color={C.orange700} />
+          <Text style={styles.contactBtnText}>મોબાઇલ કોન્ટેક્ટમાંથી પસંદ કરો</Text>
+        </TouchableOpacity>
         <TextInput
           style={styles.input}
           value={farmerName}
@@ -304,13 +329,16 @@ export default function AddTractorIncomeScreen() {
           placeholderTextColor={C.textMuted}
           onFocus={scrollToForm}
         />
-        <TouchableOpacity style={styles.contactBtn} onPress={pickContact}>
-          <Ionicons name="people-outline" size={24} color={C.orange700} />
-          <Text style={styles.contactBtnText}>મોબાઇલ કોન્ટેક્ટમાંથી પસંદ કરો</Text>
-        </TouchableOpacity>
-        {farmerPhone ? (
-          <Text style={styles.phoneText}>📱 {farmerPhone}</Text>
-        ) : null}
+        <TextInput
+          style={[styles.input, { marginTop: 12 }]}
+          value={farmerPhone}
+          onChangeText={(text) => setFarmerPhone(normalizePhone(text))}
+          placeholder="મોબાઇલ નંબર લખો"
+          placeholderTextColor={C.textMuted}
+          keyboardType="phone-pad"
+          onFocus={scrollToForm}
+        />
+        
       </View>
 
       <View style={styles.card}>
@@ -347,7 +375,7 @@ export default function AddTractorIncomeScreen() {
       )}
 
       <View style={styles.card}>
-        <Text style={styles.label}>પૈસા ચૂકવાણી</Text>
+        <Text style={styles.label}>પૈસા આપ્યા કે બાકી?</Text>
         <View style={styles.statusRow}>
           {PAYMENT_STATUS_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -381,8 +409,7 @@ export default function AddTractorIncomeScreen() {
       </TouchableOpacity>
         </>
       )}
-
-    </ScrollView>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -405,17 +432,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
     justifyContent: "center",
-  },
-  headerTractorWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: C.orange100,
-    borderWidth: 2,
-    borderColor: C.orange700,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
   },
   backBtn: {
     width: 36,
@@ -478,7 +494,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginTop: 12,
+    marginTop: 2,
+    marginBottom: 12,
     padding: 14,
     borderRadius: 12,
     backgroundColor: C.orange50,

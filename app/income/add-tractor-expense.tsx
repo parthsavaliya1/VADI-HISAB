@@ -17,6 +17,11 @@ import {
   type Expense,
 } from "@/utils/api";
 import { getCurrentFinancialYear } from "@/utils/api";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -86,6 +91,8 @@ export default function AddTractorExpenseScreen() {
   const { id: editId } = useLocalSearchParams<{ id?: string }>();
   const isEdit = !!editId;
   const { refreshTransactions } = useRefresh();
+  const [date, setDate] = useState(() => new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState<TractorExpenseCategory | "">("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -101,7 +108,12 @@ export default function AddTractorExpenseScreen() {
     (async () => {
       try {
         const ex = await getExpenseById(editId);
-        if (ex.category !== "Other" || ex.expenseSource !== "tractorExpense") return;
+        if (ex.category !== "Other" || ex.expenseSource !== "tractorExpense")
+          return;
+        // preload date from existing expense
+        if (ex.date) {
+          setDate(new Date(ex.date));
+        }
         const desc = ex.other?.description ?? ex.notes ?? "";
         const cat = LABEL_TO_CATEGORY[desc];
         if (cat) {
@@ -145,11 +157,16 @@ export default function AddTractorExpenseScreen() {
     fetchTractorExpenses();
   }, [fetchTractorExpenses]);
 
+  const handleDateChange = (_e: DateTimePickerEvent, d?: Date) => {
+    setShowDatePicker(false);
+    if (d) setDate(d);
+  };
+
   const validate = (): string | null => {
     if (!category) return "ખર્ચનો પ્રકાર પસંદ કરો.";
     if (isOther && !note.trim()) return "અન્ય ખર્ચ માટે નોંધ લખો.";
     const num = parseFloat(amount);
-    if (!amount.trim() || isNaN(num) || num <= 0) return "રકમ દાખલ કરો.";
+    if (!amount.trim() || isNaN(num) || num <= 0) return "કુલ ખર્ચ દાખલ કરો.";
     return null;
   };
 
@@ -162,14 +179,14 @@ export default function AddTractorExpenseScreen() {
       category: "Other" as const,
       expenseSource: "tractorExpense" as const,
       cropId: null,
-      date: new Date().toISOString().slice(0, 10),
+      date: date.toISOString().slice(0, 10),
       notes: isOther ? note.trim() : undefined,
       other: {
         totalAmount: Math.round(Number(amount) || 0),
         description: categoryLabel,
       },
     };
-  }, [category, note, amount, isOther]);
+  }, [category, note, amount, isOther, date]);
 
   const handleSave = async () => {
     const err = validate();
@@ -237,10 +254,52 @@ export default function AddTractorExpenseScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: C.bg }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : insets.bottom}
     >
+      <LinearGradient
+        colors={["#FFF1E6", "#FFF7ED", "#FFF7ED"]}
+        style={[styles.header, { paddingTop: HEADER_PADDING_TOP }]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.headerRow}>
+          <AppBackButton
+            onPress={() => router.back()}
+            iconColor={C.orange700}
+            backgroundColor={C.surface}
+            borderColor={C.orange200}
+          />
+          <View style={styles.headerCenter}>
+            <Text style={styles.title}>
+              {isEdit ? "ટ્રેક્ટર ખર્ચ સુધારો" : "ટ્રેક્ટર ખર્ચ ઉમેરો"}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.headerDateCard}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Ionicons name="calendar-outline" size={20} color={C.orange700} />
+            <Text style={styles.headerDateText}>
+              {date.toLocaleDateString("gu-IN", {
+                day: "2-digit",
+                month: "short",
+              })}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            maximumDate={new Date()}
+            onChange={handleDateChange}
+          />
+        )}
+      </LinearGradient>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
@@ -251,15 +310,8 @@ export default function AddTractorExpenseScreen() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.header, { paddingTop: HEADER_PADDING_TOP }]}>
-          <AppBackButton onPress={() => router.back()} />
-          <Text style={styles.title}>{isEdit ? "ટ્રેક્ટર ખર્ચ સુધારો" : "ટ્રેક્ટર ખર્ચ"}</Text>
-          <Text style={styles.subtitle}>
-            {isEdit ? "ફેરફાર કરી સાચવો" : "ખર્ચનો પ્રકાર અને રકમ દાખલ કરો"}
-          </Text>
-        </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { marginTop: 16 }]}>
           <Text style={styles.label}>ખર્ચનો પ્રકાર</Text>
           <View style={styles.chipRow}>
             {TRACTOR_EXPENSE_CATEGORIES.map((opt) => {
@@ -398,18 +450,43 @@ const styles = StyleSheet.create({
     color: C.orange700,
   },
   header: {
-    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerCenter: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
+    fontWeight: "900",
+    color: C.textPrimary,
+    textAlign: "center",
+  },
+  headerDateCard: {
+    minWidth: 78,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.orange200,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  headerDateText: {
+    fontSize: 13,
     fontWeight: "800",
     color: C.textPrimary,
-    marginTop: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: C.textMuted,
-    marginTop: 4,
   },
   section: {
     marginBottom: 20,
