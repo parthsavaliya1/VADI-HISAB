@@ -11,6 +11,7 @@ import {
   getFinancialYearOptionsExtended,
   getIncomes,
   getCrops,
+  getCurrentFinancialYear,
   type Crop,
   type Expense,
   type ExpenseCategory,
@@ -399,10 +400,21 @@ export default function AllTransactionsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [yearWise, setYearWise] = useState<{ year: string; txns: TxnItem[] }[]>([]);
   const [activeFilter, setActiveFilter] = useState<TxnFilter>("crop");
+  const [yearFilter, setYearFilter] =
+    useState<"previous" | "current" | "next">("current");
+
+  // Always show three year filters: previous + current + next financial year
+  const currentYear = getCurrentFinancialYear();
+  const [startY] = currentYear.split("-").map(Number);
+  const previousYear = `${startY - 1}-${String(startY % 100).padStart(2, "0")}`;
+  const nextYear = `${startY + 1}-${String((startY + 2) % 100)
+    .padStart(2, "0")
+    .toString()}`;
+  const yearsToLoad = [previousYear, currentYear, nextYear];
 
   const fetchAll = useCallback(async () => {
     try {
-      const years = getFinancialYearOptionsExtended();
+      const years = yearsToLoad;
       const [cropRes, ...yearResults] = await Promise.all([
         getCrops(1, 500, undefined, undefined, undefined),
         ...years.flatMap((fy) => [
@@ -429,7 +441,7 @@ export default function AllTransactionsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [yearsToLoad]);
 
   useEffect(() => {
     fetchAll();
@@ -446,12 +458,19 @@ export default function AllTransactionsScreen() {
   ];
 
   const filteredYearWise = yearWise
+    .filter(({ year }) => {
+      if (yearFilter === "current" && currentYear) return year === currentYear;
+      if (yearFilter === "previous" && previousYear) return year === previousYear;
+      if (yearFilter === "next" && nextYear) return year === nextYear;
+      return true;
+    })
     .map(({ year, txns }) => ({
       year,
       txns: txns.filter((t) => {
         if (activeFilter === "crop") return t.bucket === "crop";
         if (activeFilter === "bhagya") return t.bucket === "bhagya";
-        if (activeFilter === "general") return t.bucket === "general" && t.type === "expense";
+        if (activeFilter === "general")
+          return t.bucket === "general" && t.type === "expense";
         if (activeFilter === "tractor") return t.bucket === "tractor";
         return true;
       }),
@@ -505,6 +524,66 @@ export default function AllTransactionsScreen() {
               );
             })}
           </ScrollView>
+          <View style={styles.yearFilterRow}>
+            {previousYear && (
+              <TouchableOpacity
+                style={[
+                  styles.yearFilterChip,
+                  yearFilter === "previous" && styles.yearFilterChipActive,
+                ]}
+                onPress={() => setYearFilter("previous")}
+                activeOpacity={0.85}
+              >
+                <Text
+                  style={[
+                    styles.yearFilterChipText,
+                    yearFilter === "previous" &&
+                      styles.yearFilterChipTextActive,
+                  ]}
+                >
+                  {previousYear}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {currentYear && (
+              <TouchableOpacity
+                style={[
+                  styles.yearFilterChip,
+                  yearFilter === "current" && styles.yearFilterChipActive,
+                ]}
+                onPress={() => setYearFilter("current")}
+                activeOpacity={0.85}
+              >
+                <Text
+                  style={[
+                    styles.yearFilterChipText,
+                    yearFilter === "current" && styles.yearFilterChipTextActive,
+                  ]}
+                >
+                  {currentYear}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {nextYear && (
+              <TouchableOpacity
+                style={[
+                  styles.yearFilterChip,
+                  yearFilter === "next" && styles.yearFilterChipActive,
+                ]}
+                onPress={() => setYearFilter("next")}
+                activeOpacity={0.85}
+              >
+                <Text
+                  style={[
+                    styles.yearFilterChipText,
+                    yearFilter === "next" && styles.yearFilterChipTextActive,
+                  ]}
+                >
+                  {nextYear}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {filteredYearWise.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>📭</Text>
@@ -557,6 +636,33 @@ const styles = StyleSheet.create({
   },
   filterChipText: { fontSize: 15, fontWeight: "700", color: C.textSecondary },
   filterChipTextActive: { color: "#fff" },
+
+  yearFilterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  yearFilterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  yearFilterChipActive: {
+    backgroundColor: C.green50,
+    borderColor: C.green700,
+  },
+  yearFilterChipText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: C.textSecondary,
+  },
+  yearFilterChipTextActive: {
+    color: C.green700,
+  },
 
   section: { marginBottom: 24 },
   yearHeader: {

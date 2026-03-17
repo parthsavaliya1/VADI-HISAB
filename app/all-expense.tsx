@@ -3,6 +3,7 @@ import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getExpenses,
   getFinancialYearOptionsExtended,
+  getCurrentFinancialYear,
   type Expense,
   type ExpenseCategory,
 } from "@/utils/api";
@@ -115,7 +116,13 @@ export default function AllExpenseScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string | undefined>(undefined);
+  const currentYear = getCurrentFinancialYear();
+  const [startY] = currentYear.split("-").map(Number);
+  const previousYear = `${startY - 1}-${String(startY % 100).padStart(2, "0")}`;
+  const nextYear = `${startY + 1}-${String((startY + 2) % 100)
+    .padStart(2, "0")
+    .toString()}`;
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string | undefined>(currentYear);
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | "all">("all");
 
   const fetchAll = useCallback(async () => {
@@ -150,30 +157,40 @@ export default function AllExpenseScreen() {
         <ScreenHeader title="💸 બધા ખર્ચ" style={{ marginBottom: 0, backgroundColor: C.bg }} />
       </View>
 
-      {/* Financial year filter */}
+      {/* Financial year filter — show previous + current + next year */}
       <View style={styles.filterWrap}>
         <Text style={styles.filterLabel}>વિત્તીય વર્ષ:</Text>
         <View style={styles.filterChips}>
-          <TouchableOpacity
-            style={[styles.filterChip, selectedFinancialYear === undefined && styles.filterChipActive]}
-            onPress={() => setSelectedFinancialYear(undefined)}
-          >
-            <Text style={[styles.filterChipText, selectedFinancialYear === undefined && styles.filterChipTextActive]}>
-              બધા
-            </Text>
-          </TouchableOpacity>
-          {getFinancialYearOptionsExtended().map((fy) => {
-            const active = selectedFinancialYear === fy;
-            return (
-              <TouchableOpacity
-                key={fy}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setSelectedFinancialYear(fy)}
-              >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{fy}</Text>
-              </TouchableOpacity>
-            );
-          })}
+          {previousYear && (
+            <TouchableOpacity
+              style={[styles.filterChip, selectedFinancialYear === previousYear && styles.filterChipActive]}
+              onPress={() => setSelectedFinancialYear(previousYear)}
+            >
+              <Text style={[styles.filterChipText, selectedFinancialYear === previousYear && styles.filterChipTextActive]}>
+                {previousYear}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {currentYear && (
+            <TouchableOpacity
+              style={[styles.filterChip, selectedFinancialYear === currentYear && styles.filterChipActive]}
+              onPress={() => setSelectedFinancialYear(currentYear)}
+            >
+              <Text style={[styles.filterChipText, selectedFinancialYear === currentYear && styles.filterChipTextActive]}>
+                {currentYear}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {nextYear && (
+            <TouchableOpacity
+              style={[styles.filterChip, selectedFinancialYear === nextYear && styles.filterChipActive]}
+              onPress={() => setSelectedFinancialYear(nextYear)}
+            >
+              <Text style={[styles.filterChipText, selectedFinancialYear === nextYear && styles.filterChipTextActive]}>
+                {nextYear}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -244,7 +261,7 @@ const styles = StyleSheet.create({
   filterChip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: C.surface,
     borderWidth: 1,
     borderColor: C.borderLight,

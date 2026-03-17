@@ -683,16 +683,14 @@ export default function AddIncomeScreen() {
   const selectedCrop = crops.find((c) => c._id === effectiveCropId);
   const hasCropSelected = !!effectiveCropId && !isGeneralIncome;
 
-  useEffect(() => {
-    if (!isEdit && isGeneralIncome) {
-      setDate(financialYearToStartDate(selectedFinancialYear));
-    }
-  }, [selectedFinancialYear, isEdit, isGeneralIncome]);
-
-  // સામાન્ય આવક & વેચાણ આવક (new entry): use default date of entry (today). No date picker shown. When editing, use saved date.
-  const effectiveDate = !isEdit && (isGeneralIncome || hasCropSelected)
-    ? new Date()
-    : (date ?? financialYearToStartDate(getCurrentFinancialYear()));
+  // સામાન્ય આવક (no crop) should respect selected financial year;
+  // crop-linked income keeps today's date when creating.
+  const effectiveDate = (() => {
+    if (isEdit) return date ?? financialYearToStartDate(getCurrentFinancialYear());
+    if (isGeneralIncome) return financialYearToStartDate(selectedFinancialYear);
+    if (hasCropSelected) return new Date();
+    return date ?? financialYearToStartDate(getCurrentFinancialYear());
+  })();
 
   // Fetch crops when adding income linked to a crop, or when editing with a crop (so dropdown can show selected crop)
   useEffect(() => {

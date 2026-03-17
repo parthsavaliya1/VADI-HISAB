@@ -4,6 +4,7 @@ import {
   getCrops,
   getFinancialYearOptionsExtended,
   getIncomes,
+  getCurrentFinancialYear,
   type Crop,
   type Income,
   type IncomeCategory,
@@ -180,7 +181,13 @@ export default function AllIncomeScreen() {
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string | undefined>(undefined);
+  const currentYear = getCurrentFinancialYear();
+  const [startY] = currentYear.split("-").map(Number);
+  const previousYear = `${startY - 1}-${String(startY % 100).padStart(2, "0")}`;
+  const nextYear = `${startY + 1}-${String((startY + 2) % 100)
+    .padStart(2, "0")
+    .toString()}`;
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string | undefined>(currentYear);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -211,30 +218,40 @@ export default function AllIncomeScreen() {
         <ScreenHeader title="💰 બધી આવક" style={{ marginBottom: 0, backgroundColor: C.bg }} />
       </View>
 
-      {/* Financial year filter */}
+      {/* Financial year filter — show previous + current + next year */}
       <View style={styles.yearFilterWrap}>
         <Text style={styles.yearFilterLabel}>વિત્તીય વર્ષ:</Text>
         <View style={styles.yearChips}>
-          <TouchableOpacity
-            style={[styles.yearChip, selectedFinancialYear === undefined && styles.yearChipActive]}
-            onPress={() => setSelectedFinancialYear(undefined)}
-          >
-            <Text style={[styles.yearChipText, selectedFinancialYear === undefined && styles.yearChipTextActive]}>
-              બધા
-            </Text>
-          </TouchableOpacity>
-          {getFinancialYearOptionsExtended().map((fy) => {
-            const active = selectedFinancialYear === fy;
-            return (
-              <TouchableOpacity
-                key={fy}
-                style={[styles.yearChip, active && styles.yearChipActive]}
-                onPress={() => setSelectedFinancialYear(fy)}
-              >
-                <Text style={[styles.yearChipText, active && styles.yearChipTextActive]}>{fy}</Text>
-              </TouchableOpacity>
-            );
-          })}
+          {previousYear && (
+            <TouchableOpacity
+              style={[styles.yearChip, selectedFinancialYear === previousYear && styles.yearChipActive]}
+              onPress={() => setSelectedFinancialYear(previousYear)}
+            >
+              <Text style={[styles.yearChipText, selectedFinancialYear === previousYear && styles.yearChipTextActive]}>
+                {previousYear}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {currentYear && (
+            <TouchableOpacity
+              style={[styles.yearChip, selectedFinancialYear === currentYear && styles.yearChipActive]}
+              onPress={() => setSelectedFinancialYear(currentYear)}
+            >
+              <Text style={[styles.yearChipText, selectedFinancialYear === currentYear && styles.yearChipTextActive]}>
+                {currentYear}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {nextYear && (
+            <TouchableOpacity
+              style={[styles.yearChip, selectedFinancialYear === nextYear && styles.yearChipActive]}
+              onPress={() => setSelectedFinancialYear(nextYear)}
+            >
+              <Text style={[styles.yearChipText, selectedFinancialYear === nextYear && styles.yearChipTextActive]}>
+                {nextYear}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -287,7 +304,7 @@ const styles = StyleSheet.create({
   yearChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 10,
     backgroundColor: C.surface,
     borderWidth: 1.5,
     borderColor: C.borderLight,

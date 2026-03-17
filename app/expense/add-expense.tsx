@@ -413,8 +413,13 @@ export default function AddExpense() {
     return CATEGORIES;
   })();
 
-  // Default date of entry (today). No date picker shown.
-  const effectiveExpenseDate = new Date();
+  // Date of entry:
+  // - General/extra expense: anchored to selected financial year (so it shows under that FY)
+  // - Crop expenses: use today's date.
+  const effectiveExpenseDate = (() => {
+    if (isGeneralExpense) return financialYearToStartDate(selectedFinancialYear);
+    return new Date();
+  })();
 
   // Order: Active (live) first, then Harvested, then Closed
   const cropStatusOrder = (s: string | undefined) =>
