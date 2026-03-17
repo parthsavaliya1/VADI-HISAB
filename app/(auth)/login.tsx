@@ -30,7 +30,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get("window");
 const LANG = "gu" as const;
@@ -87,6 +87,8 @@ export default function Login() {
       .fill(0)
       .map(() => new Animated.Value(1)),
   ).current;
+
+  const insets = useSafeAreaInsets();
 
   // ── useNativeDriver: false — style props (color/border) ───────────────────
   const borderAnim = useRef(new Animated.Value(0)).current; // isolated, no conflict
@@ -308,11 +310,14 @@ export default function Login() {
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
           >
             <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
+  style={styles.scrollView}
+  contentContainerStyle={[
+    styles.scrollContent,
+    { paddingBottom: 24 + insets.bottom },
+  ]}
+  keyboardShouldPersistTaps="handled"
+  showsVerticalScrollIndicator={false}
+>
               <View style={styles.inner}>
                 {/* ── Side decorations (left & right) ── */}
                 <View style={styles.sideDecoLeft} pointerEvents="none">
@@ -490,8 +495,15 @@ export default function Login() {
         </View>
         </ScrollView>
       </KeyboardAvoidingView>
-          <Animated.View style={[styles.bottomTagWrap, { opacity: heroFade }]}>
-            <Text style={styles.brandTextBottom}>🌾 ખેતી · હિસાબ · સમૃદ્ધ 🌾</Text>
+      <Animated.View
+  style={[
+    styles.bottomTagWrap,
+    {
+      opacity: heroFade,
+      bottom: insets.bottom + 12, // ✅ ADD THIS LINE
+    },
+  ]}
+>            <Text style={styles.brandTextBottom}>🌾 ખેતી · હિસાબ · સમૃદ્ધ 🌾</Text>
           </Animated.View>
         </LinearGradient>
       </TouchableWithoutFeedback>
@@ -574,7 +586,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 24,
     alignItems: "center",
     paddingHorizontal: 16,
   },
@@ -708,19 +719,24 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  inputRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  prefixTxt: {
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+    prefixTxt: {
     fontSize: 19,
+
     fontWeight: "600",
     color: C.textPrimary,
     letterSpacing: 1.5,
+
   },
   input: {
     flex: 1,
     fontSize: 19,
     color: C.textPrimary,
+    paddingLeft: 6, // ✅ ADD THIS
     paddingVertical: 0,
-    letterSpacing: 1.5,
     fontWeight: "600",
   },
   checkCircle: {

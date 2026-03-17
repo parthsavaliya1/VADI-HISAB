@@ -24,7 +24,18 @@ export default function Index() {
   const loaderOpacity = useRef(new Animated.Value(0)).current;
   const loaderWidth = useRef(new Animated.Value(0)).current;
   const leafFloat = useRef(new Animated.Value(0)).current;
-
+  // useEffect(() => {
+  //   const clearStorage = async () => {
+  //     try {
+  //       await AsyncStorage.clear();
+  //       console.log('Storage cleared');
+  //     } catch (e) {
+  //       console.log('Error clearing storage', e);
+  //     }
+  //   };
+  
+  //   clearStorage();
+  // }, []);
   
   useEffect(() => {
     Animated.sequence([

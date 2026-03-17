@@ -72,7 +72,7 @@ export default function OTP() {
   const [sessionId, setSessionId] = useState(initSessionId ?? "");
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [resendTimer, setResendTimer] = useState(30);
+  const [resendTimer, setResendTimer] = useState(300);
   const [canResend, setCanResend] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -156,8 +156,7 @@ export default function OTP() {
     // Timer bar — non-native (width prop)
     Animated.timing(timerAnim, {
       toValue: 0,
-      duration: 30000,
-      easing: Easing.linear,
+      duration: 300000,      easing: Easing.linear,
       useNativeDriver: false,
     }).start();
   }, []);
@@ -196,25 +195,18 @@ export default function OTP() {
   };
 
   const animateBoxScale = (i: number) => {
-    // ONLY native (scale) — isolated call
-    Animated.sequence([
-      Animated.timing(boxScale[i], {
-        toValue: 1.2,
-        duration: 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(boxScale[i], {
-        toValue: 1,
-        friction: 4,
-        tension: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    boxScale[i].setValue(1.1);
+    Animated.spring(boxScale[i], {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handleChange = (text: string, i: number) => {
     setError("");
     const digit = text.replace(/[^0-9]/g, "").slice(-1);
+    if (otp[i] === digit) return; // 🔥 prevents extra re-renders
+
     const next = [...otp];
     next[i] = digit;
     setOtp(next);
@@ -298,15 +290,14 @@ export default function OTP() {
     try {
       const data = await sendOtp(phone);
       setSessionId(data.sessionId);
-      setResendTimer(30);
+      setResendTimer(300);
       setCanResend(false);
       setOtp(Array(OTP_LENGTH).fill(""));
       boxFill.forEach((a) => a.setValue(0));
       timerAnim.setValue(1);
       Animated.timing(timerAnim, {
         toValue: 0,
-        duration: 30000,
-        easing: Easing.linear,
+        duration: 300000, // 5 minutes        easing: Easing.linear,
         useNativeDriver: false,
       }).start();
       inputRefs.current[0]?.focus();
@@ -489,7 +480,6 @@ export default function OTP() {
                 maxLength={OTP_LENGTH}
                 autoComplete="sms-otp"
                 textContentType="oneTimeCode"
-                caretHidden
               />
 
               {/* OTP Boxes */}
@@ -499,9 +489,7 @@ export default function OTP() {
                   { transform: [{ translateX: shakeAnim }] },
                 ]}
               >
-                {Array(OTP_LENGTH)
-                  .fill(0)
-                  .map((_, i) => {
+                {otp.map((_, i) => {
                     // Border & bg — non-native interpolations from boxFill[i]
                     const borderColor = boxFill[i].interpolate({
                       inputRange: [-1, 0, 1],
@@ -531,8 +519,9 @@ export default function OTP() {
                           ]}
                         >
                           <TextInput
-                            ref={(r) => (inputRefs.current[i] = r)}
-                            style={[
+ref={(r) => {
+  inputRefs.current[i] = r;
+}}                            style={[
                               styles.otpInput,
                               otp[i] ? styles.otpInputFilled : null,
                             ]}
@@ -544,7 +533,6 @@ export default function OTP() {
                               handleKey(nativeEvent.key, i)
                             }
                             selectionColor={C.green700}
-                            caretHidden
                           />
                         </Animated.View>
                       </Animated.View>
@@ -822,18 +810,27 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 16,
     aspectRatio: 0.9,
+  
     justifyContent: "center",
     alignItems: "center",
+  
     overflow: "hidden",
     backgroundColor: C.surface,
+  
+    paddingTop: 2, // 🔥 micro-adjust (important for some fonts)
   },
   otpInput: {
-    fontSize: 26,
+    flex: 1, // 🔥 IMPORTANT (instead of height: "100%")
+    
+    fontSize: 22,
     fontWeight: "800",
     color: C.textPrimary,
     textAlign: "center",
-    width: "100%",
-    height: "100%",
+  
+    textAlignVertical: "center",
+    includeFontPadding: false,
+  
+    paddingVertical: 0,
   },
   otpInputFilled: { color: C.green700 },
 
