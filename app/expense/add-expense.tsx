@@ -51,12 +51,13 @@ function financialYearToStartDate(fy: string): Date {
   return new Date(y, 5, 1); // month 5 = June
 }
 
-/** Year options: previous, current, next e.g. ["2024-25", "2025-26", "2026-27"] */
+/** Year options: previous, current e.g. ["2024-25", "2025-26"] */
 function getYearOptions(): string[] {
   const current = getCurrentFinancialYear();
   const [startY] = current.split("-").map(Number);
   const prev = `${startY - 1}-${String(startY % 100).padStart(2, "0")}`;
-  return [prev, ...getFinancialYearOptions()];
+  // Only previous and current year for extra/general expense
+  return [prev, current];
 }
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -972,8 +973,6 @@ export default function AddExpense() {
             >
               {isGeneralExpense ? (
                 <Text style={styles.headerTitle}>સામાન્ય ખર્ચ</Text>
-              ) : isBhagyaUpad ? (
-                <Text style={styles.headerTitle}>ભાગ્યા નો ઉપાડ</Text>
               ) : activeCat ? (
                 <>
                   <View
@@ -1002,19 +1001,6 @@ export default function AddExpense() {
                 <Text style={styles.headerTitle}>ખર્ચ ઉમેરો</Text>
               )}
             </View>
-            {selectedCrop?.landType === "bhagma" &&
-              selectedCrop?.bhagmaPercentage != null && (
-                <View
-                  style={[
-                    styles.bhagmaBadge,
-                    { backgroundColor: C.expensePale },
-                  ]}
-                >
-                  <Text style={[styles.bhagmaBadgeText, { color: C.expense }]}>
-                    ભાગમા {selectedCrop.bhagmaPercentage}%
-                  </Text>
-                </View>
-              )}
           </View>
           <View style={{ width: 36 }} />
         </View>
@@ -1057,11 +1043,6 @@ export default function AddExpense() {
               })}
             </View>
           </View>
-        ) : isCropExpense && selectedCrop?.year ? (
-          <View style={styles.yearCard}>
-            <Text style={styles.yearLabel}>પાકનું વર્ષ (જૂન–મે)</Text>
-            <Text style={styles.cropYearText}>{selectedCrop.year}</Text>
-          </View>
         ) : null}
 
         {/* ── General expense: description + amount — not linked to any crop; no crop required ── */}
@@ -1093,9 +1074,7 @@ export default function AddExpense() {
               }}
               placeholder="પસંદ કરો..."
             />
-            <Text style={styles.optionalNote}>
-              નોંધ: દરેક પ્રકાર માટે વિવરણ દાખલ કરવું ઐચ્છિક છે (જરૂરી નથી).
-            </Text>
+            {/* Note text removed for extra expense */}
             {generalExpenseType === "other" ? (
               <View ref={generalDescRef}>
                 <Text style={styles.label}>વિવરણ (ઐચ્છિક)</Text>
