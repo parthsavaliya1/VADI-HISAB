@@ -27,18 +27,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Dimensions } from "react-native";
 
 const C = {
-  green700: "#2E7D32",
-  green500: "#4CAF50",
-  green100: "#C8E6C9",
-  green50: "#E8F5E9",
   bg: "#F5F7F2",
   surface: "#FFFFFF",
-  surfaceGreen: "#F1F8F1",
-  textPrimary: "#1A2E1C",
-  textSecondary: "#3D5C40",
-  textMuted: "#7A9B7E",
-  border: "#C8E6C9",
-  borderLight: "#EAF4EA",
+  surfaceAccent: "#EFF6FF",
+  blue700: "#0369A1",
+  blue500: "#0284C7",
+  blue100: "#DBEAFE",
+  textPrimary: "#0F172A",
+  textSecondary: "#1E293B",
+  textMuted: "#64748B",
+  border: "#E2E8F0",
+  borderLight: "#E2E8F0",
 };
 
 // Type options for ભાગ્યા નો ઉપાડ — maps to AdvanceReason
@@ -105,7 +104,7 @@ function SelectPicker({
                 {o.label}
               </Text>
               {selected === o.value && (
-                <Ionicons name="checkmark" size={20} color={C.green700} />
+                <Ionicons name="checkmark" size={20} color={C.blue700} />
               )}
             </TouchableOpacity>
           ))}
@@ -296,7 +295,7 @@ export default function AddBhagyaUpad() {
               colors={
                 saving || !type || !amount.trim() || Number(amount) <= 0
                   ? ["#9CA3AF", "#6B7280"]
-                  : [C.green700, C.green500]
+                  : [C.blue700, C.blue500]
               }
               style={styles.btnGradient}
               start={{ x: 0, y: 0 }}
@@ -351,13 +350,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: C.surfaceGreen,
+    backgroundColor: C.surfaceAccent,
   },
-  selectBtnOpen: { borderColor: C.green700, backgroundColor: C.surface },
+  selectBtnOpen: { borderColor: C.blue700, backgroundColor: C.surface },
   selectText: { fontSize: 20, color: C.textPrimary, fontWeight: "600" },
   dropList: {
     borderWidth: 1.5,
-    borderColor: C.green100,
+    borderColor: C.blue100,
     borderRadius: 14,
     backgroundColor: C.surface,
     overflow: "hidden",
@@ -373,9 +372,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.borderLight,
   },
-  dropItemActive: { backgroundColor: C.green50 },
+  dropItemActive: { backgroundColor: C.blue100 },
   dropItemText: { fontSize: 19, color: C.textPrimary, fontWeight: "600" },
-  dropItemTextActive: { fontWeight: "800", color: C.green700 },
+  dropItemTextActive: { fontWeight: "800", color: C.blue700 },
   numRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -384,7 +383,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 4,
-    backgroundColor: C.surfaceGreen,
+    backgroundColor: C.surfaceAccent,
     marginBottom: 16,
   },
   numPrefix: {
@@ -408,7 +407,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 18,
     color: C.textPrimary,
-    backgroundColor: C.surfaceGreen,
+    backgroundColor: C.surfaceAccent,
     minHeight: 80,
     marginBottom: 20,
   },

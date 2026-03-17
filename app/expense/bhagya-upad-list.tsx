@@ -229,7 +229,7 @@ const isInsideTabs = useNavigationState((state) => {
           <View style={styles.summaryCard}>
             <Text style={styles.summaryCardTitle}>ભાગ્યા નો હિસાબ</Text>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabelDark}>ભાગાનો કુલ ઉપાડ</Text>
+              <Text style={styles.summaryLabelDark}>ભાગ્યા નો કુલ ઉપાડ</Text>
               <Text style={styles.summaryValueDark}>{formatINR(kulUpad)}</Text>
             </View>
             <View style={styles.summaryRow}>
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   summaryCardTitle: {
     fontSize: 15,
     fontWeight: "800",
-    color: C.textPrimary,
+    color: C.blue700,
     marginBottom: 12,
   },
   summaryRow: {
