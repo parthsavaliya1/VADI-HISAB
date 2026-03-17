@@ -482,7 +482,10 @@ export default function AllTransactionsScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
       <View style={[styles.headerWrap, { backgroundColor: C.bg }]}>
-        <ScreenHeader title="🧾 બધા વ્યવહાર" subtitle="વર્ષ પ્રમાણે · તાજાથી જૂના" style={{ marginBottom: 0, backgroundColor: C.bg }} />
+        <ScreenHeader
+          title="🧾 બધા વ્યવહાર"
+          style={{ marginBottom: 0, backgroundColor: C.bg }}
+        />
       </View>
 
       {loading ? (
@@ -524,6 +527,7 @@ export default function AllTransactionsScreen() {
               );
             })}
           </ScrollView>
+
           <View style={styles.yearFilterRow}>
             {previousYear && (
               <TouchableOpacity
@@ -594,10 +598,13 @@ export default function AllTransactionsScreen() {
             filteredYearWise.map(({ year, txns }) => {
               return (
                 <View key={year} style={styles.section}>
-                  <YearHeader year={year} />
                   <View style={styles.txnList}>
                     {txns.map((t) => (
-                      <TxnRow key={`${t.type}-${t._id}`} item={t} onPress={() => openDetail(t)} />
+                      <TxnRow
+                        key={`${t.type}-${t._id}`}
+                        item={t}
+                        onPress={() => openDetail(t)}
+                      />
                     ))}
                   </View>
                 </View>
@@ -636,7 +643,6 @@ const styles = StyleSheet.create({
   },
   filterChipText: { fontSize: 15, fontWeight: "700", color: C.textSecondary },
   filterChipTextActive: { color: "#fff" },
-
   yearFilterRow: {
     flexDirection: "row",
     flexWrap: "wrap",
