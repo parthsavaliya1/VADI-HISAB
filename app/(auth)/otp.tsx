@@ -205,7 +205,7 @@ export default function OTP() {
   const handleChange = (text: string, i: number) => {
     setError("");
     const digit = text.replace(/[^0-9]/g, "").slice(-1);
-    if (otp[i] === digit) return; // 🔥 prevents extra re-renders
+      if (otp[i] === digit) return; // 🔥 prevents extra re-renders
 
     const next = [...otp];
     next[i] = digit;
@@ -480,6 +480,7 @@ export default function OTP() {
                 maxLength={OTP_LENGTH}
                 autoComplete="sms-otp"
                 textContentType="oneTimeCode"
+                caretHidden
               />
 
               {/* OTP Boxes */}
@@ -810,27 +811,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 16,
     aspectRatio: 0.9,
-  
     justifyContent: "center",
     alignItems: "center",
-  
     overflow: "hidden",
     backgroundColor: C.surface,
-  
-    paddingTop: 2, // 🔥 micro-adjust (important for some fonts)
   },
   otpInput: {
-    flex: 1, // 🔥 IMPORTANT (instead of height: "100%")
-    
-    fontSize: 22,
-    fontWeight: "800",
-    color: C.textPrimary,
+    width: 48,
+    height: 56,
+    borderWidth: 1,
+    borderRadius: 10,
     textAlign: "center",
   
-    textAlignVertical: "center",
-    includeFontPadding: false,
+    fontSize: 22,
   
-    paddingVertical: 0,
+    // ✅ KEY FIXES
+    lineHeight: 26,          // slightly bigger than fontSize
+    textAlignVertical: "center", // Android fix
+    paddingVertical: 0,      // remove extra padding
+  
+    includeFontPadding: false, // 🔥 Android important
   },
   otpInputFilled: { color: C.green700 },
 
