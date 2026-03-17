@@ -20,6 +20,7 @@ import {
   type SeedType,
   type SharingOption,
 } from "@/utils/api";
+import translations from "@/translations.json";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
@@ -134,7 +135,7 @@ const CATEGORIES: {
   },
   {
     value: "Machinery",
-    label: "ટ્રેક્ટર/મશીન",
+    label: "ટ્રેક્ટર",
     iconSet: "mci",
     iconName: "tractor-variant",
     color: "#7C3AED",
@@ -167,12 +168,16 @@ const SHARING_OPTIONS: { value: SharingOption; label: string }[] = [
   { value: "50", label: "50%" },
   { value: "custom", label: "કસ્ટમ" },
 ];
+const OTHER_LABEL_GU =
+  // Reuse common "Other" translation so text stays consistent
+  ((translations as any).gu?.profile?.districtLabels?.Other as string) || "અન્ય";
 const LABOUR_TASKS: { value: LabourTask; label: string }[] = [
   { value: "Weeding", label: "નીંદામણ" },
   { value: "Sowing", label: "વાવણી" },
   { value: "Spraying", label: "છંટકાવ" },
   { value: "Harvesting", label: "લણણી" },
   { value: "Irrigation", label: "સિંચાઈ" },
+  { value: "Other", label: OTHER_LABEL_GU },
 ];
 const ADVANCE_REASONS: { value: AdvanceReason; label: string }[] = [
   { value: "Medical", label: "દવા/હોસ્પિટલ" },
@@ -186,13 +191,13 @@ const ADVANCE_REASONS: { value: AdvanceReason; label: string }[] = [
 const MACHINERY_IMPLEMENTS: { value: MachineryImplement; label: string }[] = [
   { value: "Tractor", label: "ટ્રેક્ટર" },
   { value: "Rotavator", label: "રોટાવેટર" },
-  { value: "RAP", label: "રૅપ" },
-  { value: "Samar", label: "સમાર" },
-  { value: "Sah Nakhya", label: "સહ નાખ્યા" },
+  { value: "RAP", label: "રાપ" },
+  { value: "Samar", label: "હમાર" },
+  { value: "Sah Nakhya", label: "સાહ નાખ્યા" },
   { value: "Vavetar", label: "વાવેતર" },
   { value: "Kyara Bandhya", label: "ક્યારા બાંધ્યા" },
   { value: "Thresher", label: "થ્રેશર" },
-  { value: "Bagu", label: "બાગુ" },
+  { value: "Bagu", label: "બગુ" },
   { value: "Fukani", label: "ફૂકણી" },
   { value: "Kheti Kari", label: "ખેતી કરી" },
   { value: "Other Equipment", label: "અન્ય ઉપકરણ" },

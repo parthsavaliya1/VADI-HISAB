@@ -734,7 +734,8 @@ export type LabourTask =
   | "Sowing"
   | "Spraying"
   | "Harvesting"
-  | "Irrigation";
+  | "Irrigation"
+  | "Other";
 export type AdvanceReason =
   | "Medical"
   | "Grocery"
