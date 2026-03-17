@@ -833,7 +833,7 @@ export default function Profile() {
     const handleLanguagePress = () => {
         setProfilePopup({
             title: t("common", "language"),
-            message: lang === "gu" ? t("common", "gujarati") : t("common", "english"),
+            message: t("common", "gujarati"),
             icon: "language-outline",
             iconColor: "#0F766E",
             iconBg: "#CCFBF1",
@@ -843,12 +843,6 @@ export default function Profile() {
                     variant: lang === "gu" ? "primary" : "secondary",
                     icon: lang === "gu" ? "checkmark-circle" : "text-outline",
                     onPress: () => setLang("gu"),
-                },
-                {
-                    label: t("common", "english"),
-                    variant: lang === "en" ? "primary" : "secondary",
-                    icon: lang === "en" ? "checkmark-circle" : "globe-outline",
-                    onPress: () => setLang("en"),
                 },
                 { label: t("common", "cancel"), variant: "ghost", icon: "close-outline", onPress: () => {} },
             ],
@@ -989,17 +983,17 @@ export default function Profile() {
                     {/* ══ VADI score summary (above language) ══ */}
                     {vadiScore && (
                         <View style={styles.vadiScoreCard}>
-                            <Text style={styles.vadiScoreTitle}>Your VADI Score</Text>
+                            <Text style={styles.vadiScoreTitle}>{t("profileTab", "vadiScoreTitle")}</Text>
                             <Text style={styles.vadiScoreMainValue}>
                                 {vadiScore.farmer_vadi_score ?? 0}
                             </Text>
                             {vadiScore.village_rank != null && vadiScore.village_total_farmers > 0 && (
                                 <Text style={styles.vadiScoreRank}>
-                                    Village Rank: {vadiScore.village_rank} / {vadiScore.village_total_farmers} farmers
+                                    {`ગામ રેન્ક: ${vadiScore.village_rank} / ${vadiScore.village_total_farmers} ખેડૂત`}
                                 </Text>
                             )}
                             <View style={{ marginTop: 10 }}>
-                                <Text style={styles.vadiScoreSubtitle}>Top Strength</Text>
+                                <Text style={styles.vadiScoreSubtitle}>{t("profileTab", "vadiScoreTopStrength")}</Text>
                                 <Text style={styles.vadiInsightText}>
                                     {vadiScore.farmer_insights && vadiScore.farmer_insights.length > 0
                                         ? vadiScore.farmer_insights[0]
@@ -1007,7 +1001,7 @@ export default function Profile() {
                                 </Text>
                             </View>
                             <View style={{ marginTop: 10 }}>
-                                <Text style={styles.vadiScoreSubtitle}>Improvement Opportunity</Text>
+                                <Text style={styles.vadiScoreSubtitle}>{t("profileTab", "vadiScoreImprovement")}</Text>
                                 <Text style={styles.vadiInsightText}>
                                     {vadiScore.farmer_insights && vadiScore.farmer_insights.length > 1
                                         ? vadiScore.farmer_insights[1]
