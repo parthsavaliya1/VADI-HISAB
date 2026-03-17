@@ -25,6 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const C = {
   bg: "#FFF7ED",
@@ -200,6 +201,7 @@ export default function TractorIncomeListScreen() {
   const [selectedFarmer, setSelectedFarmer] = useState<string>("");
   const [farmerDropdownOpen, setFarmerDropdownOpen] = useState(false);
   const [tractorExpenseTotal, setTractorExpenseTotal] = useState(0);
+  const insets = useSafeAreaInsets();
 
   const fetchAll = useCallback(async () => {
     try {
@@ -308,6 +310,7 @@ export default function TractorIncomeListScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
       <View style={styles.headerWrap}>
+        
         <ScreenHeader
           title="🚜 ટ્રેક્ટર હિસાબ"
           style={{ marginBottom: 0, backgroundColor: C.bg }}
@@ -538,7 +541,10 @@ export default function TractorIncomeListScreen() {
                 onDelete={handleDeleteTractorAvak}
               />
             )}
-            contentContainerStyle={styles.listContent}
+           contentContainerStyle={{
+  paddingHorizontal: 16,
+  paddingBottom: 140 + insets.bottom,
+}}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
@@ -619,7 +625,7 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   filterLabel: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: "700",
     color: C.textMuted,
     marginBottom: 6,
@@ -768,7 +774,7 @@ const styles = StyleSheet.create({
   summaryColumn: { flex: 1 },
   summaryColumnSmall: { flex: 1 },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: 15,
     color: C.textMuted,
     fontWeight: "700",
   },
@@ -781,7 +787,7 @@ const styles = StyleSheet.create({
   summaryValueProfit: { color: "#166534" },
   summaryValueLoss: { color: "#B91C1C" },
   summarySmallLabel: {
-    fontSize: 11,
+    fontSize: 15,
     color: C.textMuted,
     fontWeight: "700",
   },

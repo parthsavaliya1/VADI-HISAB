@@ -1,8 +1,8 @@
 import { AppTheme, FontSizes, HEADER_PADDING_TOP } from "@/constants/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { AppBackButton } from "@/components/AppBackButton";
 import { router } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { StyleSheet, Text, View, ViewStyle } from "react-native";
 
 export interface ScreenHeaderProps {
   title: string;
@@ -36,13 +36,13 @@ export function ScreenHeader({
     <View style={[styles.wrap, { paddingTop: HEADER_PADDING_TOP }, style]}>
       <View style={styles.row}>
         {showBack ? (
-          <Pressable
-            style={[styles.backBtn, light && styles.backBtnLight]}
+          <AppBackButton
             onPress={handleBack}
-            android_ripple={{ color: "rgba(0,0,0,0.1)" }}
-          >
-            <Ionicons name="arrow-back" size={24} color={color} />
-          </Pressable>
+            iconColor={color}
+            backgroundColor={light ? "rgba(255,255,255,0.2)" : AppTheme.surface}
+            borderColor={light ? "rgba(255,255,255,0.3)" : AppTheme.borderLight}
+            style={styles.backBtn}
+          />
         ) : (
           <View style={styles.noBackSpacer} />
         )}
@@ -75,19 +75,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
     marginRight: 18,
-    backgroundColor: AppTheme.green50,
-    borderWidth: 1,
-    borderColor: AppTheme.green100,
-  },
-  backBtnLight: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderColor: "rgba(255,255,255,0.3)",
   },
   backBtnPlaceholder: { width: 40, height: 40, marginRight: 18 },
   noBackSpacer: { width: 0, height: 40, marginRight: 0 },
