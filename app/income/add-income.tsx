@@ -190,10 +190,10 @@ const BAJAR_OPTIONS = [
   "રાજકોટ યાર્ડ",
   "જામનગર યાર્ડ",
   "જુનાગઢ યાર્ડ",
-  "અમરેલી યાર્ડ",
   "મોરબી યાર્ડ",
   "ભાવનગર યાર્ડ",
-  "સુરેન્દ્રનગર યાર્ડ",
+  "ગોંડલ યાર્ડ",
+  "કાલાવડ યાર્ડ",
   "અન્ય યાર્ડ",
 ];
 
@@ -957,42 +957,37 @@ export default function AddIncomeScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
-    <ScrollView
-      ref={scrollRef}
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 60 },
-      ]}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-      showsVerticalScrollIndicator={false}
-    >
-      {/* ── Header (same as add-expense: gradient, back, title, subtitle, top space) ── */}
-      <LinearGradient
-        colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]}
-        style={[styles.header, { paddingTop: headerPaddingTop }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.decorCircle1} />
-        <View style={styles.decorCircle2} />
-        <View style={styles.headerRow}>
-          <AppBackButton onPress={() => router.back()} iconColor={C.green700} backgroundColor={C.surface} borderColor={C.green100} />
-          <View style={{ alignItems: "center", flex: 1 }}>
-            <Text style={styles.headerTitle}>{headerTitle}</Text>
-            {headerSub ? <Text style={styles.headerSub}>{headerSub}</Text> : null}
-            {selectedCrop?.landType === "bhagma" && selectedCrop?.bhagmaPercentage != null && (
-              <View style={[styles.bhagmaBadge, { backgroundColor: C.green50 }]}>
-                <Text style={[styles.bhagmaBadgeText, { color: C.green700 }]}>
-                  ભાગમા {selectedCrop.bhagmaPercentage}%
-                </Text>
-              </View>
-            )}
+      <View style={{ flex: 1, backgroundColor: C.bg }}>
+        <LinearGradient
+          colors={["#E8F5E9", "#EEF6EE", "#F5F7F2"]}
+          style={[styles.header, { paddingTop: headerPaddingTop }]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.headerRow}>
+            <AppBackButton
+              onPress={() => router.back()}
+              iconColor={C.green700}
+              backgroundColor={C.surface}
+              borderColor={C.green100}
+            />
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text style={styles.headerTitle}>{headerTitle}</Text>
+            </View>
+            <View style={{ width: 46 }} />
           </View>
-          <View style={{ width: 46 }} />
-        </View>
-      </LinearGradient>
+        </LinearGradient>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.container}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 60 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
 
       {/* ── Year: only for general income; for crop income year comes from crop ── */}
       {!isEdit && isGeneralIncome && (
@@ -1044,13 +1039,6 @@ export default function AddIncomeScreen() {
               );
             })}
           </View>
-        </View>
-      )}
-
-      {!isEdit && hasCropSelected && selectedCrop?.year && (
-        <View style={styles.yearCard}>
-          <Text style={styles.yearLabel}>પાકનું વર્ષ (જૂન–મે)</Text>
-          <Text style={styles.cropYearText}>{selectedCrop.year}</Text>
         </View>
       )}
 
@@ -1222,7 +1210,8 @@ export default function AddIncomeScreen() {
         )}
       </TouchableOpacity>
 
-    </ScrollView>
+        </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -1665,11 +1654,6 @@ const styles = StyleSheet.create({
   },
   inputSuffix: {
     backgroundColor: C.green50,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    borderLeftWidth: 0,
-    borderTopRightRadius: 14,
-    borderBottomRightRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 20,
