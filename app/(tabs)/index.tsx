@@ -258,6 +258,25 @@ const MACHINERY_LABELS: Record<string, string> = {
   "રેપ (Rap)": "રેપ",
 };
 
+function getRentalAmount(i: Income): number {
+  const top = (i as any).amount;
+  if (typeof top === "number" && !Number.isNaN(top)) return top;
+  const r = i.rentalIncome as any;
+  if (r?.totalAmount != null && !Number.isNaN(r.totalAmount)) {
+    return r.totalAmount;
+  }
+  if (
+    r &&
+    typeof r.hoursOrDays === "number" &&
+    typeof r.ratePerUnit === "number" &&
+    !Number.isNaN(r.hoursOrDays) &&
+    !Number.isNaN(r.ratePerUnit)
+  ) {
+    return r.hoursOrDays * r.ratePerUnit;
+  }
+  return 0;
+}
+
 const RENTAL_ASSET_LABELS: Record<string, string> = {
   Tractor: "ટ્રેક્ટર",
   Rotavator: "રોટાવેટર",
@@ -1208,17 +1227,35 @@ export default function Dashboard() {
           prof,
           cropRes,
           yearlyReport,
-          
+          _initialExpRes,
+          tractorIncomeRes,
+          _initialNotifications,
+          _initialLabourExpRes,
           tractorExpRes,
         ] = await Promise.all([
           getMyProfile(),
           getCrops(1, 100, undefined, undefined, financialYear),
           getYearlyReport(financialYear),
           getExpenses(undefined, undefined, undefined, 1, 30, financialYear),
-          getIncomes(1, 30, undefined, undefined, undefined, financialYear),
+          getIncomes(
+            1,
+            400,
+            undefined,
+            "Rental Income" as IncomeCategory,
+            undefined,
+            financialYear,
+          ),
           getNotifications(1, 20),
           getExpenses(undefined, "Labour", undefined, 1, 500, financialYear),
-          getExpenses(undefined, "Other", undefined, 1, 500, financialYear, "tractorExpense"),
+          getExpenses(
+            undefined,
+            "Other",
+            undefined,
+            1,
+            500,
+            financialYear,
+            "tractorExpense",
+          ),
         ]);
         setProfile(prof);
         const reportCrops = yearlyReport.crops ?? [];
@@ -1235,6 +1272,15 @@ export default function Dashboard() {
           0
         );
         setTractorExpenseTotal(excludeTractor ? 0 : tractorExpenseSum);
+        const tractorIncomeList = Array.isArray(tractorIncomeRes?.data)
+          ? (tractorIncomeRes.data as Income[])
+          : [];
+        const tractorIncomeTotalFromList = excludeTractor
+          ? 0
+          : tractorIncomeList.reduce(
+              (sum, inc) => sum + getRentalAmount(inc),
+              0,
+            );
         // Main summary: income = total (includes tractor આવક when enabled); expense = crop expense + tractor ખર્ચ
         const allIncome =
           (reportSummary.totalIncome ?? 0) -
@@ -1249,7 +1295,7 @@ export default function Dashboard() {
           totalExpense: totalExpenseWithTractor,
           netProfit: allIncome - totalExpenseWithTractor,
         });
-        setTractorIncomeTotal(excludeTractor ? 0 : tractorIncomeFromReport);
+        setTractorIncomeTotal(tractorIncomeTotalFromList);
         setCrops(
           cropRes.data.map((c: Crop) => {
             const report = reportCrops.find((r) => r._id === c._id);
