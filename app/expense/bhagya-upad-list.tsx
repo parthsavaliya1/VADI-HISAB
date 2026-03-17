@@ -9,6 +9,8 @@ import {
 } from "@/utils/api";
 import { formatWholeNumber } from "@/utils/format";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useNavigationState } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -21,6 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const C = {
   bg: "#F5F7F2",
@@ -133,6 +136,15 @@ export default function BhagyaUpadListScreen() {
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
     getCurrentFinancialYear(),
   );
+  const insets = useSafeAreaInsets();
+
+
+const isInsideTabs = useNavigationState((state) => {
+  // if parent navigator is Tabs, it will have routes like "index", "crop", etc.
+  return state?.routes?.some(r =>
+    ["index", "crop", "report", "live-price", "profile"].includes(r.name)
+  );
+});
 
   const fetchAll = useCallback(async () => {
     try {
@@ -273,9 +285,14 @@ export default function BhagyaUpadListScreen() {
           />
         </>
       )}
-
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
+<View
+  style={[
+    styles.bottomBar,
+    {
+      paddingBottom: insets.bottom + (isInsideTabs ? 70 :8),
+    },
+  ]}
+> <TouchableOpacity
           style={styles.bottomBtn}
           activeOpacity={0.9}
           onPress={() => router.push("/expense/add-bhagya-upad" as any)}

@@ -26,7 +26,6 @@ export default function Index() {
   const leafFloat = useRef(new Animated.Value(0)).current;
 
   
-
   useEffect(() => {
     Animated.sequence([
       Animated.parallel([
