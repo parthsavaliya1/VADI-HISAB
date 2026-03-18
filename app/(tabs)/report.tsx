@@ -128,8 +128,8 @@ export default function ReportScreen() {
         getYearlyReport(financialYear),
         getIncomeAnalytics(undefined, undefined, financialYear).catch(() => null),
         getCompareReport(financialYear, undefined, peerUserId).catch(() => null),
-        // For pie chart: always fetch MY analytics (not peer/avg filtered)
-        getExpenseAnalytics(financialYear, undefined).catch(() => null),
+        // Pie chart: always fetch MY analytics (fixed, not farmer/crop filtered)
+        getExpenseAnalytics(financialYear, undefined, undefined).catch(() => null),
 
 
 
@@ -261,13 +261,13 @@ export default function ReportScreen() {
     ? CROP_EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > (avgBy[cat] || 0) && (myBy[cat] || 0) > 0)
     : [];
 
-  // Pie chart: main 5 crop expense categories for selected year
+  // Pie chart: main 5 crop expense categories for selected year (fixed: only my data)
   const MAIN_PIE_CATEGORIES: string[] = ["Seed", "Pesticide", "Fertilizer", "Labour", "Machinery"];
 
   let myPieByCategory: Record<string, number> = {};
 
   if (expenseAnalytics) {
-    // Use absolute totals from myByCategory (fixed by crop entries), not per-bigha
+    // Use absolute totals from myByCategory (matches your own entries; not per-bigha)
     const mySource = expenseAnalytics.myByCategory || {};
 
     MAIN_PIE_CATEGORIES.forEach((cat) => {
@@ -377,15 +377,14 @@ export default function ReportScreen() {
             </View>
           </View>
 
-          {/* પાક માટે ખર્ચ વિભાજન — મુખ્ય ૫ કેટેગરી માટે, માત્ર પાક ખર્ચ (no Other; summary કરતા ઓછું હોઈ શકે) */}
-          {hasMyPie && (
+          {/* પાક માટે ખર્ચ વિભાજન — fixed (only your data for selected year) */}
+          {hasMyPie ? (
             <ExpensePieChart
               byCategory={myPieByCategory}
               centerTotal={myPieTotal}
-              title="પાક માટે ખર્ચ વિભાજન"
+              title="તમારા પાક માટે સરેરાશ ખર્ચ વિભાજન"
             />
-          )}
-          {!hasMyPie && (
+          ) : (
             <Text style={styles.expenseTypeEmpty}>આ વર્ષ માટે પાક ખર્ચ વર્ગીકરણ ઉપલબ્ધ નથી</Text>
           )}
 
@@ -461,7 +460,7 @@ export default function ReportScreen() {
           {/* પાક માટે ખર્ચ વિભાજન — crop average only, no Other / tractor */}
           {(expenseAnalytics || (report && (report as any).summary)) && (
             <View style={styles.expenseTypeCard}>
-              <Text style={styles.expenseTypeTitle}>💸 પાક માટે ખર્ચ વિભાજન</Text>
+              <Text style={styles.expenseTypeTitle}>💸 પાક માટે ખર્ચ વિભાજન (પ્રતિ વીઘા)</Text>
               {expenseAnalytics && ((expenseAnalytics.myArea ?? 0) > 0 || expenseAnalytics.mySummary?.length) ? (
                 (() => {
                   const usePerBigha = (expenseAnalytics.myArea ?? 0) > 0;
