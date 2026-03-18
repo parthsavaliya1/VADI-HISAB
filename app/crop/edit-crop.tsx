@@ -33,9 +33,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import { Dimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getCropImageSource } from "@/utils/cropImageSource";
 
 const C = {
   green700: "#2E7D32",
@@ -410,7 +412,15 @@ export default function EditCropScreen() {
                   setCustomCrop("");
                 }}
               >
-                <Text style={styles.cropPillEmoji}>{c.emoji}</Text>
+                {getCropImageSource(c.value) ? (
+                  <Image
+                    source={getCropImageSource(c.value)}
+                    style={styles.cropPillImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <Text style={styles.cropPillEmoji}>{c.emoji}</Text>
+                )}
                 <Text style={[styles.cropPillText, cropValue === c.value && !customCrop && styles.cropPillTextActive]} numberOfLines={1}>{c.label}</Text>
               </TouchableOpacity>
             ))}
@@ -434,6 +444,7 @@ export default function EditCropScreen() {
           {(cropValue || customCrop.trim()) ? (() => {
             const selectedCrop = CROPS.find((c) => c.value === cropValue);
             const subtypes = selectedCrop?.subtypes ?? [];
+            const selectedCropImage = getCropImageSource(cropValue);
             return (
               <>
                 {subtypes.length > 0 && (
@@ -444,7 +455,20 @@ export default function EditCropScreen() {
                         style={[styles.subtypeChip, subType === st && styles.subtypeChipActive]}
                         onPress={() => setSubType(st)}
                       >
-                        <Text style={[styles.subtypeChipText, subType === st && styles.subtypeChipTextActive]} numberOfLines={1}>
+                        {selectedCropImage ? (
+                          <Image
+                            source={selectedCropImage}
+                            style={styles.subtypeChipImage}
+                            resizeMode="contain"
+                          />
+                        ) : null}
+                        <Text
+                          style={[
+                            styles.subtypeChipText,
+                            subType === st && styles.subtypeChipTextActive,
+                          ]}
+                          numberOfLines={1}
+                        >
                           {st}
                         </Text>
                       </TouchableOpacity>
@@ -659,11 +683,15 @@ const styles = StyleSheet.create({
   },
   cropPillActive: { backgroundColor: C.green100, borderColor: C.green700 },
   cropPillEmoji: { fontSize: 18 },
+  cropPillImage: { width: 22, height: 22, marginLeft: 2 },
   cropPillText: { fontSize: 14, fontWeight: "700", color: C.textSecondary, maxWidth: 70 },
   cropPillTextActive: { color: C.green700 },
 
   subtypeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   subtypeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
@@ -674,6 +702,7 @@ const styles = StyleSheet.create({
   subtypeChipActive: { backgroundColor: C.green100, borderColor: C.green700 },
   subtypeChipText: { fontSize: 14, fontWeight: "700", color: C.textSecondary },
   subtypeChipTextActive: { color: C.green700 },
+  subtypeChipImage: { width: 20, height: 20 },
   orDivider: { fontSize: 13, color: C.textMuted, marginTop: 14, marginBottom: 4, textAlign: "center" },
 
   farmChip: {

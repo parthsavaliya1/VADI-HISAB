@@ -26,6 +26,7 @@ import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Platform,
   RefreshControl,
   ScrollView,
@@ -35,6 +36,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { getCropImageSource } from "@/utils/cropImageSource";
 
 const C = {
   green700: "#2E7D32",
@@ -357,11 +359,20 @@ function TxnRow({ item, onPress }: { item: TxnItem; onPress: () => void }) {
     >
       <View style={[styles.txnCardBar, { backgroundColor: accent }]} />
       <View style={[styles.txnIconWrap, { backgroundColor: bg }]}>
-        {item.cropEmoji ? (
-          <Text style={styles.txnCropEmoji}>{item.cropEmoji}</Text>
-        ) : (
-          <Ionicons name={item.icon as any} size={22} color={accent} />
-        )}
+        {(() => {
+          const src = getCropImageSource(item.cropName);
+          return src ? (
+            <Image
+              source={src}
+              style={styles.txnCropImage}
+              resizeMode="contain"
+            />
+          ) : item.cropEmoji ? (
+            <Text style={styles.txnCropEmoji}>{item.cropEmoji}</Text>
+          ) : (
+            <Ionicons name={item.icon as any} size={22} color={accent} />
+          );
+        })()}
       </View>
       <View style={styles.txnCardBody}>
         <Text style={styles.txnCardLabel} numberOfLines={1}>{item.label}</Text>
@@ -403,14 +414,18 @@ export default function AllTransactionsScreen() {
   const [yearFilter, setYearFilter] =
     useState<"previous" | "current" | "next">("current");
 
-  // Always show three year filters: previous + current + next financial year
-  const currentYear = getCurrentFinancialYear();
-  const [startY] = currentYear.split("-").map(Number);
-  const previousYear = `${startY - 1}-${String(startY % 100).padStart(2, "0")}`;
-  const nextYear = `${startY + 1}-${String((startY + 2) % 100)
-    .padStart(2, "0")
-    .toString()}`;
-  const yearsToLoad = [previousYear, currentYear, nextYear];
+  // Always show three year filters: previous + current + next financial year.
+  // IMPORTANT: keep `yearsToLoad` stable across renders, otherwise `fetchAll`
+  // keeps getting re-created and the `useEffect` triggers repeatedly.
+  const { currentYear, previousYear, nextYear, yearsToLoad } = React.useMemo(() => {
+    const currentYear = getCurrentFinancialYear();
+    const [startY] = currentYear.split("-").map(Number);
+    const previousYear = `${startY - 1}-${String(startY % 100).padStart(2, "0")}`;
+    const nextYear = `${startY + 1}-${String((startY + 2) % 100)
+      .padStart(2, "0")
+      .toString()}`;
+    return { currentYear, previousYear, nextYear, yearsToLoad: [previousYear, currentYear, nextYear] };
+  }, []);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -711,6 +726,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   txnCropEmoji: { fontSize: 22 },
+  txnCropImage: { width: 28, height: 28 },
   txnCardBody: { flex: 1, marginLeft: 12, minWidth: 0 },
   txnCardLabel: { fontSize: 15, fontWeight: "700", color: C.textPrimary },
   txnCardMeta: { fontSize: 12, color: C.textMuted, marginTop: 2 },

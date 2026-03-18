@@ -3,6 +3,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { getGujaratiLabel } from "@/data/gujarati-location";
+import { CROPSWITHIMAGE } from "../constants";
 import {
   getCrops,
   getCurrentFinancialYear,
@@ -29,6 +30,7 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  Image,
   Modal,
   Platform,
   RefreshControl,
@@ -116,6 +118,17 @@ function cropDisplayName(
   t: (s: string, k: string) => string,
 ): string {
   return t("cropNames", name) || name;
+}
+
+function cropImageSource(cropName: string): any | undefined {
+  const normalized = (cropName ?? "").trim().toLowerCase();
+  return (
+    CROPSWITHIMAGE.find(
+      (c) =>
+        (c.value ?? "").trim().toLowerCase() === normalized ||
+        (c.label ?? "").trim().toLowerCase() === normalized,
+    )?.image ?? undefined
+  );
 }
 
 /** Season label from translations */
@@ -733,9 +746,17 @@ function CropPickerModal({
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <Text style={{ fontSize: 30 }}>
-                      {crop.cropEmoji ?? "🌱"}
-                    </Text>
+                      {cropImageSource(crop.cropName) ? (
+                        <Image
+                          source={cropImageSource(crop.cropName)}
+                          style={styles.sheetCropImage}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <Text style={{ fontSize: 30 }}>
+                          {crop.cropEmoji ?? "🌱"}
+                        </Text>
+                      )}
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.sheetCropName}>
@@ -1136,7 +1157,13 @@ function RecentTransactions({
                   },
                 ]}
               >
-                {t.cropEmoji ? (
+                {cropImageSource(t.crop) ? (
+                  <Image
+                    source={cropImageSource(t.crop)}
+                    style={styles.txnCropImage}
+                    resizeMode="contain"
+                  />
+                ) : t.cropEmoji ? (
                   <Text style={styles.txnCropEmoji}>{t.cropEmoji}</Text>
                 ) : (
                   <Ionicons
@@ -1982,9 +2009,20 @@ export default function Dashboard() {
                             end={{ x: 1, y: 1 }}
                           >
                             <View style={styles.cropCardLeft}>
-                              <Text style={styles.cropCardEmoji}>
-                                {crop.cropEmoji ?? "🌱"}
-                              </Text>
+                              {(() => {
+                                const src = cropImageSource(crop.cropName);
+                                return src ? (
+                                  <Image
+                                    source={src}
+                                    style={styles.cropCardImage}
+                                    resizeMode="contain"
+                                  />
+                                ) : (
+                                  <Text style={styles.cropCardEmoji}>
+                                    {crop.cropEmoji ?? "🌱"}
+                                  </Text>
+                                );
+                              })()}
                             </View>
                             <View style={styles.cropCardRight}>
                               <Text style={styles.cropName} numberOfLines={2}>
@@ -2094,9 +2132,20 @@ export default function Dashboard() {
                   >
                     <View style={styles.detailHeader}>
                       <View style={styles.detailEmojiWrap}>
-                        <Text style={styles.detailEmoji}>
-                          {c.cropEmoji ?? "🌱"}
-                        </Text>
+                        {(() => {
+                          const src = cropImageSource(c.cropName);
+                          return src ? (
+                            <Image
+                              source={src}
+                              style={styles.detailCropImage}
+                              resizeMode="contain"
+                            />
+                          ) : (
+                            <Text style={styles.detailEmoji}>
+                              {c.cropEmoji ?? "🌱"}
+                            </Text>
+                          );
+                        })()}
                       </View>
                       <View style={styles.detailHeaderText}>
                         <View
@@ -2810,6 +2859,7 @@ const styles = StyleSheet.create({
   },
   cropCardRight: { flex: 1, justifyContent: "center" },
   cropCardEmoji: { fontSize: 58 },
+  cropCardImage: { width: 68, height: 68 },
   cropBadge: {
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -2926,6 +2976,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailEmoji: { fontSize: 40 },
+  detailCropImage: { width: 62, height: 62 },
   detailHeaderText: { flex: 1 },
   detailName: {
     fontSize: 24,
@@ -3088,6 +3139,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   txnCropEmoji: { fontSize: 22 },
+  txnCropImage: { width: 28, height: 28 },
   txnInfo: { flex: 1 },
   txnLabel: { fontSize: 18, fontWeight: "800", color: C.textPrimary },
   txnMeta: {
@@ -3166,6 +3218,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  sheetCropImage: { width: 40, height: 40 },
   sheetCropName: { fontSize: 19, fontWeight: "800", color: C.textPrimary },
   sheetCropMeta: { fontSize: 17, color: C.textMuted, marginTop: 2 },
   bighaFont: { fontSize: 17, fontWeight: "800", color: C.textPrimary },

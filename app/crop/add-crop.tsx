@@ -37,6 +37,8 @@ import {
   type CropSeason,
   type ProfileFarm,
 } from "@/utils/api";
+import { CROPSWITHIMAGE } from "../constants";
+import { Image } from "react-native";
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 const C = {
@@ -394,12 +396,12 @@ function Chip({
 // Large crop card for step 1 — 3 per row, icon + label, highlight only when selected
 function CropCard({
   label,
-  emoji,
+  image,
   selected,
   onPress,
 }: {
   label: string;
-  emoji: string;
+  image: any;
   selected: boolean;
   onPress: () => void;
 }) {
@@ -409,13 +411,22 @@ function CropCard({
       onPress={onPress}
       activeOpacity={0.85}
     >
-      <Text style={styles.cropCardEmoji}>{emoji}</Text>
+      {/* Image */}
+      {image ? (
+        <Image source={image} style={styles.cropImage} />
+      ) : (
+        <Text style={styles.cropCardEmoji}>🌱</Text> // fallback
+      )}
+
+      {/* Label */}
       <Text
         style={[styles.cropCardLabel, selected && styles.cropCardLabelActive]}
         numberOfLines={2}
       >
         {label}
       </Text>
+
+      {/* Selected Icon */}
       {selected && (
         <View style={styles.cropCardCheck}>
           <Ionicons name="checkmark-circle" size={22} color={C.green700} />
@@ -429,11 +440,13 @@ function CropCard({
 function SubTypeCard({
   label,
   cropEmoji,
+  cropImage,
   selected,
   onPress,
 }: {
   label: string;
   cropEmoji: string;
+  cropImage?: any;
   selected: boolean;
   onPress: () => void;
 }) {
@@ -443,7 +456,15 @@ function SubTypeCard({
       onPress={onPress}
       activeOpacity={0.85}
     >
-      <Text style={styles.subTypeEmoji}>{cropEmoji}</Text>
+      {cropImage ? (
+        <Image
+          source={cropImage}
+          style={styles.subTypeImage}
+          resizeMode="contain"
+        />
+      ) : (
+        <Text style={styles.subTypeEmoji}>{cropEmoji}</Text>
+      )}
       <Text
         style={[styles.subTypeLabel, selected && styles.subTypeLabelActive]}
         numberOfLines={2}
@@ -547,7 +568,7 @@ export default function AddCrop() {
       .then((c) => {
         const cr = c as any;
         const name = cr.cropName ?? "";
-        const matchedCrop = CROPS.find((co) => co.value === name);
+        const matchedCrop = CROPSWITHIMAGE.find((co) => co.value === name);
         setForm({
           season: (cr.season as CropSeason) || "",
           cropValue: matchedCrop ? name : "",
@@ -666,7 +687,7 @@ export default function AddCrop() {
     if (step === 1 && !form.cropValue && !form.customCrop.trim())
       return "કૃપા કરીને પાક પસંદ કરો.";
     const hasSubtypes =
-      (CROPS.find((c) => c.value === form.cropValue)?.subtypes ?? []).length >
+      (CROPSWITHIMAGE.find((c) => c.value === form.cropValue)?.subtypes ?? []).length >
       0;
     if (
       step === 1 &&
@@ -751,7 +772,7 @@ export default function AddCrop() {
 
   // Subtypes for currently selected crop
   const currentCropSubtypes =
-    CROPS.find((c) => c.value === form.cropValue)?.subtypes ?? [];
+    CROPSWITHIMAGE.find((c) => c.value === form.cropValue)?.subtypes ?? [];
 
   // For selected farm: max bigha = farm area - already used by active crops on same farm
   const maxBighaForSelectedFarm = selectedFarm
@@ -1023,25 +1044,25 @@ export default function AddCrop() {
             <View>
               <Text style={styles.stepTitle}>પાક પસંદ કરો</Text>
               <View style={styles.cropGrid}>
-                {CROPS.map((c) => (
-                  <CropCard
-                    key={c.value}
-                    label={c.label}
-                    emoji={c.emoji}
-                    selected={form.cropValue === c.value && !form.customCrop}
-                    onPress={() => {
-                      setForm((p) => ({
-                        ...p,
-                        cropValue: c.value,
-                        cropLabel: c.label,
-                        cropEmoji: c.emoji,
-                        customCrop: "",
-                        subType: "",
-                        customSubType: "",
-                      }));
-                      setShouldScrollToSubType(true);
-                    }}
-                  />
+                {CROPSWITHIMAGE.map((c) => (
+                 <CropCard
+                 key={c.value}
+                 label={c.label}
+                 image={c.image}
+                 selected={form.cropValue === c.value && !form.customCrop}
+                 onPress={() => {
+                   setForm((p) => ({
+                     ...p,
+                     cropValue: c.value,
+                     cropLabel: c.label,
+                     cropEmoji: "", // optional
+                     customCrop: "",
+                     subType: "",
+                     customSubType: "",
+                   }));
+                   setShouldScrollToSubType(true);
+                 }}
+               />
                 ))}
               </View>
               <View
@@ -1093,6 +1114,11 @@ export default function AddCrop() {
                             key={st}
                             label={st}
                             cropEmoji={finalCropEmoji}
+                            cropImage={
+                              CROPSWITHIMAGE.find(
+                                (c) => c.value === form.cropValue,
+                              )?.image ?? undefined
+                            }
                             selected={
                               form.subType === st && !form.customSubType
                             }
@@ -1546,6 +1572,12 @@ const styles = StyleSheet.create({
     top: -40,
     right: -30,
   },
+  cropImage: {
+    width: 40,
+    height: 40,
+    resizeMode: "contain",
+    marginBottom: 6,
+  },
   decorCircle2: {
     position: "absolute",
     width: 80,
@@ -1824,6 +1856,7 @@ const styles = StyleSheet.create({
   },
   subTypeCardActive: { borderColor: C.green700, backgroundColor: C.green50 },
   subTypeEmoji: { fontSize: 28, marginBottom: 4 },
+  subTypeImage: { width: 44, height: 44, marginBottom: 6, borderRadius: 10 },
   subTypeLabel: {
     fontSize: 16,
     fontWeight: "700",

@@ -40,8 +40,10 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  Image,
   View,
 } from "react-native";
+import { getCropImageSource } from "@/utils/cropImageSource";
 const { width: SCREEN_W } = Dimensions.get("window");
 
 // ─── Color system (shared theme) ─────────────────────────────────────────────
@@ -147,7 +149,14 @@ function CropCard({
           {/* Top row */}
           <View style={styles.cardTop}>
             <View style={[styles.cropEmojiWrap, { backgroundColor: cropPale }]}>
-              <Text style={styles.cropEmoji}>{item.cropEmoji ?? "🌱"}</Text>
+              {(() => {
+                const src = getCropImageSource(item.cropName);
+                return src ? (
+                  <Image source={src} style={styles.cropImage} resizeMode="contain" />
+                ) : (
+                  <Text style={styles.cropEmoji}>{item.cropEmoji ?? "🌱"}</Text>
+                );
+              })()}
             </View>
 
             <View style={{ flex: 1, marginLeft: 12 }}>
@@ -687,12 +696,27 @@ export default function CropScreen() {
               <>
                 <View style={styles.modalHeader}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.modalTitle}>
-                      {summaryCrop.cropEmoji ?? "🌱"}{" "}
-                      {summaryCrop.subType
-                        ? `${cropDisplayName(summaryCrop.cropName, t)} - ${summaryCrop.subType}`
-                        : cropDisplayName(summaryCrop.cropName, t)}
-                    </Text>
+                    <View style={styles.modalTitleRow}>
+                      {(() => {
+                        const src = getCropImageSource(summaryCrop.cropName);
+                        return src ? (
+                          <Image
+                            source={src}
+                            style={styles.modalCropImage}
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <Text style={styles.modalCropEmoji}>
+                            {summaryCrop.cropEmoji ?? "🌱"}
+                          </Text>
+                        );
+                      })()}
+                      <Text style={styles.modalTitleText}>
+                        {summaryCrop.subType
+                          ? `${cropDisplayName(summaryCrop.cropName, t)} - ${summaryCrop.subType}`
+                          : cropDisplayName(summaryCrop.cropName, t)}
+                      </Text>
+                    </View>
                     <Text style={styles.modalArea}>
                       {Math.round(summaryCrop.area)} વીઘા
                     </Text>
@@ -1015,6 +1039,7 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: "row", alignItems: "flex-start", marginBottom: 10 },
   cropEmojiWrap: { width: 50, height: 50, borderRadius: 15, justifyContent: "center", alignItems: "center" },
   cropEmoji: { fontSize: 26 },
+  cropImage: { width: 36, height: 36 },
   cropName: { fontSize: 22, fontWeight: "800", color: C.textPrimary, marginBottom: 3 },
   cropSubTypeInline: { fontSize: 16, color: C.textSecondary, fontWeight: "700" },
   tagsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
@@ -1126,6 +1151,10 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: C.textPrimary,
   },
+  modalTitleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  modalCropImage: { width: 34, height: 34, borderRadius: 10 },
+  modalCropEmoji: { fontSize: 26 },
+  modalTitleText: { fontSize: 26, fontWeight: "900", color: C.textPrimary },
   modalSubType: {
     marginTop: 2,
     fontSize: 10,

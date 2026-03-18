@@ -28,6 +28,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Modal,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -38,6 +39,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { getCropImageSource } from "@/utils/cropImageSource";
 
 const VERTICAL_CHART_HEIGHT = 140;
 
@@ -232,7 +234,7 @@ export default function ReportScreen() {
   // Use full crop list from "નવું પાક ઉમેરો" (step 2 options), not just crops in current year
   const cropOptionsForPicker = ALL_CROPS.map((c) => ({
     value: c.value,
-    label: `${c.emoji} ${c.label}`,
+    label: c.label, // we'll show image instead of emoji in picker UI
   })).sort((a, b) => a.label.localeCompare(b.label, "gu"));
 
   const selectedCropLabel =
@@ -1088,7 +1090,18 @@ export default function ReportScreen() {
                   setCropPickerVisible(false);
                 }}
               >
-                <Text style={styles.peerListName}>બધા પાક</Text>
+                <View style={styles.peerListCropRow}>
+                  <View style={styles.peerListCropImageWrap}>
+                    {getCropImageSource("Soybean") ? (
+                      <Image
+                        source={getCropImageSource("Soybean")}
+                        style={styles.peerListCropImage}
+                        resizeMode="contain"
+                      />
+                    ) : null}
+                  </View>
+                  <Text style={styles.peerListName}>બધા પાક</Text>
+                </View>
               </TouchableOpacity>
 
               {filteredCropOptions.map((c) => (
@@ -1101,7 +1114,18 @@ export default function ReportScreen() {
                     setCropPickerVisible(false);
                   }}
                 >
-                  <Text style={styles.peerListName}>{c.label}</Text>
+                  <View style={styles.peerListCropRow}>
+                    <View style={styles.peerListCropImageWrap}>
+                      {getCropImageSource(c.value) ? (
+                        <Image
+                          source={getCropImageSource(c.value)}
+                          style={styles.peerListCropImage}
+                          resizeMode="contain"
+                        />
+                      ) : null}
+                    </View>
+                    <Text style={styles.peerListName}>{c.label}</Text>
+                  </View>
                 </TouchableOpacity>
               ))}
 
@@ -1619,6 +1643,20 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 2,
   },
+  peerListCropRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  peerListCropImageWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: C.green50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  peerListCropImage: { width: 26, height: 26 },
   peerListName: {
     fontSize: 18,
     fontWeight: "700",
