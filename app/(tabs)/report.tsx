@@ -23,6 +23,7 @@ import { formatWholeNumber } from "@/utils/format";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+import { CROPS as ALL_CROPS } from "@/app/crop/add-crop";
 import {
   ActivityIndicator,
   Dimensions,
@@ -110,6 +111,9 @@ export default function ReportScreen() {
   const [peerSearch, setPeerSearch] = useState("");
   const [vadiScore, setVadiScore] = useState<VadiScoreResponse | null>(null);
   const [tractorExpenseReport, setTractorExpenseReport] = useState(0);
+  const [cropPickerVisible, setCropPickerVisible] = useState(false);
+  const [cropSearch, setCropSearch] = useState("");
+  const [selectedCropValue, setSelectedCropValue] = useState<string | "all">("all");
 
   const loadReport = useCallback(async () => {
     try {
@@ -124,7 +128,8 @@ export default function ReportScreen() {
         getYearlyReport(financialYear),
         getIncomeAnalytics(undefined, undefined, financialYear).catch(() => null),
         getCompareReport(financialYear, undefined, peerUserId).catch(() => null),
-        getExpenseAnalytics(financialYear, peerUserId).catch(() => null),
+        // For pie chart: always fetch MY analytics (not peer/avg filtered)
+        getExpenseAnalytics(financialYear, undefined).catch(() => null),
 
 
 
@@ -182,6 +187,12 @@ export default function ReportScreen() {
     loadReport();
   }, [loadReport, transactionsRefreshKey]);
 
+  // Reset crop filter when year changes / data reloads
+  useEffect(() => {
+    setSelectedCropValue("all");
+    setCropSearch("");
+  }, [financialYear]);
+
   const years = getFinancialYearOptionsExtended();
   const summary = report?.summary ?? { totalIncome: 0, totalExpense: 0, netProfit: 0, totalCrops: 0, totalArea: 0, tractorIncome: 0 };
   const tractorIncome = summary.tractorIncome ?? 0;
@@ -194,6 +205,28 @@ export default function ReportScreen() {
   const displayExpense = cropExpense + (excludeTractor ? 0 : tractorExpenseReport);
   const displayNetProfit = displayTotalIncome - displayExpense;
   const crops = (report?.crops ?? []) as CropReportRow[];
+  // Use full crop list from "નવું પાક ઉમેરો" (step 2 options), not just crops in current year
+  const cropOptionsForPicker = ALL_CROPS.map((c) => ({
+    value: c.value,
+    label: `${c.emoji} ${c.label}`,
+  })).sort((a, b) => a.label.localeCompare(b.label, "gu"));
+
+  const selectedCropLabel =
+    selectedCropValue === "all"
+      ? "બધા પાક"
+      : cropOptionsForPicker.find((c) => c.value === selectedCropValue)?.label ??
+        cropDisplayName(selectedCropValue);
+
+  const filteredCropOptions = cropOptionsForPicker.filter((c) => {
+    if (!cropSearch.trim()) return true;
+    const q = cropSearch.trim().toLowerCase();
+    return c.label.toLowerCase().includes(q);
+  });
+
+  const visibleCrops =
+    selectedCropValue === "all"
+      ? crops
+      : crops.filter((c) => (c as any)?.cropName === selectedCropValue);
 
 
 
@@ -232,32 +265,21 @@ export default function ReportScreen() {
   const MAIN_PIE_CATEGORIES: string[] = ["Seed", "Pesticide", "Fertilizer", "Labour", "Machinery"];
 
   let myPieByCategory: Record<string, number> = {};
-  let avgPieByCategory: Record<string, number> = {};
 
   if (expenseAnalytics) {
-    const usePerBigha = (expenseAnalytics.myArea ?? 0) > 0;
-    const mySource = usePerBigha ? expenseAnalytics.myPerBighaByCategory || {} : expenseAnalytics.myByCategory || {};
-    const avgSource =
-      usePerBigha && expenseAnalytics.sampleSize > 0
-        ? expenseAnalytics.avgPerBighaByCategory || {}
-        : expenseAnalytics.avgByCategory || {};
+    // Use absolute totals from myByCategory (fixed by crop entries), not per-bigha
+    const mySource = expenseAnalytics.myByCategory || {};
 
     MAIN_PIE_CATEGORIES.forEach((cat) => {
       const myVal = mySource[cat];
       if (myVal != null && myVal > 0) {
         myPieByCategory[cat] = myVal;
       }
-      const avgVal = avgSource[cat];
-      if (avgVal != null && avgVal > 0) {
-        avgPieByCategory[cat] = avgVal;
-      }
     });
   }
 
   const myPieTotal = Object.values(myPieByCategory).reduce((s, v) => s + v, 0);
-  const avgPieTotal = Object.values(avgPieByCategory).reduce((s, v) => s + v, 0);
   const hasMyPie = Object.keys(myPieByCategory).length > 0 && myPieTotal > 0;
-  const hasAvgPie = Object.keys(avgPieByCategory).length > 0 && avgPieTotal > 0;
 
   const selectedPeer = selectedPeerId === "average"
     ? null
@@ -363,14 +385,7 @@ export default function ReportScreen() {
               title="પાક માટે ખર્ચ વિભાજન"
             />
           )}
-          {hasAvgPie && (
-            <ExpensePieChart
-              byCategory={avgPieByCategory}
-              centerTotal={avgPieTotal}
-              title="સરેરાશ પાક માટે ખર્ચ વિભાજન"
-            />
-          )}
-          {!hasMyPie && !hasAvgPie && (
+          {!hasMyPie && (
             <Text style={styles.expenseTypeEmpty}>આ વર્ષ માટે પાક ખર્ચ વર્ગીકરણ ઉપલબ્ધ નથી</Text>
           )}
 
@@ -394,6 +409,21 @@ export default function ReportScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Crop selection dropdown — filter crop list below */}
+          <View style={styles.peerDropdownRow}>
+            <Text style={styles.peerSelectLabel}>પાક પસંદ કરો:</Text>
+            <TouchableOpacity
+              style={styles.peerDropdownButton}
+              activeOpacity={0.8}
+              onPress={() => setCropPickerVisible(true)}
+            >
+              <Text style={styles.peerDropdownButtonText} numberOfLines={1}>
+                {selectedCropLabel}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={C.textMuted} />
+            </TouchableOpacity>
+          </View>
 
 
 
@@ -807,13 +837,15 @@ export default function ReportScreen() {
           </View>
 
           <Text style={styles.sectionTitle}>🌾 આ વર્ષ ના પાક</Text>
-          {crops.length === 0 ? (
+          {visibleCrops.length === 0 ? (
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyEmoji}>📋</Text>
-              <Text style={styles.emptyText}>આ વર્ષ માટે ડેટા નથી</Text>
+              <Text style={styles.emptyText}>
+                {selectedCropValue === "all" ? "આ વર્ષ માટે ડેટા નથી" : "આ પાક માટે ડેટા નથી"}
+              </Text>
             </View>
           ) : (
-            crops.map((row) => (
+            visibleCrops.map((row) => (
               <View key={row._id} style={styles.cropRow}>
                 <View style={styles.cropRowLeft}>
                   <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
@@ -922,6 +954,61 @@ export default function ReportScreen() {
           </Pressable>
         </Modal>
       )}
+
+      {/* Crop picker dropdown modal */}
+      <Modal
+        visible={cropPickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCropPickerVisible(false)}
+      >
+        <Pressable style={styles.peerModalBackdrop} onPress={() => setCropPickerVisible(false)}>
+          <Pressable style={styles.peerModalCard}>
+            <Text style={styles.peerModalTitle}>પાક પસંદ કરો</Text>
+            <View style={styles.peerSearchBox}>
+              <Ionicons name="search" size={18} color={C.textMuted} />
+              <TextInput
+                style={styles.peerSearchInput}
+                placeholder="પાક શોધો"
+                placeholderTextColor={C.textMuted}
+                value={cropSearch}
+                onChangeText={setCropSearch}
+              />
+            </View>
+
+            <ScrollView style={styles.peerList}>
+              <TouchableOpacity
+                style={[styles.peerListItem, selectedCropValue === "all" && styles.peerListItemActive]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setSelectedCropValue("all");
+                  setCropPickerVisible(false);
+                }}
+              >
+                <Text style={styles.peerListName}>બધા પાક</Text>
+              </TouchableOpacity>
+
+              {filteredCropOptions.map((c) => (
+                <TouchableOpacity
+                  key={c.value}
+                  style={[styles.peerListItem, selectedCropValue === c.value && styles.peerListItemActive]}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setSelectedCropValue(c.value);
+                    setCropPickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.peerListName}>{c.label}</Text>
+                </TouchableOpacity>
+              ))}
+
+              {filteredCropOptions.length === 0 && (
+                <Text style={styles.emptyText}>કોઈ પાક મળ્યો નથી</Text>
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
 
 
