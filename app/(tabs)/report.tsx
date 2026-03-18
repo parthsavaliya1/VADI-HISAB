@@ -78,8 +78,8 @@ const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
   Other: "અન્ય",
 };
 const EXPENSE_CATEGORY_ORDER = ["Seed", "Fertilizer", "Pesticide", "Labour", "Machinery", "Irrigation", "Other"];
-/** Only crop expense categories for પાક માટે ખર્ચ વિભાજન — exclude Other and tractor */
-const CROP_EXPENSE_CATEGORY_ORDER = ["Seed", "Fertilizer", "Pesticide", "Labour", "Machinery", "Irrigation"];
+/** Only crop expense categories for comparison — exclude Other and sinchai */
+const CROP_EXPENSE_CATEGORY_ORDER = ["Seed", "Fertilizer", "Pesticide", "Labour", "Machinery"];
 const BAR_MAX_WIDTH = SCREEN_W - 32 - 100;
 
 function formatINR(n: number): string {
@@ -100,6 +100,7 @@ export default function ReportScreen() {
   const [analytics, setAnalytics] = useState<Awaited<ReturnType<typeof getIncomeAnalytics>> | null>(null);
   const [compare, setCompare] = useState<Awaited<ReturnType<typeof getCompareReport>> | null>(null);
   const [expenseAnalytics, setExpenseAnalytics] = useState<Awaited<ReturnType<typeof getExpenseAnalytics>> | null>(null);
+  const [expenseAnalyticsFixed, setExpenseAnalyticsFixed] = useState<Awaited<ReturnType<typeof getExpenseAnalytics>> | null>(null);
   const [yearlyReports, setYearlyReports] = useState<{ year: string; income: number; expense: number }[]>([]);
   const [comparePeers, setComparePeers] = useState<ComparePeer[]>([]);
   const [selectedPeerId, setSelectedPeerId] = useState<string | "average">("average");
@@ -124,12 +125,15 @@ export default function ReportScreen() {
       // Load analytics, compare, peers, VADI score and multi-year in background
       const years = getFinancialYearOptionsExtended();
       const peerUserId = selectedPeerId === "average" ? undefined : selectedPeerId;
-      const [data, analyticsRes, compareRes, expAnalytics, peersRes, tractorExpRes, ...yearResults] = await Promise.all([
+      const cropNameForCompare = selectedCropValue === "all" ? undefined : selectedCropValue;
+      const [data, analyticsRes, compareRes, expAnalyticsFixed, expAnalyticsCompare, peersRes, tractorExpRes, ...yearResults] = await Promise.all([
         getYearlyReport(financialYear),
         getIncomeAnalytics(undefined, undefined, financialYear).catch(() => null),
         getCompareReport(financialYear, undefined, peerUserId).catch(() => null),
         // Pie chart: always fetch MY analytics (fixed, not farmer/crop filtered)
         getExpenseAnalytics(financialYear, undefined, undefined).catch(() => null),
+        // Comparison section (after farmer + crop selection)
+        getExpenseAnalytics(financialYear, peerUserId, cropNameForCompare).catch(() => null),
 
 
 
@@ -150,7 +154,8 @@ export default function ReportScreen() {
       setReport(data ?? null);
       setAnalytics(analyticsRes ?? null);
       setCompare(compareRes ?? null);
-      setExpenseAnalytics(expAnalytics ?? null);
+      setExpenseAnalyticsFixed(expAnalyticsFixed ?? null);
+      setExpenseAnalytics(expAnalyticsCompare ?? null);
       setComparePeers(peersRes?.peers ?? []);
       const tractorExpenseSum = (tractorExpRes?.data ?? []).reduce(
         (s: number, e: Expense) => s + (Number(e.amount) || Number((e as any).other?.totalAmount) || 0),
@@ -181,7 +186,7 @@ export default function ReportScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [financialYear, selectedPeerId, profile?.tractorAvailable]);
+  }, [financialYear, selectedPeerId, selectedCropValue, profile?.tractorAvailable]);
 
   useEffect(() => {
     loadReport();
@@ -205,6 +210,10 @@ export default function ReportScreen() {
   const displayExpense = cropExpense + (excludeTractor ? 0 : tractorExpenseReport);
   const displayNetProfit = displayTotalIncome - displayExpense;
   const crops = (report?.crops ?? []) as CropReportRow[];
+  const myHasSelectedCrop =
+    selectedCropValue !== "all"
+      ? crops.some((c) => (c as any)?.cropName === selectedCropValue)
+      : true;
   // Use full crop list from "નવું પાક ઉમેરો" (step 2 options), not just crops in current year
   const cropOptionsForPicker = ALL_CROPS.map((c) => ({
     value: c.value,
@@ -266,9 +275,9 @@ export default function ReportScreen() {
 
   let myPieByCategory: Record<string, number> = {};
 
-  if (expenseAnalytics) {
+  if (expenseAnalyticsFixed) {
     // Use absolute totals from myByCategory (matches your own entries; not per-bigha)
-    const mySource = expenseAnalytics.myByCategory || {};
+    const mySource = expenseAnalyticsFixed.myByCategory || {};
 
     MAIN_PIE_CATEGORIES.forEach((cat) => {
       const myVal = mySource[cat];
@@ -464,14 +473,35 @@ export default function ReportScreen() {
               {expenseAnalytics && ((expenseAnalytics.myArea ?? 0) > 0 || expenseAnalytics.mySummary?.length) ? (
                 (() => {
                   const usePerBigha = (expenseAnalytics.myArea ?? 0) > 0;
-                  const myBy = usePerBigha ? (expenseAnalytics.myPerBighaByCategory || {}) : (expenseAnalytics.myByCategory || {});
-                  const avgBy = usePerBigha && expenseAnalytics.sampleSize > 0 ? (expenseAnalytics.avgPerBighaByCategory || {}) : (expenseAnalytics.avgByCategory || {});
-                  const hasCompare = expenseAnalytics.sampleSize > 0;
-                  const categories = CROP_EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > 0 || (avgBy[cat] || 0) > 0);
+                  const rawMyBy = usePerBigha ? (expenseAnalytics.myPerBighaByCategory || {}) : (expenseAnalytics.myByCategory || {});
+                  const myBy =
+                    selectedCropValue !== "all" && !myHasSelectedCrop
+                      ? {}
+                      : rawMyBy;
+                  const avgBy =
+                    usePerBigha && expenseAnalytics.sampleSize > 0
+                      ? (expenseAnalytics.avgPerBighaByCategory || {})
+                      : (expenseAnalytics.avgByCategory || {});
+                  // Show comparison:
+                  // - always when a specific farmer is selected
+                  // - when average farmer is selected AND a specific crop is selected (show 0 if no data)
+                  // - when average farmer + all crops (only if we have sample)
+                  const hasCompare =
+                    selectedPeerId !== "average" ||
+                    (selectedPeerId === "average" && selectedCropValue !== "all") ||
+                    (selectedPeerId === "average" && selectedCropValue === "all" && (expenseAnalytics.sampleSize ?? 0) > 0);
+                  const categories =
+                    selectedCropValue !== "all"
+                      ? CROP_EXPENSE_CATEGORY_ORDER
+                      : CROP_EXPENSE_CATEGORY_ORDER.filter((cat) => (myBy[cat] || 0) > 0 || (avgBy[cat] || 0) > 0);
                   if (categories.length === 0) {
                     return <Text style={styles.expenseTypeEmpty}>આ વર્ષ ખર્ચ ડેટા નથી</Text>;
                   }
                   const maxVal = Math.max(1, ...categories.map((cat) => Math.max(myBy[cat] || 0, avgBy[cat] || 0)));
+                  const peerTotal = Object.values(avgBy).reduce((s, v) => s + (v || 0), 0);
+                  const peerHasNoCropData = selectedCropValue !== "all" && peerTotal <= 0;
+                  const myTotal = Object.values(myBy).reduce((s, v) => s + (v || 0), 0);
+                  const myHasNoCropData = selectedCropValue !== "all" && !myHasSelectedCrop && myTotal <= 0;
                   return (
                     <View style={styles.expenseTypeWrap}>
                       <View style={styles.expenseTypeLegend}>
@@ -483,13 +513,27 @@ export default function ReportScreen() {
                           <View style={styles.expenseTypeLegendItem}>
                             <View style={[styles.expenseTypeLegendDot, { backgroundColor: C.textMuted }]} />
                             <Text style={styles.expenseTypeLegendText}>
-                              {expenseAnalytics?.mode === "peer" && selectedPeer
-                                ? selectedPeer.name
-                                : "સરેરાશ ખેડૂત"}
+                              {selectedPeer ? selectedPeer.name : "સરેરાશ ખેડૂત"}
                             </Text>
                           </View>
                         )}
                       </View>
+                      {myHasNoCropData && (
+                        <View style={styles.expenseTypeSuggestion}>
+                          <Ionicons name="information-circle" size={18} color={C.textMuted} />
+                          <Text style={styles.expenseTypeSuggestionText}>
+                            આ વર્ષમાં તમારા પાસે આ પાક નથી
+                          </Text>
+                        </View>
+                      )}
+                      {peerHasNoCropData && (
+                        <View style={styles.expenseTypeSuggestion}>
+                          <Ionicons name="alert-circle" size={18} color={C.expense} />
+                          <Text style={styles.expenseTypeSuggestionText}>
+                            {selectedPeerId === "average" ? "સરેરાશ ખેડૂત પાસે આ પાક નથી" : "તમારે સરખામણી માટે પાક નથી"}
+                          </Text>
+                        </View>
+                      )}
                       {categories.map((cat) => {
                         const my = myBy[cat] || 0;
                         const avg = avgBy[cat] || 0;
