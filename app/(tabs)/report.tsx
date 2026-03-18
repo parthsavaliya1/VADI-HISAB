@@ -101,6 +101,8 @@ export default function ReportScreen() {
   const [compare, setCompare] = useState<Awaited<ReturnType<typeof getCompareReport>> | null>(null);
   const [expenseAnalytics, setExpenseAnalytics] = useState<Awaited<ReturnType<typeof getExpenseAnalytics>> | null>(null);
   const [expenseAnalyticsFixed, setExpenseAnalyticsFixed] = useState<Awaited<ReturnType<typeof getExpenseAnalytics>> | null>(null);
+  const [expenseAnalyticsPerBighaCompare, setExpenseAnalyticsPerBighaCompare] =
+    useState<Awaited<ReturnType<typeof getExpenseAnalytics>> | null>(null);
   const [yearlyReports, setYearlyReports] = useState<{ year: string; income: number; expense: number }[]>([]);
   const [comparePeers, setComparePeers] = useState<ComparePeer[]>([]);
   const [selectedPeerId, setSelectedPeerId] = useState<string | "average">("average");
@@ -126,7 +128,17 @@ export default function ReportScreen() {
       const years = getFinancialYearOptionsExtended();
       const peerUserId = selectedPeerId === "average" ? undefined : selectedPeerId;
       const cropNameForCompare = selectedCropValue === "all" ? undefined : selectedCropValue;
-      const [data, analyticsRes, compareRes, expAnalyticsFixed, expAnalyticsCompare, peersRes, tractorExpRes, ...yearResults] = await Promise.all([
+      const [
+        data,
+        analyticsRes,
+        compareRes,
+        expAnalyticsFixed,
+        expAnalyticsCompare,
+        expAnalyticsPerBighaCompare,
+        peersRes,
+        tractorExpRes,
+        ...yearResults
+      ] = await Promise.all([
         getYearlyReport(financialYear),
         getIncomeAnalytics(undefined, undefined, financialYear).catch(() => null),
         getCompareReport(financialYear, undefined, peerUserId).catch(() => null),
@@ -134,6 +146,8 @@ export default function ReportScreen() {
         getExpenseAnalytics(financialYear, undefined, undefined).catch(() => null),
         // Comparison section (after farmer + crop selection)
         getExpenseAnalytics(financialYear, peerUserId, cropNameForCompare).catch(() => null),
+        // Per-bigha cards: compare vs selected farmer (overall, not crop-specific)
+        getExpenseAnalytics(financialYear, peerUserId, undefined).catch(() => null),
 
 
 
@@ -156,6 +170,7 @@ export default function ReportScreen() {
       setCompare(compareRes ?? null);
       setExpenseAnalyticsFixed(expAnalyticsFixed ?? null);
       setExpenseAnalytics(expAnalyticsCompare ?? null);
+      setExpenseAnalyticsPerBighaCompare(expAnalyticsPerBighaCompare ?? null);
       setComparePeers(peersRes?.peers ?? []);
       const tractorExpenseSum = (tractorExpRes?.data ?? []).reduce(
         (s: number, e: Expense) => s + (Number(e.amount) || Number((e as any).other?.totalAmount) || 0),
@@ -255,11 +270,19 @@ export default function ReportScreen() {
       ? Math.round((myIncomePerBighaFromSummary - targetIncomePerBigha) / targetIncomePerBigha * 100)
       : 0;
 
-  const expenseAnalyticsData = expenseAnalytics && (expenseAnalytics.myArea ?? 0) > 0 && expenseAnalytics.sampleSize > 0;
-  const myBy = expenseAnalyticsData ? (expenseAnalytics?.myPerBighaByCategory || {}) : {};
-  const avgBy = expenseAnalyticsData ? (expenseAnalytics?.avgPerBighaByCategory || {}) : {};
+  // Expense per-bigha box: compare vs selected farmer when picked, else vs overall average.
+  // Must NOT be affected by crop selection.
+  const expensePerBighaAnalytics =
+    selectedPeerId !== "average"
+      ? (expenseAnalyticsPerBighaCompare ?? null)
+      : (expenseAnalyticsFixed ?? null);
+  const expenseAnalyticsData =
+    expensePerBighaAnalytics && (expensePerBighaAnalytics.myArea ?? 0) > 0 && (expensePerBighaAnalytics.sampleSize ?? 0) > 0;
+  const myBy = expenseAnalyticsData ? (expensePerBighaAnalytics?.myPerBighaByCategory || {}) : {};
+  const avgBy = expenseAnalyticsData ? (expensePerBighaAnalytics?.avgPerBighaByCategory || {}) : {};
 
   const myExpenseTotalFromApi = Object.values(myBy).reduce((s, v) => s + v, 0);
+  // Match dashboard: expense per bigha = (total expense for year) / (total land bigha)
   const myExpenseTotal = landBigha > 0 ? displayExpense / landBigha : myExpenseTotalFromApi;
   const avgExpenseTotal = Object.values(avgBy).reduce((s, v) => s + v, 0);
   const expensePctVsAvg = avgExpenseTotal > 0 ? Math.round((myExpenseTotal - avgExpenseTotal) / avgExpenseTotal * 100) : 0;
@@ -635,7 +658,7 @@ export default function ReportScreen() {
           {/* 2. Expense per bigha — common design (uses selected peer or average) */}
           {expenseAnalyticsData && (
             <View style={styles.perBighaCard}>
-              <Text style={styles.perBighaTitle}>💸 ખર્ચ પ્રતિ વીઘા</Text>
+              <Text style={styles.perBighaTitle}>💸 સરેરાશ ખર્ચ પ્રતિ વીઘા</Text>
 
               <View style={styles.perBighaHeroRow}>
                 <View style={[styles.perBighaHeroBox, styles.perBighaHeroBoxMine]}>
@@ -647,9 +670,7 @@ export default function ReportScreen() {
                 </View>
                 <View style={styles.perBighaHeroBox}>
                   <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]} numberOfLines={1}>
-                    {expenseAnalytics?.mode === "peer" && selectedPeer
-                      ? peerNameOnly
-                      : "સરેરાશ ખેડૂત"}
+                  {selectedPeerId !== "average" ? peerNameOnly : "સરેરાશ ખેડૂત"}
                   </Text>
                   <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>{formatINR(avgExpenseTotal)}</Text>
                 </View>
@@ -658,7 +679,7 @@ export default function ReportScreen() {
               <View style={[styles.perBighaPctBadge, expenseLowerIsBetter ? styles.perBighaPctBadgeGood : styles.perBighaPctBadgeNeutral]}>
                 <Ionicons name={expenseLowerIsBetter ? "trending-down" : "trending-up"} size={18} color={expenseLowerIsBetter ? C.green700 : C.expense} />
                 <Text style={[styles.perBighaPctText, { color: expenseLowerIsBetter ? C.green700 : C.expense }]}>
-                  {expenseAnalytics?.mode === "peer" && selectedPeer ? `${selectedPeer.name} કરતાં ` : "સરેરાશ કરતાં "}
+                  {selectedPeerId !== "average" ? `${peerNameOnly} કરતાં ` : "સરેરાશ કરતાં "}
                   {Math.abs(expensePctVsAvg)}% {expenseLowerIsBetter ? "ઓછું ✓" : "વધારે"}
                 </Text>
               </View>
@@ -678,7 +699,7 @@ export default function ReportScreen() {
                 </View>
                 <View style={styles.perBighaRaceRow}>
                   <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]} numberOfLines={1}>
-                    {expenseAnalytics?.mode === "peer" && selectedPeer ? peerNameOnly : "સરેરાશ ખેડૂત"}
+                    {selectedPeerId !== "average" ? peerNameOnly : "સરેરાશ ખેડૂત"}
                   </Text>
                   <View style={styles.perBighaRaceTrack}>
                     <View
@@ -719,7 +740,7 @@ export default function ReportScreen() {
 
             return (
               <View style={styles.perBighaCard}>
-                <Text style={styles.perBighaTitle}>🌾 આવક પ્રતિ વીઘા</Text>
+                <Text style={styles.perBighaTitle}>🌾 સરેરાશ આવક પ્રતિ વીઘા</Text>
 
                 <View style={styles.perBighaHeroRow}>
                   <View style={[styles.perBighaHeroBox, styles.perBighaHeroBoxMine]}>
