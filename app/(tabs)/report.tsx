@@ -739,95 +739,134 @@ export default function ReportScreen() {
 
 
             return (
-              <View style={styles.perBighaCard}>
-                <Text style={styles.perBighaTitle}>🌾 સરેરાશ આવક પ્રતિ વીઘા</Text>
+              <>
+                <View style={styles.perBighaCard}>
+                  <Text style={styles.perBighaTitle}>🌾 સરેરાશ આવક પ્રતિ વીઘા</Text>
 
-                <View style={styles.perBighaHeroRow}>
-                  <View style={[styles.perBighaHeroBox, styles.perBighaHeroBoxMine]}>
-                    <Text style={styles.perBighaHeroLabel}>તમારી</Text>
-                    <Text style={[styles.perBighaHeroValue, { color: C.green700 }]}>{formatINR(myVal)}</Text>
+                  <View style={styles.perBighaHeroRow}>
+                    <View style={[styles.perBighaHeroBox, styles.perBighaHeroBoxMine]}>
+                      <Text style={styles.perBighaHeroLabel}>તમારી</Text>
+                      <Text style={[styles.perBighaHeroValue, { color: C.green700 }]}>{formatINR(myVal)}</Text>
+                    </View>
+                    <View style={styles.perBighaVsBadge}>
+                      <Text style={styles.perBighaVsText}>VS</Text>
+                    </View>
+                    <View style={styles.perBighaHeroBox}>
+                      <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]} numberOfLines={1}>
+                        {targetLabel}
+                      </Text>
+                      <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>
+                        {formatINR(targetVal)}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.perBighaVsBadge}>
-                    <Text style={styles.perBighaVsText}>VS</Text>
-                  </View>
-                  <View style={styles.perBighaHeroBox}>
-                    <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]} numberOfLines={1}>
-                      {targetLabel}
-                    </Text>
-                    <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>
-                      {formatINR(targetVal)}
-                    </Text>
-                  </View>
-                </View>
 
-                {compare.sampleSize > 0 && (
-                  <View
-                    style={[
-                      styles.perBighaPctBadge,
-                      aboveTarget ? styles.perBighaPctBadgeGood : styles.perBighaPctBadgeNeutral,
-                    ]}
-                  >
-                    <Ionicons
-                      name={aboveTarget ? "trending-up" : "trending-down"}
-                      size={18}
-                      color={aboveTarget ? C.green700 : C.textMuted}
-                    />
-                    <Text
+                  {compare.sampleSize > 0 && (
+                    <View
                       style={[
-                        styles.perBighaPctText,
-                        { color: aboveTarget ? C.green700 : C.textMuted },
+                        styles.perBighaPctBadge,
+                        aboveTarget ? styles.perBighaPctBadgeGood : styles.perBighaPctBadgeNeutral,
                       ]}
                     >
-                      {isPeerMode && (compare.peerName || selectedPeer)
-                        ? `${compare.peerName ?? selectedPeer?.name} કરતાં `
-                        : "સરેરાશ કરતાં "}
-                      {Math.abs(incomePctVsAvg)}% {aboveTarget ? "વધારે" : "ઓછું"}
-                    </Text>
-                  </View>
-                )}
+                      <Ionicons
+                        name={aboveTarget ? "trending-up" : "trending-down"}
+                        size={18}
+                        color={aboveTarget ? C.green700 : C.textMuted}
+                      />
+                      <Text
+                        style={[
+                          styles.perBighaPctText,
+                          { color: aboveTarget ? C.green700 : C.textMuted },
+                        ]}
+                      >
+                        {isPeerMode && (compare.peerName || selectedPeer)
+                          ? `${compare.peerName ?? selectedPeer?.name} કરતાં `
+                          : "સરેરાશ કરતાં "}
+                        {Math.abs(incomePctVsAvg)}% {aboveTarget ? "વધારે" : "ઓછું"}
+                      </Text>
+                    </View>
+                  )}
 
-                <View style={styles.perBighaRaceWrap}>
-                  <View style={styles.perBighaRaceRow}>
-                    <Text style={styles.perBighaRaceLabel}>તમારી</Text>
-                    <View style={styles.perBighaRaceTrack}>
-                      <View
-                        style={[
-                          styles.perBighaRaceFill,
-                          { width: `${Math.min(100, (myVal / maxV) * 100)}%`, backgroundColor: C.green700 },
-                        ]}
-                      />
+                  <View style={styles.perBighaRaceWrap}>
+                    <View style={styles.perBighaRaceRow}>
+                      <Text style={styles.perBighaRaceLabel}>તમારી</Text>
+                      <View style={styles.perBighaRaceTrack}>
+                        <View
+                          style={[
+                            styles.perBighaRaceFill,
+                            { width: `${Math.min(100, (myVal / maxV) * 100)}%`, backgroundColor: C.green700 },
+                          ]}
+                        />
+                      </View>
+                      <Text style={[styles.perBighaRaceVal, { color: C.green700 }]}>{formatINR(myVal)}</Text>
                     </View>
-                    <Text style={[styles.perBighaRaceVal, { color: C.green700 }]}>{formatINR(myVal)}</Text>
-                  </View>
-                  <View style={styles.perBighaRaceRow}>
-                    <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]} numberOfLines={1}>
-                      {isPeerMode && (compare.peerName || selectedPeer)
-                        ? targetLabel
-                        : "સરેરાશ ખેડૂત"}
-                    </Text>
-                    <View style={styles.perBighaRaceTrack}>
-                      <View
-                        style={[
-                          styles.perBighaRaceFillAvg,
-                          { width: `${Math.min(100, (targetVal / maxV) * 100)}%` },
-                        ]}
-                      />
+                    <View style={styles.perBighaRaceRow}>
+                      <Text style={[styles.perBighaRaceLabel, { color: C.textMuted }]} numberOfLines={1}>
+                        {isPeerMode && (compare.peerName || selectedPeer)
+                          ? targetLabel
+                          : "સરેરાશ ખેડૂત"}
+                      </Text>
+                      <View style={styles.perBighaRaceTrack}>
+                        <View
+                          style={[
+                            styles.perBighaRaceFillAvg,
+                            { width: `${Math.min(100, (targetVal / maxV) * 100)}%` },
+                          ]}
+                        />
+                      </View>
+                      <Text style={[styles.perBighaRaceVal, { color: C.textMuted }]}>{formatINR(targetVal)}</Text>
                     </View>
-                    <Text style={[styles.perBighaRaceVal, { color: C.textMuted }]}>{formatINR(targetVal)}</Text>
                   </View>
+
+                  {aboveTarget && compare.sampleSize > 0 && (
+                    <View style={styles.perBighaWinRow}>
+                      <Ionicons name="trophy" size={18} color={C.textPrimary} />
+                      <Text style={styles.perBighaWinText}>
+                        {isPeerMode && (compare.peerName || selectedPeer)
+                          ? `તમે ${(compare.peerName ?? selectedPeer?.name) || "પસંદ ખેડૂત"} કરતાં આગળ છો!`
+                          : "તમે સરેરાશ કરતાં આગળ છો!"}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
-                {aboveTarget && compare.sampleSize > 0 && (
-                  <View style={styles.perBighaWinRow}>
-                    <Ionicons name="trophy" size={18} color={C.textPrimary} />
-                    <Text style={styles.perBighaWinText}>
-                      {isPeerMode && (compare.peerName || selectedPeer)
-                        ? `તમે ${(compare.peerName ?? selectedPeer?.name) || "પસંદ ખેડૂત"} કરતાં આગળ છો!`
-                        : "તમે સરેરાશ કરતાં આગળ છો!"}
-                    </Text>
-                  </View>
-                )}
-              </View>
+                <View style={styles.perBighaCard}>
+                  <Text style={styles.perBighaTitle}>📈 ખર્ચ પર નફો (%)</Text>
+                  {(() => {
+                    const myExp = myExpenseTotal;
+                    const targetExp = avgExpenseTotal;
+                    const myRoi = myExp > 0 ? ((myVal - myExp) / myExp) * 100 : 0;
+                    const targetRoi = targetExp > 0 ? ((targetVal - targetExp) / targetExp) * 100 : 0;
+                    const diff = myRoi - targetRoi;
+                    const better = diff >= 0;
+                    const diffText = `${Math.abs(Math.round(diff))}% ${better ? "વધારે" : "ઓછું"}`;
+                    return (
+                      <>
+                        <View style={styles.perBighaHeroRow}>
+                          <View style={[styles.perBighaHeroBox, styles.perBighaHeroBoxMine]}>
+                            <Text style={styles.perBighaHeroLabel}>તમારી</Text>
+                            <Text style={[styles.perBighaHeroValue, { color: better ? C.green700 : C.expense }]}>
+                              {Math.round(myRoi)}%
+                            </Text>
+                          </View>
+                          <View style={styles.perBighaVsBadge}>
+                            <Text style={styles.perBighaVsText}>VS</Text>
+                          </View>
+                          <View style={styles.perBighaHeroBox}>
+                            <Text style={[styles.perBighaHeroLabel, { color: C.textMuted }]} numberOfLines={1}>
+                              {targetLabel}
+                            </Text>
+                            <Text style={[styles.perBighaHeroValue, styles.perBighaHeroValueAvg]}>
+                              {Math.round(targetRoi)}%
+                            </Text>
+                          </View>
+                        </View>
+
+                      </>
+                    );
+                  })()}
+                </View>
+              </>
             );
           })()}
 
@@ -1651,7 +1690,7 @@ const styles = StyleSheet.create({
   },
   adviceWrap: { marginTop: 10 },
   adviceText: { fontSize: 15, color: C.textSecondary, marginBottom: 4 },
-  sectionTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 14 },
+  sectionTitle: { fontSize: 20, fontWeight: "900", color: C.textPrimary, marginBottom: 16 },
   cropRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1664,7 +1703,7 @@ const styles = StyleSheet.create({
     borderColor: C.borderLight,
   },
   cropRowLeft: { flex: 1 },
-  cropRowName: { fontSize: 21, fontWeight: "900", color: C.textPrimary },
+  cropRowName: { fontSize: 18, fontWeight: "900", color: C.textPrimary },
   vighaBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -1673,15 +1712,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F0F1F3",
   },
-  vighaBadgeText: { fontSize: 14, fontWeight: "800", color: C.textPrimary },
+  vighaBadgeText: { fontSize: 12, fontWeight: "800", color: C.textPrimary },
   bhagmaBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
-  bhagmaBadgeText: { fontSize: 13, fontWeight: "700" },
-  cropRowMeta: { fontSize: 17, color: C.textMuted, marginTop: 5, fontWeight: "700" },
-  cropRowProfit: { fontSize: 21, fontWeight: "900", marginLeft: 12 },
+  bhagmaBadgeText: { fontSize: 12, fontWeight: "700" },
+  cropRowMeta: { fontSize: 14, color: C.textMuted, marginTop: 4, fontWeight: "700" },
+  cropRowProfit: { fontSize: 18, fontWeight: "900", marginLeft: 12 },
   emptyWrap: { alignItems: "center", paddingVertical: 40 },
   emptyEmoji: { fontSize: 48, marginBottom: 10 },
   emptyText: { fontSize: 18, color: C.textMuted, fontWeight: "700" },
