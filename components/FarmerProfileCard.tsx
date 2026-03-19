@@ -57,9 +57,14 @@ export function FarmerProfileCard({
   const totalLand = profile.totalLand?.value ?? 0;
   const landUnit = profile.totalLand?.unit === "bigha" ? "વીઘા" : "એકર";
   const landText = totalLand ? `${profile.totalLand?.unit === "bigha" ? formatArea(totalLand) : formatWholeNumber(totalLand)} ${landUnit}` : "—";
-  const waterText = toList(WATER, waterSources);
+  // The UI shows a single "water" section; if multiple sources are saved,
+  // show only the first one to avoid duplicated water indicators.
+  // Also hide Borewell (2nd option) from water display.
+  const filteredWaterSources = waterSources?.filter((ws) => ws !== "Borewell") ?? [];
+  const waterText = filteredWaterSources?.length
+    ? (WATER[filteredWaterSources[0] as keyof typeof WATER] ?? filteredWaterSources[0])
+    : "—";
   const labourText = toList(LABOUR, labourTypes);
-  const tractorServicesText = implementsAvailable.length > 0 ? toList(TRACTOR_SERVICES, implementsAvailable) : null;
 
   const h = cardHeight ?? 360;
 
@@ -147,19 +152,6 @@ export function FarmerProfileCard({
               </Text>
             </View>
           </View>
-          {profile.tractorAvailable && tractorServicesText && (
-            <View style={styles.iconRow}>
-              <View style={[styles.iconCircle, { backgroundColor: SECTION_COLORS.tractor[1] }]}>
-                <Ionicons name="construct-outline" size={18} color={SECTION_COLORS.tractor[2]} />
-              </View>
-              <View style={styles.iconRowText}>
-                <Text style={styles.iconLabel}>ટ્રેક્ટર સેવાઓ</Text>
-                <Text style={styles.iconValue} numberOfLines={2}>
-                  {tractorServicesText}
-                </Text>
-              </View>
-            </View>
-          )}
           {farms.length > 0 && (
             <View style={styles.iconRow}>
               <View style={[styles.iconCircle, { backgroundColor: SECTION_COLORS.farms[1] }]}>

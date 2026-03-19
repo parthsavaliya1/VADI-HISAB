@@ -416,17 +416,6 @@ function EditModal({
                                 <Switch value={draft.tractorAvailable} onValueChange={(v) => set("tractorAvailable", v)} trackColor={{ false: "#E5E7EB", true: "#C8E6C9" }} thumbColor={draft.tractorAvailable ? "#2E7D32" : "#D1D5DB"} />
                             </View>
 
-                            {draft.tractorAvailable && (
-                                <View style={editStyles.inputGroup}>
-                                    <Text style={editStyles.inputLabel}>{t("profileTab", "tractorServices")}</Text>
-                                    <MultiChipPicker
-                                        options={tractorServiceOptions}
-                                        selected={draft.implementsAvailable}
-                                        onToggle={(k) => set("implementsAvailable", draft.implementsAvailable.includes(k) ? draft.implementsAvailable.filter((x) => x !== k) : [...draft.implementsAvailable, k])}
-                                    />
-                                </View>
-                            )}
-
                             {/* Privacy */}
                             <Text style={editStyles.groupLabel}>🔐 {t("profileTab", "sectionPrivacy")}</Text>
                             <View style={editStyles.switchRow}>
@@ -693,7 +682,8 @@ export default function Profile() {
                 totalLand: { value: parseFloat(draft.totalLand), unit: draft.totalLandUnit },
                 waterSources: draft.waterSources as any,
                 tractorAvailable: draft.tractorAvailable,
-                implementsAvailable: draft.tractorAvailable ? (draft.implementsAvailable as any) : [],
+                // Tractor services selection removed; always save empty.
+                implementsAvailable: [],
                 labourTypes: draft.labourTypes as any,
                 dataSharing: draft.dataSharing,
             });

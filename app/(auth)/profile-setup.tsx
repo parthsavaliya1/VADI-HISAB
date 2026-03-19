@@ -57,11 +57,7 @@ const C = {
 const WATER_SOURCES = ["Rain", "Borewell", "Canal"];
 const TRACTOR_SERVICES = API_TRACTOR_SERVICES;
 
-const WATER_ICONS: Record<string, string> = {
-    Rain: "weather-rainy",
-    Borewell: "water-well",   // 👈 THIS is for કુવો (well)
-    Canal: "waves",
-  };
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -272,7 +268,6 @@ const MultiChipSelector = ({
                     >
 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
     <MaterialCommunityIcons
-        name={WATER_ICONS[opt] as any}
         size={18}
         color={isSelected ? C.green900 : C.textMuted}
     />
@@ -377,11 +372,13 @@ export default function ProfileSetup() {
                                   area: f.area != null ? String(f.area) : "",
                               }))
                             : [{ name: "ખેતર ૧", area: profile.totalLand?.value ? String(profile.totalLand.value) : "" }]),
-                    waterSources: Array.isArray(profile.waterSources) ? profile.waterSources : [],
-                    tractorAvailable: profile.tractorAvailable ?? null,
-                    implementsAvailable: Array.isArray(profile.implementsAvailable)
-                        ? profile.implementsAvailable
+                    // Keep only water sources that are still present in the UI.
+                    waterSources: Array.isArray(profile.waterSources)
+                        ? profile.waterSources.filter((ws) => WATER_SOURCES.includes(ws))
                         : [],
+                    tractorAvailable: profile.tractorAvailable ?? null,
+                    // Tractor services selection removed from UI; keep payload empty.
+                    implementsAvailable: [],
                 });
             } catch (e) {
                 // If profile doesn't exist yet (first-time setup), ignore.
@@ -598,9 +595,8 @@ export default function ProfileSetup() {
                     farms: farmsPayload,
                     waterSources: form.waterSources as WaterSource[],
                     tractorAvailable: form.tractorAvailable!,
-                    implementsAvailable: form.tractorAvailable
-                        ? (form.implementsAvailable as TractorService[])
-                        : [],
+                    // Tractor services selection removed from UI; always send empty.
+                    implementsAvailable: [],
                     labourTypes: [] as LabourType[],
                 });
                 // Go straight back to profile tab (no OK popup)
@@ -616,9 +612,8 @@ export default function ProfileSetup() {
                     farms: farmsPayload,
                     waterSources: form.waterSources as WaterSource[],
                     tractorAvailable: form.tractorAvailable!,
-                    implementsAvailable: form.tractorAvailable
-                        ? (form.implementsAvailable as TractorService[])
-                        : [],
+                    // Tractor services selection removed from UI; always send empty.
+                    implementsAvailable: [],
                     labourTypes: [] as LabourType[],
                 });
                 const user = await getMe();
@@ -804,7 +799,16 @@ export default function ProfileSetup() {
                                 <Text style={styles.sectionTitle}>🚜 {t.tractor}</Text>
                             </View>
                             <View style={styles.toggleRowCompact}>
-                                <Pressable onPress={() => setForm((prev) => ({ ...prev, tractorAvailable: true }))} style={[styles.toggleBtnCompact, form.tractorAvailable === true && styles.toggleBtnYes]}>
+                                <Pressable
+                                    onPress={() =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            tractorAvailable: true,
+                                            implementsAvailable: [],
+                                        }))
+                                    }
+                                    style={[styles.toggleBtnCompact, form.tractorAvailable === true && styles.toggleBtnYes]}
+                                >
                                     <Text style={[styles.toggleSymbol, styles.toggleSymbolYes]}>✓</Text>
                                     <Text style={[styles.toggleText, form.tractorAvailable === true && styles.toggleTextActive]}>{t.tractorYes}</Text>
                                 </Pressable>
@@ -814,16 +818,6 @@ export default function ProfileSetup() {
                                 </Pressable>
                             </View>
                         </View>
-
-                        {form.tractorAvailable === true && (
-                            <MultiChipSelector
-                                label={t.tractorServices ?? "ટ્રેક્ટર સેવાઓ"}
-                                options={TRACTOR_SERVICES}
-                                labels={t.tractorServiceLabels ?? {}}
-                                selected={form.implementsAvailable}
-                                onToggle={toggleTractorService}
-                            />
-                        )}
 
                         {/* ── Submit ── */}
                         <Animated.View style={[{ transform: [{ scale: submitScale }] }, { marginTop: 8 }]}>

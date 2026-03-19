@@ -24,6 +24,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigationState } from "@react-navigation/native";
 import {
   ActivityIndicator,
   Alert,
@@ -112,7 +113,13 @@ export default function CropMahitiScreen() {
   const { t } = useLanguage();
   const { refreshTransactions } = useRefresh();
   const insets = useSafeAreaInsets();
-  const bottomPad = insets.bottom + 12;
+  const isInsideTabs = useNavigationState((state) => {
+    return state?.routes?.some((r) =>
+      ["index", "crop", "report", "live-price", "profile"].includes(r.name),
+    );
+  });
+
+  const bottomPad = insets.bottom + (isInsideTabs ? 70 : 12);
   const scrollPad = 100 + bottomPad;
 
   const params = useLocalSearchParams<{ id?: string; year?: string }>();

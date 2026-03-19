@@ -1535,6 +1535,13 @@ export default function Dashboard() {
   });
 
   const paddingTop = HEADER_PADDING_TOP;
+  const contentTranslateY = scrollY.interpolate({
+    // Visually counteract the header collapse so scroll content doesn't
+    // leave a gap at the top when the header height animates.
+    inputRange: [0, STICKY_THRESHOLD],
+    outputRange: [0, -(HEADER_MAX - HEADER_MIN)],
+    extrapolate: "clamp",
+  });
 
   // ── Navigation ─────────────────────────────────────────────────────────────────
   const openExpensePicker = () => {
@@ -1725,6 +1732,8 @@ export default function Dashboard() {
           />
         }
       >
+        {/* Keep all scroll children visually aligned while the header collapses */}
+        <Animated.View style={{ transform: [{ translateY: contentTranslateY }] }}>
         {/* ── Financial year selector ── */}
         <View style={styles.fyRow}>
           {getFinancialYearOptions().map((y) => (
@@ -2401,6 +2410,7 @@ export default function Dashboard() {
         />
 
         <View style={{ height: 120 }} />
+        </Animated.View>
       </Animated.ScrollView>
 
       <CropPickerModal
@@ -2452,7 +2462,14 @@ const styles = StyleSheet.create({
   stickyNameTouchable: {},
   stickyName: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
 
-  headerWrapper: { overflow: "hidden", zIndex: 50 },
+  headerWrapper: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: "hidden",
+    zIndex: 50,
+  },
   header: { flex: 1, paddingHorizontal: 20, paddingBottom: 16 },
   decorCircle1: {
     position: "absolute",
@@ -2585,7 +2602,8 @@ const styles = StyleSheet.create({
   },
   weatherStat: { fontSize: 16, color: C.textMuted, fontWeight: "700" },
 
-  scrollContent: { paddingTop: 8 },
+  // Reserve the max header height so collapsing doesn't reflow scroll content.
+  scrollContent: { paddingTop: HEADER_MAX },
   fyRow: {
     flexDirection: "row",
     flexWrap: "wrap",
