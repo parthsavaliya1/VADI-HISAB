@@ -35,6 +35,8 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 const { width, height } = Dimensions.get("window");
 const LANG = "gu" as const;
 const t = translations[LANG].login;
+// Reduce logo height on large screens to keep the card closer.
+const LOGO_SIZE = width >= 1100 ? 220 : width >= 800 ? 250 : 300;
 
 // ─── Main app palette (matches index.tsx) ───────────────────────────────────────
 const C = {
@@ -75,8 +77,6 @@ export default function Login() {
   const inputScale = useRef(new Animated.Value(1)).current;
   const btnScale = useRef(new Animated.Value(1)).current;
   const btnShine = useRef(new Animated.Value(-width)).current;
-  const checkScale = useRef(new Animated.Value(0)).current;
-  const checkRotate = useRef(new Animated.Value(0)).current;
   const wheatAnims = useRef(
     Array(5)
       .fill(0)
@@ -89,6 +89,10 @@ export default function Login() {
   ).current;
 
   const insets = useSafeAreaInsets();
+  // The bottom tagline is `position: "absolute"`, so the ScrollView must
+  // reserve space for it to avoid overlap on large screens.
+  const isWideScreen = width >= 900;
+  const bottomTagSpacer = isWideScreen ? 40 : 72;
 
   // ── useNativeDriver: false — style props (color/border) ───────────────────
   const borderAnim = useRef(new Animated.Value(0)).current; // isolated, no conflict
@@ -156,20 +160,6 @@ export default function Login() {
 
   useEffect(() => {
     if (isValid) {
-      // Checkmark pop — native driver
-      Animated.parallel([
-        Animated.spring(checkScale, {
-          toValue: 1,
-          friction: 4,
-          tension: 220,
-          useNativeDriver: true,
-        }),
-        Animated.spring(checkRotate, {
-          toValue: 1,
-          friction: 5,
-          useNativeDriver: true,
-        }),
-      ]).start();
       // Shine sweep — native driver
       btnShine.setValue(-width);
       Animated.timing(btnShine, {
@@ -179,11 +169,7 @@ export default function Login() {
         useNativeDriver: true,
       }).start();
     } else {
-      Animated.spring(checkScale, {
-        toValue: 0,
-        useNativeDriver: true,
-      }).start();
-      checkRotate.setValue(0);
+      btnShine.setValue(-width);
     }
   }, [isValid]);
 
@@ -285,10 +271,6 @@ export default function Login() {
     inputRange: [0, 1],
     outputRange: [C.border, C.green700],
   });
-  const checkSpin = checkRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["-45deg", "0deg"],
-  });
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -313,10 +295,11 @@ export default function Login() {
   style={styles.scrollView}
   contentContainerStyle={[
     styles.scrollContent,
-    { paddingBottom: 24 + insets.bottom },
+                { paddingBottom: 24 + insets.bottom + bottomTagSpacer },
   ]}
   keyboardShouldPersistTaps="handled"
   showsVerticalScrollIndicator={false}
+              scrollEnabled={!isWideScreen}
 >
               <View style={styles.inner}>
                 {/* ── Side decorations (left & right) ── */}
@@ -391,7 +374,7 @@ export default function Login() {
                   <View style={styles.inputRow}>
                     <Text style={styles.prefixTxt}>+91</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, phone.length === 0 ? { fontSize: 17 } : null]}
                       placeholder={t.placeholder}
                       placeholderTextColor={C.textMuted}
                       keyboardType="numeric"
@@ -404,21 +387,6 @@ export default function Login() {
                     />
                   </View>
                 </View>
-                {isValid && (
-                  <Animated.View
-                    style={[
-                      styles.checkCircle,
-                      {
-                        transform: [
-                          { scale: checkScale },
-                          { rotate: checkSpin },
-                        ],
-                      },
-                    ]}
-                  >
-                    <Ionicons name="checkmark" size={16} color="#fff" />
-                  </Animated.View>
-                )}
               </Animated.View>
             </Animated.View>
 
@@ -526,17 +494,18 @@ const styles = StyleSheet.create({
   // Logo (minimal space below)
   logoContainer: {
     alignItems: "center",
-    marginBottom: 0,
+    // Pull the card slightly up on larger screens.
+    marginBottom: -10,
   },
   logoImage: {
-    width: 300,
-    height: 300,
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
     backgroundColor: "transparent",
   },
   taglineContainer: {
     alignItems: "center",
-    marginTop: 4,
-    marginBottom: 12,
+    marginTop: 0,
+    marginBottom: 0,
   },
   brandText: {
     fontSize: 18,
@@ -647,7 +616,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "flex-start",
     paddingTop: 0,
-    paddingBottom: 24,
+    paddingBottom: 0,
   },
   card: {
     backgroundColor: C.surface,
@@ -682,11 +651,11 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
+    position: "relative",
     backgroundColor: C.surface,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    gap: 12,
     borderWidth: 2,
     borderColor: "transparent",
     ...Platform.select({
@@ -710,8 +679,9 @@ const styles = StyleSheet.create({
     backgroundColor: C.green50,
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 12,
   },
-  inputContent: { flex: 1, gap: 2 },
+  inputContent: { flex: 1 },
   inputLabel: {
     fontSize: 12,
     fontWeight: "600",
@@ -722,24 +692,31 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
   },
-    prefixTxt: {
-    fontSize: 19,
-
-    fontWeight: "600",
+  prefixTxt: {
+    fontSize: 16,
+    fontWeight: "700",
     color: C.textPrimary,
-    letterSpacing: 1.5,
-
+    letterSpacing: 0.5,
+    marginRight: 6,
+    flexShrink: 0,
   },
   input: {
     flex: 1,
     fontSize: 19,
     color: C.textPrimary,
     paddingLeft: 6, // ✅ ADD THIS
+    minWidth: 0,
+    flexShrink: 1,
     paddingVertical: 0,
     fontWeight: "600",
   },
   checkCircle: {
+    position: "absolute",
+    right: 16,
+    top: "50%",
+    marginTop: -12, // (height 24 / 2)
     width: 24,
     height: 24,
     borderRadius: 12,

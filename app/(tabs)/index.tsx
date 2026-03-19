@@ -542,7 +542,12 @@ function AnimatedNumber({ value }: { value: number }) {
     return () => anim.removeListener(id);
   }, [value]);
   return (
-    <Text style={styles.netProfitAmount}>
+    <Text
+      style={styles.netProfitAmount}
+      numberOfLines={1}
+      adjustsFontSizeToFit={true}
+      minimumFontScale={0.7}
+    >
       {formatWholeNumber(Math.abs(display))}
     </Text>
   );
@@ -1678,7 +1683,13 @@ export default function Dashboard() {
                     color={iconColor}
                   />
                   <Text style={styles.weatherTemp}>{weather.temp}</Text>
-                  <Text style={styles.weatherCond}>{weather.condition}</Text>
+                  <Text
+                    style={styles.weatherCond}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {weather.condition}
+                  </Text>
                   <View style={styles.weatherDivider} />
                   <Ionicons
                     name="water-outline"
@@ -1762,6 +1773,8 @@ export default function Dashboard() {
                       flexDirection: "row",
                       alignItems: "flex-end",
                       flex: 1,
+                      flexShrink: 1,
+                      minWidth: 0,
                     }}
                   >
                     <Text
@@ -1773,13 +1786,16 @@ export default function Dashboard() {
                       {totalProfit >= 0 ? "+" : "-"}
                     </Text>
                     <AnimatedNumber value={Math.abs(totalProfit)} />
-                    <Text style={styles.profitStatusLabel}>
-                      {totalProfit >= 0 ? "કુલ નફો" : "કુલ ખર્ચો"}
-                    </Text>
                   </View>
                   <View style={styles.profitPakBadge}>
-                    <Text style={styles.profitPakValue}>{crops.length}</Text>
-                    <Text style={styles.profitPakLabel}>
+                    <Text style={styles.profitPakValue} numberOfLines={1}>
+                      {crops.length}
+                    </Text>
+                    <Text
+                      style={styles.profitPakLabel}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
                       {t("dashboard", "crops")}
                     </Text>
                   </View>
@@ -1806,6 +1822,9 @@ export default function Dashboard() {
                       <View>
                         <Text
                           style={[styles.profitSubValue, { color: item.color }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit={true}
+                          minimumFontScale={0.7}
                         >
                           {formatWholeNumber(item.value)}
                         </Text>
@@ -2551,7 +2570,13 @@ const styles = StyleSheet.create({
     borderColor: "#F5E6D3",
   },
   weatherTemp: { fontSize: 20, fontWeight: "800", color: C.textPrimary },
-  weatherCond: { fontSize: 16, color: C.textMuted, flex: 1 },
+  weatherCond: {
+    fontSize: 16,
+    color: C.textMuted,
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
   weatherDivider: {
     width: 1,
     height: 20,
@@ -2654,13 +2679,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: C.borderLight,
+    flexShrink: 0,
   },
   profitPakValue: { fontSize: 18, fontWeight: "700", color: C.textSecondary },
   profitPakLabel: { fontSize: 15, color: C.textMuted, fontWeight: "600" },
   profitAmountRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 8,
+    flexWrap: "wrap",
     marginTop: 0,
     marginBottom: 24,
   },
@@ -2676,6 +2703,8 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginLeft: 10,
     color: "#4B5563",
+    flexShrink: 1,
+    flexBasis: 0,
   },
   profitSubRow: { flexDirection: "row", gap: 6 },
   profitSubItem: {

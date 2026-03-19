@@ -4,7 +4,7 @@
             "appName": "VADI",
             "tagline": "ખેડૂત માટે સ્માર્ટ હિસાબ",
             "label": "મોબાઈલ નંબર",
-            "placeholder": "10 આંકડા દાખલ કરો",
+            "placeholder": "10 અંક દાખલ કરો",
             "sendOtpBtn": "OTP મોકલો",
             "hint": "OTP SMS દ્વારા આવશે",
             "errTitle": "ભૂલ"
@@ -408,7 +408,7 @@
             "appName": "VADI",
             "tagline": "Smart farming records",
             "label": "Mobile Number",
-            "placeholder": "Enter 10-digit number",
+            "placeholder": "Enter 10 digits",
             "sendOtpBtn": "Send OTP",
             "hint": "OTP will be sent via SMS",
             "errTitle": "Error"

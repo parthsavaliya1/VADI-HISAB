@@ -393,7 +393,7 @@ function Chip({
   );
 }
 
-// Large crop card for step 1 — 3 per row, icon + label, highlight only when selected
+// Large crop card for step 1 — 4 per row, icon + label, highlight only when selected
 function CropCard({
   label,
   image,
@@ -907,7 +907,8 @@ export default function AddCrop() {
         style={{ flex: 1, backgroundColor: C.bg }}
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 140 : 140 },
+          // Same bottom spacing concept as dashboard (`height: 120`)
+          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 120 : 120 },
         ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -1801,8 +1802,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cropCard: {
-    width: "23%",
-    minWidth: 76,
+    // Use a slightly smaller width/minWidth so 4 cards fit consistently
+    // across standard/large/extra-large device widths.
+    width: "22.5%",
+    minWidth: 64,
     backgroundColor: C.surface,
     borderRadius: 14,
     padding: 10,
@@ -1839,8 +1842,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   subTypeCard: {
-    width: "31%",
-    minWidth: 96,
+    // Must match crop-card sizing for consistent 4-up layout.
+    width: "22.5%",
+    minWidth: 64,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: C.surface,
@@ -2234,10 +2238,8 @@ const styles = StyleSheet.create({
 
   // Bottom bar
   bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
+    // Keep it in normal layout (like dashboard content spacing),
+    // so it won't be covered by bottom navigation.
     padding: 18,
     paddingBottom: Platform.OS === "ios" ? 36 : 18,
     backgroundColor: C.bg,

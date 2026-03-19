@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Easing,
   Keyboard,
   KeyboardAvoidingView,
@@ -30,7 +31,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const OTP_LENGTH = 6;
 const LANG = "gu" as const;
@@ -68,6 +69,9 @@ export default function OTP() {
     phone: string;
     sessionId: string;
   }>();
+  const { width } = Dimensions.get("window");
+  const isWideScreen = width >= 900;
+  const insets = useSafeAreaInsets();
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [sessionId, setSessionId] = useState(initSessionId ?? "");
@@ -389,7 +393,7 @@ export default function OTP() {
   const resendWait = t.resendWait.replace("{seconds}", String(resendTimer));
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <LinearGradient
           colors={["#F6F7F2", "#E8F5E9", "#F5F7F2"]}
@@ -424,28 +428,39 @@ export default function OTP() {
         >
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { justifyContent: isWideScreen ? "center" : "flex-start" },
+              // On wide screens we keep scroll disabled, so we must avoid
+              // adding too much extra height at the bottom.
+              { paddingBottom: (isWideScreen ? 24 : 44) + insets.bottom },
+            ]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            scrollEnabled={!isWideScreen}
           >
-          <View style={styles.inner}>
+          <View style={[styles.inner, isWideScreen ? styles.innerWide : null]}>
             {/* Hero */}
             <Animated.View
               style={[
                 styles.heroBlock,
+                isWideScreen ? styles.heroBlockWide : null,
                 { opacity: heroFade, transform: [{ translateY: heroSlide }] },
               ]}
             >
               <Animated.Text
                 style={[
                   styles.lockEmoji,
+                  isWideScreen ? styles.lockEmojiWide : null,
                   { transform: [{ translateY: floatAnim }] },
                 ]}
               >
                 🔐
               </Animated.Text>
               <Text style={styles.title}>{t.title}</Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
+              <Text style={[styles.subtitle, isWideScreen ? styles.subtitleWide : null]}>
+                {subtitle}
+              </Text>
             </Animated.View>
 
             {/* Card */}
@@ -461,7 +476,9 @@ export default function OTP() {
                 end={{ x: 1, y: 0 }}
                 style={styles.cardBar}
               />
-              <Text style={styles.cardTitle}>OTP દાખલ કરો</Text>
+              <Text style={[styles.cardTitle, isWideScreen ? styles.cardTitleWide : null]}>
+                OTP દાખલ કરો
+              </Text>
 
               {/* Hidden input for SMS OTP autofill (iOS oneTimeCode / Android sms-otp) */}
               <TextInput
@@ -550,7 +567,7 @@ ref={(r) => {
               )}
 
               {/* Timer */}
-              <View style={styles.timerRow}>
+              <View style={[styles.timerRow, isWideScreen ? styles.timerRowWide : null]}>
                 <View style={styles.timerBg}>
                   <Animated.View
                     style={[
@@ -569,7 +586,10 @@ ref={(r) => {
 
               {/* Verify Button */}
               <Animated.View
-                style={{ transform: [{ scale: btnScale }], marginBottom: 16 }}
+                style={{
+                  transform: [{ scale: btnScale }],
+                  marginBottom: isWideScreen ? 12 : 16,
+                }}
               >
                 <Pressable
                   onPressIn={() =>
@@ -635,7 +655,7 @@ ref={(r) => {
               </Animated.View>
 
               {/* Divider */}
-              <View style={styles.divRow}>
+              <View style={[styles.divRow, isWideScreen ? styles.divRowWide : null]}>
                 <View style={styles.divLine} />
                 <Text style={styles.divLbl}>{t.or}</Text>
                 <View style={styles.divLine} />
@@ -646,7 +666,7 @@ ref={(r) => {
                 <TouchableOpacity
                   onPress={resend}
                   disabled={loading}
-                  style={styles.resendBtn}
+                  style={[styles.resendBtn, isWideScreen ? styles.resendBtnWide : null]}
                   activeOpacity={0.7}
                 >
                   {loading ? (
@@ -656,15 +676,19 @@ ref={(r) => {
                   )}
                 </TouchableOpacity>
               ) : (
-                <Text style={styles.resendWait}>{resendWait}</Text>
+                <Text style={[styles.resendWait, isWideScreen ? styles.resendWaitWide : null]}>
+                  {resendWait}
+                </Text>
               )}
 
-              <Text style={styles.secureLbl}>🔒 {t.secure}</Text>
+              <Text style={[styles.secureLbl, isWideScreen ? styles.secureLblWide : null]}>
+                🔒 {t.secure}
+              </Text>
 
               {/* Change number link (reference style) */}
               <TouchableOpacity
                 onPress={() => router.back()}
-                style={styles.changeNumWrap}
+                style={[styles.changeNumWrap, isWideScreen ? styles.changeNumWrapWide : null]}
                 activeOpacity={0.7}
               >
                 <Text style={styles.changeNumLink}>{t.changeNum}</Text>
@@ -672,7 +696,13 @@ ref={(r) => {
             </Animated.View>
 
             {/* Progress dots */}
-            <Animated.View style={[styles.dotsRow, { opacity: heroFade }]}>
+            <Animated.View
+              style={[
+                styles.dotsRow,
+                isWideScreen ? styles.dotsRowWide : null,
+                { opacity: heroFade },
+              ]}
+            >
               {otp.map((d, i) => (
                 <View
                   key={i}
@@ -740,13 +770,18 @@ const styles = StyleSheet.create({
     color: C.green700,
   },
 
-  scrollContent: { flexGrow: 1, justifyContent: "center", paddingVertical: 24, paddingBottom: 20 },
+  scrollContent: { flexGrow: 1, justifyContent: "flex-start", paddingVertical: 24 },
   inner: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     paddingHorizontal: 20,
     paddingBottom: 24,
-    paddingTop: 60,
+    paddingTop: 44,
+  },
+  // Wide screens: shrink vertical spacing so content fits without scrolling.
+  innerWide: {
+    paddingTop: 34,
+    paddingBottom: 10,
   },
   hiddenOtpInput: {
     position: "absolute",
@@ -761,6 +796,9 @@ const styles = StyleSheet.create({
     marginTop: 18,
     paddingVertical: 8,
   },
+  changeNumWrapWide: {
+    marginTop: 12,
+  },
   changeNumLink: {
     textAlign: "center",
     color: "#2E7D32",
@@ -768,8 +806,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  heroBlock: { alignItems: "center", marginBottom: 28 },
-  lockEmoji: { fontSize: 52, marginBottom: 8 },
+  heroBlock: { alignItems: "center", marginBottom: 22 },
+  heroBlockWide: { marginBottom: 16 },
+  lockEmoji: { fontSize: 52, marginBottom: 6 },
+  lockEmojiWide: { fontSize: 46, marginBottom: 4 },
   title: {
     fontSize: 26,
     fontWeight: "800",
@@ -780,9 +820,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#4E7C50",
     marginTop: 8,
-    marginBottom: 20,
+    marginBottom: 18,
     fontSize: 15,
   },
+  subtitleWide: { marginBottom: 16 },
 
   card: {
     backgroundColor: C.surface,
@@ -806,6 +847,7 @@ const styles = StyleSheet.create({
     color: C.textPrimary,
     marginBottom: 18,
   },
+  cardTitleWide: { marginBottom: 14 },
 
   otpRow: { flexDirection: "row", gap: 10, marginBottom: 4 },
   boxScaleWrap: { flex: 1 },
@@ -851,6 +893,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     marginTop: 4,
   },
+  timerRowWide: { marginBottom: 14 },
   timerBg: {
     flex: 1,
     height: 6,
@@ -892,6 +935,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     gap: 10,
   },
+  divRowWide: { marginBottom: 10 },
   divLine: { flex: 1, height: 1, backgroundColor: C.green100 },
   divLbl: { color: C.textMuted, fontSize: 12 },
 
@@ -902,6 +946,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: C.surfaceGreen,
   },
+  resendBtnWide: { marginBottom: 2 },
   resendRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   resendTxt: { color: C.green700, fontSize: 16, fontWeight: "800" },
   resendWait: {
@@ -910,12 +955,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 4,
   },
+  resendWaitWide: { marginBottom: 2 },
   secureLbl: {
     color: C.textMuted,
     fontSize: 11,
     textAlign: "center",
     marginTop: 12,
   },
+  secureLblWide: { marginTop: 8 },
 
   dotsRow: {
     flexDirection: "row",
@@ -923,6 +970,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 18,
   },
+  dotsRowWide: { marginTop: 10 },
   dot: { width: 10, height: 10, borderRadius: 5 },
   dotOff: { backgroundColor: C.green100 },
   dotOn: { backgroundColor: C.green700 },
