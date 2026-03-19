@@ -750,13 +750,10 @@ export default function Profile() {
         const villageDisplay = p.village ? getLocationLabel("village", { district: p.district, taluka, village: p.village }) : "—";
         const waterSources = Array.isArray((p as any).waterSources) ? (p as any).waterSources : ((p as any).waterSource != null ? [(p as any).waterSource] : []);
         const labourTypes = Array.isArray((p as any).labourTypes) ? (p as any).labourTypes : ((p as any).labourType != null ? [(p as any).labourType] : []);
-        const implementsAvailable = Array.isArray((p as any).implementsAvailable) ? (p as any).implementsAvailable : [];
         const landDisplay = `${p.totalLand?.unit === "bigha" ? formatArea(p.totalLand?.value) : formatWholeNumber(p.totalLand?.value)} ${p.totalLand?.unit === "bigha" ? t("common", "bigha") : t("common", "acre")}`;
         const waterDisplay = toLabels(WATER_OPTIONS, waterSources);
         const labourDisplay = toLabels(LABOUR_OPTIONS, labourTypes);
-        const tractorServicesDisplay = implementsAvailable.length > 0 ? toLabels(TRACTOR_SERVICE_OPTIONS, implementsAvailable) : null;
         let msg = `🌾 VADI — ${t("profileTab", "farmerProfileSharePrefix")}\n\n${t("profileTab", "shareName")}: ${p.name}\n${t("profileTab", "shareDistrict")}: ${districtDisplay}\n${t("profileTab", "shareTaluka")}: ${talukaDisplay}\n${t("profileTab", "shareVillage")}: ${villageDisplay}\n${t("profileTab", "shareTotalLand")}: ${landDisplay}\n${t("profileTab", "shareWater")}: ${waterDisplay}\n${t("profileTab", "shareLabour")}: ${labourDisplay}\n${t("profileTab", "shareTractor")}: ${p.tractorAvailable ? t("profileTab", "shareYes") : t("profileTab", "shareNo")}`;
-        if (p.tractorAvailable && tractorServicesDisplay) msg += `\n${t("profileTab", "shareTractorServices")}: ${tractorServicesDisplay}`;
         const farms = Array.isArray((p as any).farms) ? (p as any).farms : [];
         if (farms.length) msg += "\n" + t("profileTab", "shareFarms") + ": " + farms.map((f: any) => `${f.name || t("profileTab", "shareFarm")} ${f.area ?? 0} ${t("common", "bigha")}`).join(", ");
         msg += "\n\n— " + t("profileTab", "sharedFromApp");

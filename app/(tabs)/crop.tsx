@@ -172,7 +172,7 @@ function CropCard({
               })()}
             </View>
 
-            <View style={{ flex: 1, marginLeft: 12 }}>
+              <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.cropName}>
                 {cropDisplayName(item.cropName, t)}
                 {item.subType ? <Text style={styles.cropSubTypeInline}> - {item.subType}</Text> : null}
@@ -201,7 +201,7 @@ function CropCard({
               activeOpacity={0.85}
             >
               <Text style={styles.menuTriggerText}>માહિતી</Text>
-              <Ionicons name="chevron-forward" size={22} color={C.green700} />
+              <Ionicons name="chevron-forward" size={20} color={C.green700} />
             </TouchableOpacity>
           </View>
 
@@ -783,34 +783,34 @@ const styles = StyleSheet.create({
   cropImage: { width: 36, height: 36 },
   cropName: { fontSize: 22, fontWeight: "800", color: C.textPrimary, marginBottom: 3 },
   cropSubTypeInline: { fontSize: 16, color: C.textSecondary, fontWeight: "700" },
-  tagsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
+  tagsRow: { flexDirection: "row", gap: 6, flexWrap: "nowrap" },
   tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   tagText: { fontSize: 17, fontWeight: "700" },
   bhagmaBadge: {
     flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8,
   },
-  bhagmaBadgeText: { fontSize: 14, fontWeight: "700" },
+  bhagmaBadgeText: { fontSize: 13, fontWeight: "700" },
   statusBadge: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
   statusDot: { width: 9, height: 9, borderRadius: 4.5 },
-  statusText: { fontSize: 15, fontWeight: "700" },
+  statusText: { fontSize: 14, fontWeight: "700" },
 
   menuTrigger: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     marginLeft: 6,
     borderRadius: 12,
     backgroundColor: C.green50,
     borderWidth: 1,
     borderColor: C.borderLight,
   },
-  menuTriggerText: { fontSize: 15, fontWeight: "800", color: C.green700 },
+  menuTriggerText: { fontSize: 14, fontWeight: "800", color: C.green700 },
   dropMenu: {
     backgroundColor: C.surface, borderRadius: 18,
     borderWidth: 1, borderColor: C.borderLight,

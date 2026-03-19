@@ -25,6 +25,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigationState } from "@react-navigation/native";
+import { CROPSWITHIMAGE } from "../constants";
 import {
   ActivityIndicator,
   Alert,
@@ -92,9 +93,20 @@ const CROP_NAME_KEYS = [
   "Marchi",
 ];
 
-function cropDisplayName(name: string, t: (s: string, k: string) => string): string {
+function cropDisplayName(
+  name: string,
+  t: (s: string, k: string) => string,
+  lang: "gu" | "en",
+): string {
   const raw = (name ?? "").trim();
   if (!raw) return raw;
+
+  // When language is Gujarati, prefer static Gujarati crop labels so we don't
+  // depend on translation completeness.
+  const matchedCrop = CROPSWITHIMAGE.find(
+    (c) => c.value.trim().toLowerCase() === raw.toLowerCase(),
+  );
+  if (lang === "gu" && matchedCrop) return matchedCrop.label;
 
   // Direct lookup first (exact key match)
   const direct = t("cropNames", raw);
@@ -110,7 +122,7 @@ function cropDisplayName(name: string, t: (s: string, k: string) => string): str
 }
 
 export default function CropMahitiScreen() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { refreshTransactions } = useRefresh();
   const insets = useSafeAreaInsets();
   const isInsideTabs = useNavigationState((state) => {
@@ -288,7 +300,7 @@ export default function CropMahitiScreen() {
 
       <ScreenHeader
         title="પાક મહિતી"
-        subtitle={cropDisplayName(crop.cropName, t)}
+        subtitle={cropDisplayName(crop.cropName, t, lang)}
         rightElement={
           <View style={styles.headerRightRow}>
             <TouchableOpacity onPress={handleEdit} style={styles.headerIconBtn} activeOpacity={0.85}>
@@ -322,7 +334,7 @@ export default function CropMahitiScreen() {
 
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.summaryTitle} numberOfLines={2}>
-                {cropDisplayName(crop.cropName, t)}
+                {cropDisplayName(crop.cropName, t, lang)}
                 {crop.subType ? <Text style={styles.summarySubInline}> - {crop.subType}</Text> : null}
               </Text>
               <Text style={styles.summaryArea}>{Math.round(crop.area)} વીઘા</Text>
