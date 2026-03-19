@@ -8,6 +8,7 @@
 
 import translations from "@/translations.json";
 import { getFriendlyErrorMessage, sendOtp, verifyOtp } from "@/utils/api";
+import { registerAndSyncPushToken } from "@/utils/pushNotifications";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -345,6 +346,7 @@ export default function OTP() {
 
       const data = await verifyOtp(phone, otpStr, sessionId);
       console.log("verify: data", data);
+      await registerAndSyncPushToken();
       setSuccess(true);
       Animated.parallel([
         Animated.spring(successScale, {

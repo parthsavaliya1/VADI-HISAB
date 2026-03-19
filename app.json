@@ -35,6 +35,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#ffffff"
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "VADI ને તમારા સ્થાનનો ઉપયોગ કરવા દો જેથી ડેશબોર્ડ પર સ્થાનિક હવામાન બતાવી શકાય."
