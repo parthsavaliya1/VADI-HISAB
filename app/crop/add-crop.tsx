@@ -283,7 +283,7 @@ const YEAR_OPTIONS = getFinancialYearOptions();
 // Bhagma share options when user selects હા — label shown in UI, value stored as percentage
 const BHAGMA_SHARE_OPTIONS: { value: string; label: string; pct: number }[] = [
   { value: "50", label: "બીજા ભાગે", pct: 50 },
-  { value: "33.33", label: "ત્રિજા ભાગે", pct: 33.33 },
+  { value: "33", label: "ત્રિજા ભાગે", pct: 33 },
   { value: "25", label: "ચોથા ભાગે", pct: 25 },
 ];
 
@@ -585,7 +585,7 @@ export default function AddCrop() {
             if (pct == null) return "";
             const n = Number(pct);
             if (Math.abs(n - 25) < 2) return "25";
-            if (Math.abs(n - 33.33) < 2 || Math.abs(n - 33) < 2) return "33.33";
+            if (Math.abs(n - 33.33) < 2 || Math.abs(n - 33) < 2) return "33";
             if (Math.abs(n - 50) < 2) return "50";
             return String(pct);
           })(),
@@ -713,7 +713,7 @@ export default function AddCrop() {
     if (step === 2 && !form.bhagmaOption)
       return "કૃપા કરીને ભાગમા અપ્યું તે પસંદ કરો.";
     if (step === 2 && form.bhagmaOption === "ha") {
-      const valid = ["25", "33.33", "50"].includes(
+      const valid = ["25", "33", "50"].includes(
         form.bhagmaPercentage.trim(),
       );
       if (!valid)
