@@ -8,18 +8,11 @@ import {
   getFinancialYearOptions,
   getMyProfile,
   updateCropStatus,
-  getIncomes,
-  getExpenseSummary,
   type Crop,
   type CropStatus,
-  type Income,
-  type ExpenseCategory,
-  getYearlyReport,
-  type CropReportRow,
 } from "@/utils/api";
 import { AppTheme, HEADER_PADDING_TOP } from "@/constants/theme";
 import { getCropColors } from "@/utils/cropColors";
-import { formatWholeNumber } from "@/utils/format";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -32,10 +25,7 @@ import {
   Dimensions,
   FlatList,
   Platform,
-  Pressable,
   RefreshControl,
-  Modal,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -61,6 +51,33 @@ const SEASON_COLORS: Record<string, { color: string; pale: string }> = {
   Unalo: { color: "#F59E0B", pale: "#FEF3C7" },
 };
 
+// Backend sometimes sends crop names with different casing/spaces.
+// This makes sure we always show the translated Gujarati crop name.
+const CROP_NAME_KEYS = [
+  "Groundnut",
+  "Cotton",
+  "Chana",
+  "Jeera",
+  "Wheat",
+  "Garlic",
+  "Onion",
+  "Dhana",
+  "Tal",
+  "Maize",
+  "Kalonji",
+  "Moong",
+  "Urad",
+  "Moth",
+  "Vatana",
+  "Val",
+  "Soybean",
+  "Castor",
+  "Tuver",
+  "Methi",
+  "Bajra",
+  "Marchi",
+];
+
 const ACTIVE_COLOR = "#0D9488";
 const ACTIVE_PALE = "#CCFBF1";
 const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
@@ -69,20 +86,6 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = 
   Closed: { bg: C.expensePale, text: C.expense, dot: "#EF4444" },
 };
 
-const EXPENSE_CATEGORY_LABELS: Partial<Record<ExpenseCategory, string>> = {
-  Seed: "બિયારણ",
-  Fertilizer: "ખાતર",
-  Pesticide: "દવા",
-  Labour: "મજૂરી",
-  Machinery: "મશીનરી",
-};
-const EXPENSE_CATEGORY_ORDER: ExpenseCategory[] = [
-  "Seed",
-  "Fertilizer",
-  "Pesticide",
-  "Labour",
-  "Machinery",
-];
 
 function getFilterTabs(t: (s: string, k: string) => string) {
   return [
@@ -94,7 +97,17 @@ function getFilterTabs(t: (s: string, k: string) => string) {
 }
 
 function cropDisplayName(name: string, t: (s: string, k: string) => string): string {
-  return t("cropNames", name) || name;
+  const raw = (name ?? "").trim();
+  if (!raw) return raw;
+
+  const direct = t("cropNames", raw);
+  if (direct && direct !== raw) return direct;
+
+  const normalized = raw.toLowerCase();
+  const matchKey = CROP_NAME_KEYS.find((k) => k.toLowerCase() === normalized);
+  if (matchKey) return t("cropNames", matchKey) || matchKey;
+
+  return direct || raw;
 }
 
 // ─── Crop card ────────────────────────────────────────────────────────────────
@@ -478,12 +491,6 @@ export default function CropScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState("Active");
   const [selectedYear, setSelectedYear] = useState(getCurrentFinancialYear());
-  const [summaryCrop, setSummaryCrop] = useState<Crop | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(false);
-  const [summaryIncomes, setSummaryIncomes] = useState<Income[]>([]);
-  const [summaryByCategory, setSummaryByCategory] =
-    useState<Partial<Record<ExpenseCategory, number>>>({});
-  const [summaryRow, setSummaryRow] = useState<CropReportRow | null>(null);
 
   const totalLandBigha =
     profile?.totalLand?.unit === "bigha" ? Number(profile.totalLand?.value) || 0 : 0;
@@ -563,54 +570,12 @@ export default function CropScreen() {
     Closed: crops.filter((c) => c.status === "Closed").length,
   };
 
-  const openSummary = async (crop: Crop) => {
-    setSummaryCrop(crop);
-    setSummaryLoading(true);
-    try {
-      const [iRes, expSummary, yearly] = await Promise.all([
-        getIncomes(1, 200, crop._id, undefined, undefined, selectedYear),
-        getExpenseSummary(undefined, crop._id, selectedYear),
-        getYearlyReport(selectedYear),
-      ]);
-      setSummaryIncomes(iRes.data ?? []);
-      const byCat: Partial<Record<ExpenseCategory, number>> = {};
-      (expSummary.summary ?? []).forEach((item) => {
-        const cat = item._id as ExpenseCategory;
-        byCat[cat] = item.total;
-      });
-      setSummaryByCategory(byCat);
-      const rows = (yearly?.crops ?? []) as CropReportRow[];
-      const row = rows.find((r) => r._id === crop._id) ?? null;
-      setSummaryRow(row);
-    } catch (err) {
-      console.warn("[CropSummary] load error:", (err as Error).message);
-      setSummaryIncomes([]);
-      setSummaryByCategory({});
-      setSummaryRow(null);
-    } finally {
-      setSummaryLoading(false);
-    }
-  };
-
-  const closeSummary = () => {
-    setSummaryCrop(null);
-    setSummaryIncomes([]);
-    setSummaryByCategory({});
-    setSummaryRow(null);
-  };
-
-  const fallbackIncome = summaryIncomes.reduce(
-    (sum: number, i: Income) => sum + (i.amount || 0),
-    0,
+  const openDetails = useCallback(
+    (crop: Crop) => {
+      router.push(`/crop/crop-mahiti?id=${crop._id}&year=${selectedYear}` as any);
+    },
+    [selectedYear],
   );
-  const fallbackExpense = (Object.values(summaryByCategory) as number[]).reduce(
-    (sum, v) => sum + (v || 0),
-    0,
-  );
-  const totalIncome = summaryRow?.income ?? fallbackIncome;
-  const totalExpense = summaryRow?.expense ?? fallbackExpense;
-  const netProfit = summaryRow?.profit ?? totalIncome - totalExpense;
-  const byCategory = summaryByCategory;
 
   if (loading) {
     return (
@@ -653,7 +618,7 @@ export default function CropScreen() {
                   tParam={tParam}
                   onDelete={handleDelete}
                   onStatusChange={handleStatusChange}
-                  onOpenDetails={openSummary}
+                  onOpenDetails={openDetails}
                   onRequestMenuOpen={ensureMenuVisible}
                 />
               )}
@@ -682,230 +647,6 @@ export default function CropScreen() {
               }
             />
           )}
-
-      {/* Center summary popup */}
-      <Modal
-        visible={!!summaryCrop}
-        transparent
-        animationType="fade"
-        onRequestClose={closeSummary}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={closeSummary}>
-          <Pressable style={styles.modalCard}>
-            {summaryCrop && (
-              <>
-                <View style={styles.modalHeader}>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.modalTitleRow}>
-                      {(() => {
-                        const src = getCropImageSource(summaryCrop.cropName);
-                        return src ? (
-                          <Image
-                            source={src}
-                            style={styles.modalCropImage}
-                            resizeMode="contain"
-                          />
-                        ) : (
-                          <Text style={styles.modalCropEmoji}>
-                            {summaryCrop.cropEmoji ?? "🌱"}
-                          </Text>
-                        );
-                      })()}
-                      <Text style={styles.modalTitleText}>
-                        {summaryCrop.subType
-                          ? `${cropDisplayName(summaryCrop.cropName, t)} - ${summaryCrop.subType}`
-                          : cropDisplayName(summaryCrop.cropName, t)}
-                      </Text>
-                    </View>
-                    <Text style={styles.modalArea}>
-                      {Math.round(summaryCrop.area)} વીઘા
-                    </Text>
-                  </View>
-                  <View style={styles.modalHeaderRight}>
-                    <Text style={styles.modalDate}>
-                      {new Date(
-                        summaryCrop.sowingDate ?? summaryCrop.createdAt,
-                      ).toLocaleDateString("gu-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </Text>
-                    <View style={styles.modalHeaderActions}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          closeSummary();
-                          router.push(`/crop/edit-crop?id=${summaryCrop._id}` as any);
-                        }}
-                        style={styles.modalIconBtn}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="create-outline" size={20} color={C.textSecondary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => {
-                          closeSummary();
-                          handleDelete(summaryCrop._id);
-                        }}
-                        style={styles.modalIconBtn}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="trash-outline" size={20} color={C.expense} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-
-                <Text style={styles.modalSectionTitle}>કેટેગરી પ્રમાણે ખર્ચ</Text>
-                {summaryLoading ? (
-                  <View style={styles.modalLoadingRow}>
-                    <ActivityIndicator size="small" color={C.green700} />
-                    <Text style={styles.modalLoadingText}>લોડ થઈ રહ્યું છે...</Text>
-                  </View>
-                ) : (
-                  <>
-                    {EXPENSE_CATEGORY_ORDER.map((cat) => (
-                      <View key={cat} style={styles.modalCatRow}>
-                        <Text style={styles.modalCatLabel}>
-                          {EXPENSE_CATEGORY_LABELS[cat] ?? cat}
-                        </Text>
-                        <Text style={styles.modalCatValue}>
-                          ₹ {Math.round(byCategory[cat] || 0).toLocaleString("en-IN")}
-                        </Text>
-                      </View>
-                    ))}
-
-                    {/* Total expense & income summary */}
-                    <Text style={styles.modalTotalLine}>
-                      કુલ ખર્ચ:{" "}
-                      <Text style={styles.modalTotalAmount}>
-                        ₹ {formatWholeNumber(totalExpense)}
-                      </Text>
-                    </Text>
-                    <Text style={styles.modalTotalLine}>
-                      કુલ આવક:{" "}
-                      <Text style={styles.modalTotalAmount}>
-                        ₹ {formatWholeNumber(totalIncome)}
-                      </Text>
-                    </Text>
-                    {summaryCrop.landType === "bhagma" &&
-                      summaryCrop.bhagmaPercentage != null && (
-                        <>
-                          <Text style={styles.modalTotalLine}>
-                            ભાગ્યાદારને આપવાનો ભાગ (
-                            {summaryCrop.bhagmaPercentage}%):{" "}
-                            <Text style={styles.modalTotalAmount}>
-                              ₹{" "}
-                              {Math.round(
-                                (totalIncome * summaryCrop.bhagmaPercentage) / 100,
-                              ).toLocaleString("en-IN")}
-                            </Text>
-                          </Text>
-                          <Text style={styles.modalTotalLine}>
-                            તમારી આવક (ભાગ પછી):{" "}
-                            <Text style={styles.modalTotalAmount}>
-                              ₹{" "}
-                              {Math.round(
-                                totalIncome *
-                                  (1 - summaryCrop.bhagmaPercentage / 100),
-                              ).toLocaleString("en-IN")}
-                            </Text>
-                          </Text>
-                        </>
-                      )}
-                    <Text style={styles.modalTotalLine}>
-                      ચોખ્ખો નફો:{" "}
-                      <Text
-                        style={[
-                          styles.modalTotalAmount,
-                          { color: netProfit >= 0 ? C.income : C.expense },
-                        ]}
-                      >
-                        ₹ {formatWholeNumber(netProfit)}
-                      </Text>
-                    </Text>
-
-                    {/* Status chooser card */}
-                    <View style={styles.modalStatusCard}>
-                      <Text style={styles.modalStatusLabel}>વિકલ્પ પસંદ કરો</Text>
-                      <View style={styles.modalDivider} />
-
-                      {/* Status change buttons in one row (choose, then Save to apply) */}
-                      <View style={styles.modalStatusRow}>
-                      {(["Active", "Harvested", "Closed"] as CropStatus[]).map((s, idx, arr) => {
-                        const statusStyle = STATUS_STYLE[s] ?? STATUS_STYLE.Active;
-                        const selected = summaryCrop.status === s;
-                        const isFirst = idx === 0;
-                        const isLast = idx === arr.length - 1;
-                        return (
-                          <TouchableOpacity
-                            key={s}
-                            style={[
-                              styles.modalStatusChip,
-                              isFirst && styles.modalStatusChipFirst,
-                              isLast && styles.modalStatusChipLast,
-                              selected && {
-                                borderColor: statusStyle.dot,
-                                backgroundColor: statusStyle.bg,
-                              },
-                            ]}
-                            activeOpacity={0.9}
-                            onPress={() => {
-                              setSummaryCrop((prev) =>
-                                prev && prev._id === summaryCrop._id
-                                  ? { ...prev, status: s }
-                                  : prev,
-                              );
-                            }}
-                          >
-                            <Text
-                              style={[
-                                styles.modalStatusChipText,
-                                selected && { color: statusStyle.text },
-                              ]}
-                            >
-                              {s === "Active"
-                                ? t("common", "statusActive")
-                                : s === "Harvested"
-                                ? t("common", "statusHarvested")
-                                : t("common", "statusClosed")}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                    </View>
-                  </>
-                )}
-
-                <View style={styles.modalActionsRow}>
-                  <TouchableOpacity
-                    style={[styles.modalBigBtn, styles.modalBigBtnSecondary]}
-                    onPress={closeSummary}
-                    activeOpacity={0.9}
-                  >
-                    <Text style={styles.modalBigBtnTextSecondary}>બંધ કરો</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.modalBigBtn, styles.modalBigBtnPrimary]}
-                    onPress={() => {
-                      if (!summaryCrop) {
-                        closeSummary();
-                        return;
-                      }
-                      handleStatusChange(summaryCrop._id, summaryCrop.status);
-                      closeSummary();
-                    }}
-                    activeOpacity={0.9}
-                  >
-                    <Text style={styles.modalBigBtnTextPrimary}>સેવ કરો</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
 
     </View>
   );
