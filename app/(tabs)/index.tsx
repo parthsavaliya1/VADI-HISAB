@@ -1576,9 +1576,15 @@ export default function Dashboard() {
       >
         <View style={styles.stickyInner}>
           <View style={styles.stickyLeft}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>{avatarChar}</Text>
-            </View>
+            <TouchableOpacity
+              onPress={() => router.push("/profile" as any)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarText}>{avatarChar}</Text>
+              </View>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push("/profile" as any)}
               style={styles.stickyNameTouchable}

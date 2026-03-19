@@ -1233,8 +1233,9 @@ const styles = StyleSheet.create({
   },
   summaryBoxIncome: { backgroundColor: "#ECFDF3" },
   summaryBoxExpense: { backgroundColor: "#FEF2F2" },
-  summaryValue: { fontSize: 18, fontWeight: "900" },
-  summaryLabel: { fontSize: 14, color: C.textMuted, fontWeight: "700" },
+  // Summary (કુલ આવક/કુલ ખર્ચ/ચોખ્ખો નફો) - slightly smaller to fit better
+  summaryValue: { fontSize: 14, fontWeight: "900" },
+  summaryLabel: { fontSize: 11, color: C.textMuted, fontWeight: "700" },
   breakdownCard: {
     backgroundColor: C.surface,
     borderRadius: 18,
