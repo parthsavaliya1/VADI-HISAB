@@ -10,7 +10,7 @@ export interface CropItem {
     {
       value: "Groundnut",
       label: "મગફળી",
-      image: require("@/assets/crops/magafali1.jpeg"),
+      image: require("@/assets/crops/magafali.png"),
       subtypes: [
         "BT-32",
         "BT-37",
@@ -71,7 +71,7 @@ export interface CropItem {
     {
       value: "Dhana",
       label: "ધાણા",
-      image: require("@/assets/crops/kothami.png"),
+      image: require("@/assets/crops/kothmi.png"),
       subtypes: ["2", "4", "JAS 4", "ધાણી"],
     },
     {
@@ -101,13 +101,13 @@ export interface CropItem {
     {
       value: "Urad",
       label: "અડદ",
-      image: require("@/assets/crops/tal.png"),
+      image: require("@/assets/crops/adad.png"),
       subtypes: ["સ્થાનિક"],
     },
     {
       value: "Moth",
       label: "મઠ",
-      image: require("@/assets/crops/soyabean.png"),
+      image: require("@/assets/crops/math.png"),
       subtypes: ["સ્થાનિક"],
     },
     {
@@ -131,13 +131,13 @@ export interface CropItem {
     {
       value: "Castor",
       label: "એરંડા",
-      image: require("@/assets/crops/soyabean.png"),
+      image: require("@/assets/crops/aeranda.png"),
       subtypes: ["સ્થાનિક"],
     },
     {
       value: "Tuver",
       label: "તુવર",
-      image: require("@/assets/crops/soyabean.png"),
+      image: require("@/assets/crops/tuver.png"),
       subtypes: ["સ્થાનિક"],
     },
     {
@@ -149,13 +149,13 @@ export interface CropItem {
     {
       value: "Bajra",
       label: "બાજરી",
-      image: require("@/assets/crops/soyabean.png"),
+      image: require("@/assets/crops/bajari.png"),
       subtypes: ["સ્થાનિક"],
     },
     {
       value: "Marchi",
       label: "મરચી",
-      image: require("@/assets/crops/marcha.png"),
+      image: require("@/assets/crops/marchi.png"),
       subtypes: ["લાંબી", "દેશી", "તીખી", "કાશ્મીરી"],
     },
   ];
