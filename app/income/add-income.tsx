@@ -30,6 +30,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigationState } from "@react-navigation/native";
 
 /** Financial year "2025-26" → June 1, 2025 (start of FY) */
 function financialYearToStartDate(fy: string): Date {
@@ -57,6 +58,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🎨 Design tokens  (same as expense screen)
@@ -657,6 +659,14 @@ export default function AddIncomeScreen() {
   const paramYear = Array.isArray(params.year) ? params.year[0] : params.year;
   const isEdit = !!editId;
   const { refreshTransactions } = useRefresh();
+  const insets = useSafeAreaInsets();
+  const isInsideTabs = useNavigationState((state) => {
+    // If parent navigator is Tabs, it will have routes like "index", "crop", etc.
+    return state?.routes?.some((r) =>
+      ["index", "crop", "report", "live-price", "profile"].includes(r.name),
+    );
+  });
+  const bottomBarPad = insets.bottom + (isInsideTabs ? 70 : 8);
 
   const yearOptions = getYearOptions();
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>(
@@ -987,7 +997,10 @@ export default function AddIncomeScreen() {
           style={styles.container}
           contentContainerStyle={[
             styles.content,
-            { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 60 },
+            {
+              paddingBottom:
+                (keyboardHeight > 0 ? keyboardHeight : 0) + 140 + bottomBarPad,
+            },
           ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -1197,25 +1210,29 @@ export default function AddIncomeScreen() {
       </View>
       )}
 
-      {/* ── Submit ── */}
-      <TouchableOpacity
-        style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
-        onPress={handleSubmit}
-        disabled={loading}
-        activeOpacity={0.85}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Text style={styles.submitBtnText}>
-              {isEdit ? "💾  અપડેટ કરો" : "✅  આવક સેવ કરો"}
-            </Text>
-          </>
-        )}
-      </TouchableOpacity>
-
         </ScrollView>
+
+        {/* ── Fixed Submit (prevents overlap with tab bar) ── */}
+        <View style={[styles.bottomBar, { paddingBottom: bottomBarPad }]}>
+          <TouchableOpacity
+            style={[
+              styles.submitBtn,
+              styles.submitBtnFixed,
+              loading && styles.submitBtnDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitBtnText}>
+                {isEdit ? "💾  અપડેટ કરો" : "✅  આવક સેવ કરો"}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -1709,7 +1726,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 17,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 0,
+    alignSelf: "stretch",
     shadowColor: C.green700,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
@@ -1717,6 +1735,19 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   submitBtnDisabled: { opacity: 0.6 },
+  submitBtnFixed: {},
+  bottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 50,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: "rgba(245,247,242,0.96)",
+    borderTopWidth: 1,
+    borderTopColor: C.borderLight,
+  },
   submitBtnText: {
     color: "#fff",
     fontSize: 18,

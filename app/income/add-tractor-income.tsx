@@ -215,23 +215,13 @@ export default function AddTractorIncomeScreen() {
   };
 
   const keyboardHeight = useKeyboardHeight();
-  
+
+  const extraKeyboardPad = keyboardHeight > 0 ? keyboardHeight : 0;
+  const bottomBarPaddingBottom = insets.bottom + extraKeyboardPad;
+  const scrollPaddingBottom = 140 + bottomBarPaddingBottom;
 
   return (
-<KeyboardAwareScrollView
-  style={{ flex: 1, backgroundColor: C.bg }}
-  contentContainerStyle={{
-    padding: 16,
-    paddingBottom: 50 + insets.bottom,
-    }}  
-  enableOnAndroid={true}
-  extraScrollHeight={10}
-  extraHeight={80}
-  
-    keyboardShouldPersistTaps="handled"
-  showsVerticalScrollIndicator={false}
-  enableResetScrollToCoords={false}
->
+    <View style={styles.container}>
       <LinearGradient
         colors={["#FFF1E6", "#FFF7ED", "#FFF7ED"]}
         style={[styles.header, { paddingTop: HEADER_PADDING_TOP }]}
@@ -274,124 +264,170 @@ export default function AddTractorIncomeScreen() {
         )}
       </LinearGradient>
 
-
-      {loadingEdit ? (
-        <View style={{ padding: 40, alignItems: "center" }}>
-          <ActivityIndicator size="large" color={C.orange700} />
-          <Text style={{ marginTop: 12, fontSize: 15, color: C.textMuted }}>
-            લોડ થઈ રહ્યું છે...
-          </Text>
-        </View>
-      ) : (
-        <>
-      <View style={styles.card}>
-        <Text style={styles.label}>કરેલું કામ</Text>
-        <View style={styles.chipRow}>
-          {TRACTOR_ASSET_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.chip, assetType === opt.value && styles.chipActive]}
-              onPress={() => setAssetType(opt.value)}
-            >
-              <Text style={[styles.chipText, assetType === opt.value && styles.chipTextActive]}>
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.card} >
-        <Text style={styles.label}>ખેડૂત / ગ્રાહકનું નામ</Text>
-        <TouchableOpacity style={styles.contactBtn} onPress={pickContact}>
-          <Ionicons name="people-outline" size={24} color={C.orange700} />
-          <Text style={styles.contactBtnText}>મોબાઇલ કોન્ટેક્ટમાંથી પસંદ કરો</Text>
-        </TouchableOpacity>
-        <TextInput
-          style={styles.input}
-          value={farmerName}
-          onChangeText={setFarmerName}
-          placeholder="નામ લખો અથવા નીચે પસંદ કરો"
-          placeholderTextColor={C.textMuted}
-        />
-        <TextInput
-          style={[styles.input, { marginTop: 12 }]}
-          value={farmerPhone}
-          onChangeText={(text) => setFarmerPhone(normalizePhone(text))}
-          placeholder="મોબાઇલ નંબર લખો"
-          placeholderTextColor={C.textMuted}
-          keyboardType="phone-pad"
-        />
-        
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>કલાક / દિવસ</Text>
-        <TextInput
-          style={styles.input}
-          value={hoursOrDays}
-          onChangeText={setHoursOrDays}
-          placeholder="0"
-          placeholderTextColor={C.textMuted}
-          keyboardType="decimal-pad"
-        />
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>ભાડું (પ્રતિ એકમ)</Text>
-        <TextInput
-          style={styles.input}
-          value={ratePerUnit}
-          onChangeText={setRatePerUnit}
-          placeholder="0"
-          placeholderTextColor={C.textMuted}
-          keyboardType="decimal-pad"
-        />
-      </View>
-
-      {total !== null && (
-        <View style={styles.totalCard}>
-          <Text style={styles.totalLabel}>કુલ રકમ</Text>
-          <Text style={styles.totalValue}>{Math.round(total).toLocaleString("en-IN")}</Text>
-        </View>
-      )}
-
-      <View style={styles.card}>
-        <Text style={styles.label}>પૈસા આપ્યા કે બાકી?</Text>
-        <View style={styles.statusRow}>
-          {PAYMENT_STATUS_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.statusBtn, paymentStatus === opt.value && styles.statusBtnActive]}
-              onPress={() => setPaymentStatus(opt.value)}
-            >
-              <Text style={[styles.statusText, paymentStatus === opt.value && styles.statusTextActive]}>
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <TouchableOpacity
-        style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-        onPress={handleSave}
-        disabled={saving}
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: scrollPaddingBottom,
+        }}
+        enableOnAndroid={true}
+        extraScrollHeight={10}
+        extraHeight={80}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        enableResetScrollToCoords={false}
       >
-        <View style={[styles.saveBtnInner, saving && styles.saveBtnInnerDisabled]}>
-          {saving ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <>
-              <MaterialCommunityIcons name="tractor-variant" size={26} color="#fff" />
-              <Text style={styles.saveBtnText}>{isEdit ? "અપડેટ કરો" : "સાચવો"}</Text>
-            </>
-          )}
-        </View>
-      </TouchableOpacity>
-        </>
-      )}
-    </KeyboardAwareScrollView>
+        {loadingEdit ? (
+          <View style={{ padding: 40, alignItems: "center" }}>
+            <ActivityIndicator size="large" color={C.orange700} />
+            <Text style={{ marginTop: 12, fontSize: 15, color: C.textMuted }}>
+              લોડ થઈ રહ્યું છે...
+            </Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.card}>
+              <Text style={styles.label}>કરેલું કામ</Text>
+              <View style={styles.chipRow}>
+                {TRACTOR_ASSET_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.chip,
+                      assetType === opt.value && styles.chipActive,
+                    ]}
+                    onPress={() => setAssetType(opt.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        assetType === opt.value && styles.chipTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.label}>ખેડૂત / ગ્રાહકનું નામ</Text>
+              <TouchableOpacity style={styles.contactBtn} onPress={pickContact}>
+                <Ionicons name="people-outline" size={24} color={C.orange700} />
+                <Text style={styles.contactBtnText}>મોબાઇલ કોન્ટેક્ટમાંથી પસંદ કરો</Text>
+              </TouchableOpacity>
+              <TextInput
+                style={styles.input}
+                value={farmerName}
+                onChangeText={setFarmerName}
+                placeholder="નામ લખો અથવા નીચે પસંદ કરો"
+                placeholderTextColor={C.textMuted}
+              />
+              <TextInput
+                style={[styles.input, { marginTop: 12 }]}
+                value={farmerPhone}
+                onChangeText={(text) => setFarmerPhone(normalizePhone(text))}
+                placeholder="મોબાઇલ નંબર લખો"
+                placeholderTextColor={C.textMuted}
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.label}>કલાક / દિવસ</Text>
+              <TextInput
+                style={styles.input}
+                value={hoursOrDays}
+                onChangeText={setHoursOrDays}
+                placeholder="0"
+                placeholderTextColor={C.textMuted}
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.label}>ભાડું (પ્રતિ એકમ)</Text>
+              <TextInput
+                style={styles.input}
+                value={ratePerUnit}
+                onChangeText={setRatePerUnit}
+                placeholder="0"
+                placeholderTextColor={C.textMuted}
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            {total !== null && (
+              <View style={styles.totalCard}>
+                <Text style={styles.totalLabel}>કુલ રકમ</Text>
+                <Text style={styles.totalValue}>{Math.round(total).toLocaleString("en-IN")}</Text>
+              </View>
+            )}
+
+            <View style={styles.card}>
+              <Text style={styles.label}>પૈસા આપ્યા કે બાકી?</Text>
+              <View style={styles.statusRow}>
+                {PAYMENT_STATUS_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.statusBtn,
+                      paymentStatus === opt.value && styles.statusBtnActive,
+                    ]}
+                    onPress={() => setPaymentStatus(opt.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        paymentStatus === opt.value && styles.statusTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </>
+        )}
+      </KeyboardAwareScrollView>
+
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            paddingBottom: bottomBarPaddingBottom,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={[
+            styles.saveBtn,
+            styles.saveBtnFixed,
+            saving && styles.saveBtnDisabled,
+          ]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          <View
+            style={[
+              styles.saveBtnInner,
+              saving && styles.saveBtnInnerDisabled,
+            ]}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <MaterialCommunityIcons name="tractor-variant" size={26} color="#fff" />
+                <Text style={styles.saveBtnText}>{isEdit ? "અપડેટ કરો" : "સાચવો"}</Text>
+              </>
+            )}
+          </View>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
@@ -513,6 +549,7 @@ const styles = StyleSheet.create({
   statusTextActive: { color: "#fff" },
   saveBtn: { borderRadius: 14, marginTop: 8 },
   saveBtnDisabled: { opacity: 0.7 },
+  saveBtnFixed: { marginTop: 0 },
   saveBtnInner: {
     flexDirection: "row",
     alignItems: "center",
@@ -530,4 +567,11 @@ const styles = StyleSheet.create({
     borderColor: "#9CA3AF",
   },
   saveBtnText: { fontSize: 21, fontWeight: "900", color: "#fff" },
+  bottomBar: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: C.bg,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
 });

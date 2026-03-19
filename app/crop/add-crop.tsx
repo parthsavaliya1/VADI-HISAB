@@ -20,10 +20,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
+  PixelRatio,
 } from "react-native";
 import Toast from "react-native-toast-message";
 
+import { useNavigationState } from "@react-navigation/native";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   createCrop,
   getCropById,
@@ -506,6 +510,11 @@ export default function AddCrop() {
   const editId = params.id ?? null;
   const isEdit = !!editId;
 
+  const { width: windowWidth } = useWindowDimensions();
+  const fontScale = PixelRatio.getFontScale();
+  // Covers both wider devices and "Large Text" accessibility mode.
+  const isLargeScreen = windowWidth >= 380 || fontScale >= 1.15;
+
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -525,8 +534,18 @@ export default function AddCrop() {
   const [subTypeOffsetY, setSubTypeOffsetY] = useState<number | null>(null);
   const [shouldScrollToSubType, setShouldScrollToSubType] = useState(false);
   const { profile, setProfile } = useProfile();
+  const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
   const keyboardHeightRef = useRef(keyboardHeight);
+
+  const isInsideTabs = useNavigationState((state) => {
+    // If parent navigator is Tabs, it will have routes like "index", "crop", etc.
+    return state?.routes?.some((r) =>
+      ["index", "crop", "report", "live-price", "profile"].includes(r.name)
+    );
+  });
+  const tabBarExtra = isInsideTabs ? 70 : 0;
+  const bottomBarPad = insets.bottom + (isInsideTabs ? 70 : 8);
   useEffect(() => {
     keyboardHeightRef.current = keyboardHeight;
   }, [keyboardHeight]);
@@ -542,7 +561,8 @@ export default function AddCrop() {
           (_left: number, top: number, _width: number, _height: number) => {
             const kbH = keyboardHeightRef.current || 300;
             const windowH = Dimensions.get("window").height;
-            const visibleH = windowH - kbH - 80; // account for bottom bar
+            const visibleH =
+              windowH - kbH - (80 + tabBarExtra + insets.bottom); // account for bottom bar + tab bar
             const targetY = Math.max(0, top - visibleH * 0.4);
             scrollRef.current?.scrollTo({ y: targetY, animated: true });
           },
@@ -552,7 +572,7 @@ export default function AddCrop() {
         );
       }, 280);
     },
-    [],
+    [insets.bottom, tabBarExtra],
   );
 
   // Refs for important inputs
@@ -908,7 +928,10 @@ export default function AddCrop() {
         contentContainerStyle={[
           styles.scroll,
           // Same bottom spacing concept as dashboard (`height: 120`)
-          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 120 : 120 },
+          {
+            paddingBottom:
+              keyboardHeight > 0 ? keyboardHeight + 120 + tabBarExtra + insets.bottom : 120 + tabBarExtra + insets.bottom,
+          },
         ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -1357,12 +1380,18 @@ export default function AddCrop() {
                 </View>
               </View>
               {form.bhagmaOption === "ha" && (
-                <View style={styles.bhagmaShareRow}>
+                <View
+                  style={[
+                    styles.bhagmaShareRow,
+                    isLargeScreen && styles.bhagmaShareRowLarge,
+                  ]}
+                >
                   {BHAGMA_SHARE_OPTIONS.map((opt) => (
                     <TouchableOpacity
                       key={opt.value}
                       style={[
                         styles.bhagmaShareChip,
+                        isLargeScreen && styles.bhagmaShareChipLarge,
                         form.bhagmaPercentage === opt.value &&
                           styles.bhagmaShareChipActive,
                       ]}
@@ -1375,6 +1404,7 @@ export default function AddCrop() {
                           form.bhagmaPercentage === opt.value &&
                             styles.bhagmaShareChipTextActive,
                         ]}
+                        numberOfLines={2}
                       >
                         {opt.label}
                       </Text>
@@ -1449,7 +1479,7 @@ export default function AddCrop() {
       </ScrollView>
 
       {/* ── Bottom bar ── */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: bottomBarPad }]}>
         {step < STEPS.length - 1 ? (
           <TouchableOpacity
             style={styles.nextBtn}
@@ -2069,21 +2099,34 @@ const styles = StyleSheet.create({
   },
   bhagmaShareRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginTop: 14,
+    flexWrap: "nowrap",
+    gap: 10,
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+  bhagmaShareRowLarge: {
+    flexWrap: "nowrap",
+    gap: 8,
+    justifyContent: "space-between",
+    marginTop: 10,
   },
   bhagmaShareChip: {
     flex: 1,
-    minWidth: 100,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    minWidth: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 14,
     borderWidth: 2.5,
     borderColor: C.borderLight,
     backgroundColor: C.surface,
     alignItems: "center",
     justifyContent: "center",
+  },
+  bhagmaShareChipLarge: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
   },
   bhagmaShareChipActive: {
     borderColor: C.green700,
@@ -2238,10 +2281,12 @@ const styles = StyleSheet.create({
 
   // Bottom bar
   bottomBar: {
-    // Keep it in normal layout (like dashboard content spacing),
-    // so it won't be covered by bottom navigation.
-    padding: 18,
-    paddingBottom: Platform.OS === "ios" ? 36 : 18,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
     backgroundColor: C.bg,
     borderTopWidth: 1,
     borderTopColor: C.borderLight,

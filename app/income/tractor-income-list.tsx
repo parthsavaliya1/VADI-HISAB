@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigationState } from "@react-navigation/native";
 import {
   ActivityIndicator,
   Alert,
@@ -202,6 +203,14 @@ export default function TractorIncomeListScreen() {
   const [farmerDropdownOpen, setFarmerDropdownOpen] = useState(false);
   const [tractorExpenseTotal, setTractorExpenseTotal] = useState(0);
   const insets = useSafeAreaInsets();
+
+  const isInsideTabs = useNavigationState((state) => {
+    // When parent navigator is Tabs, reserve extra space so bottom buttons
+    // sit above the tab bar (prevents overlap).
+    return state?.routes?.some((r) =>
+      ["index", "crop", "report", "live-price", "profile"].includes(r.name)
+    );
+  });
 
   const fetchAll = useCallback(async () => {
     try {
@@ -569,7 +578,14 @@ export default function TractorIncomeListScreen() {
           />
         </>
       )}
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            paddingBottom: insets.bottom + (isInsideTabs ? 70 : 8),
+          },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.bottomBtn, styles.bottomBtnLeft]}
           activeOpacity={0.9}
