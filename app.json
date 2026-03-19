@@ -4,12 +4,13 @@
     "slug": "vadi-hisaab",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/vadi-logo.png",
     "scheme": "vadihisaab",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "icon": "./assets/vadi-logo.png"
     },
     "android": {
       "adaptiveIcon": {
@@ -37,7 +38,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/vadi-logo.png",
           "color": "#ffffff"
         }
       ],
