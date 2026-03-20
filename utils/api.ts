@@ -10,8 +10,8 @@ import axios, { AxiosError } from "axios";
 // 🚀 PROD: Set EXPO_PUBLIC_API_URL=https://your-api.onrender.com/api
 const BASE_URL =
   (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) ||
-  // "http://192.168.1.8:8000/api";
-  "https://vadi-hisab-be.onrender.com/api";
+  "http://192.168.1.7:8000/api";
+  // "https://vadi-hisab-be.onrender.com/api";
 
 // ─── Axios Instance ───────────────────────────
 export const API = axios.create({
@@ -851,7 +851,7 @@ export interface Expense {
    */
   amount: number;
   /** Denormalized year (from date) — enables fast year filtering */
-  year: number;
+  year: string | number;
   date: string;
   notes?: string;
   seed?: SeedExpense;
@@ -1155,7 +1155,7 @@ export interface TopCropByIncome {
 
 export interface IncomeAnalyticsResponse {
   success: boolean;
-  year: number;
+  year: string | number;
   /** This user's total income for the year */
   myTotal: number;
   /** Average income across all consenting users (filtered by district if passed) */

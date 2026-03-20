@@ -526,6 +526,14 @@ function buildTransactions(
     .slice(0, RECENT_TXN_LIMIT);
 }
 
+// Financial year "YYYY-YY" (June to June) derived from any date.
+function financialYearFromDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = d.getMonth(); // JS: Jan=0 ... Dec=11
+  if (month >= 5) return `${year}-${String((year + 1) % 100).padStart(2, "0")}`;
+  return `${year - 1}-${String(year % 100).padStart(2, "0")}`;
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🔢 Animated counter
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1364,6 +1372,7 @@ export default function Dashboard() {
           .reduce((sum, expense) => sum + expenseAmount(expense as any), 0);
         setBhagyaUpadTotal(bhagyaUpadTotal);
         const expenses = Array.isArray(expRes?.data) ? expRes.data : [];
+
         let incomes = Array.isArray(incRes?.data) ? incRes.data : [];
         if (excludeTractor) {
           incomes = incomes.filter((i: any) => i.category !== "Rental Income");
@@ -1559,7 +1568,9 @@ export default function Dashboard() {
   const handleCropSelected = (crop: Crop) => {
     setPickerVisible(false);
     if (pickerType === "expense") {
-      router.push(`/expense/add-expense?cropId=${crop._id}` as any);
+      router.push(
+        `/expense/add-expense?cropId=${crop._id}&year=${financialYear}` as any,
+      );
     } else {
       router.push(`/income/add-income?cropId=${crop._id}` as any); // ✅
     }
@@ -2356,7 +2367,7 @@ export default function Dashboard() {
                       <PressableCard
                         onPress={() =>
                           router.push(
-                            `/expense/add-expense?cropId=${c._id}` as any,
+                            `/expense/add-expense?cropId=${c._id}&year=${financialYear}` as any,
                           )
                         }
                         style={styles.detailBtnWrap}

@@ -52,6 +52,42 @@ function financialYearToStartDate(fy: string): Date {
   return new Date(y, 5, 1); // month 5 = June
 }
 
+/** Financial year "YYYY-YY" (June to June) derived from any date */
+function financialYearFromDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = d.getMonth(); // JS: Jan=0 ... Dec=11
+  if (month >= 5) {
+    // Jun..Dec => start year = calendar year
+    return `${year}-${String((year + 1) % 100).padStart(2, "0")}`;
+  }
+  // Jan..May => start year = calendar year - 1
+  return `${year - 1}-${String(year % 100).padStart(2, "0")}`;
+}
+
+/**
+ * Coerce a date into `targetFY` while keeping the same month/day.
+ * We use midday (12:00) to reduce risk of day-shift from timezone/ISO conversion.
+ */
+function coerceDateToFinancialYear(date: Date, targetFY: string): Date {
+  const [startY] = targetFY.split("-").map(Number);
+  if (!Number.isFinite(startY)) return date;
+
+  const month = date.getMonth();
+  const adjustedYear = month >= 5 ? startY : startY + 1;
+  const coerced = new Date(
+    adjustedYear,
+    month,
+    date.getDate(),
+    12,
+    0,
+    0,
+    0,
+  );
+
+  // Safety: if something unexpected happens, fall back to the original date.
+  return financialYearFromDate(coerced) === targetFY ? coerced : date;
+}
+
 /** Year options: previous, current e.g. ["2024-25", "2025-26"] */
 function getYearOptions(): string[] {
   const current = getCurrentFinancialYear();
@@ -420,7 +456,7 @@ export default function AddExpense() {
 
   // Date of entry:
   // - General/extra expense: anchored to selected financial year (so it shows under that FY)
-  // - Crop expenses: use today's date.
+  // - Crop expenses: keep actual date (server FY classification is done using crop.year)
   const effectiveExpenseDate = (() => {
     if (isGeneralExpense) return financialYearToStartDate(selectedFinancialYear);
     return new Date();
