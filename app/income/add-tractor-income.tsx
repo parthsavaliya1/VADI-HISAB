@@ -79,6 +79,41 @@ function normalizePhone(phone: string) {
   return digits.slice(-10);
 }
 
+/** expo-contacts often leaves `name` empty while first/last are set (especially on Android). */
+function contactDisplayName(contact: Contacts.Contact): string {
+  const raw = contact.name?.trim();
+  if (raw) return raw;
+  const parts = [
+    contact.namePrefix,
+    contact.firstName,
+    contact.middleName,
+    contact.lastName,
+    contact.nameSuffix,
+  ]
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter(Boolean);
+  if (parts.length) return parts.join(" ");
+  const nick = contact.nickname?.trim();
+  if (nick) return nick;
+  return contact.company?.trim() ?? "";
+}
+
+function pickPhoneFromContact(contact: Contacts.Contact): string {
+  const list = contact.phoneNumbers ?? [];
+  if (!list.length) return "";
+  const mobileish = (label: string) =>
+    /mobile|cell|મોબાઇલ|ફોન/i.test(label);
+  const withNum = list.filter((p) => (p.number ?? p.digits ?? "").trim());
+  if (!withNum.length) return "";
+  const primary = withNum.find((p) => p.isPrimary);
+  if (primary?.number ?? primary?.digits) {
+    return primary.number ?? primary.digits ?? "";
+  }
+  const mobile = withNum.find((p) => mobileish(p.label ?? ""));
+  const chosen = mobile ?? withNum[0];
+  return chosen.number ?? chosen.digits ?? "";
+}
+
 export default function AddTractorIncomeScreen() {
   const insets = useSafeAreaInsets();
   const { id: editId } = useLocalSearchParams<{ id?: string }>();
@@ -156,8 +191,8 @@ export default function AddTractorIncomeScreen() {
 
       const contact = await Contacts.presentContactPickerAsync();
       if (!contact) return;
-      const name = contact.name ?? "";
-      const phone = contact.phoneNumbers?.[0]?.number ?? "";
+      const name = contactDisplayName(contact);
+      const phone = pickPhoneFromContact(contact);
       setFarmerName(name);
       setFarmerPhone(normalizePhone(phone));
     } catch (e) {

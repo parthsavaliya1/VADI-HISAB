@@ -10,6 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.parthsavaliya.vadihisaab",
       "icon": "./assets/vadi-logo.png"
     },
     "android": {
@@ -33,13 +34,17 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#2E7D32"
+    },
     "plugins": [
       "expo-router",
       [
         "expo-notifications",
         {
-          "icon": "./assets/vadi-logo.png",
-          "color": "#ffffff"
+          "icon": "./assets/notification-icon.png",
+          "color": "#2E7D32"
         }
       ],
       [
