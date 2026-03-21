@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getCrops,
@@ -14,7 +15,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   RefreshControl,
   StatusBar,
@@ -257,8 +257,11 @@ export default function AllIncomeScreen() {
 
       {loading ? (
         <View style={styles.loadWrap}>
-          <ActivityIndicator size="large" color={C.green700} />
-          <Text style={styles.loadText}>લોડ થઈ રહ્યું છે...</Text>
+          <VadiLogoLoader
+            size="lg"
+            label="લોડ થઈ રહ્યું છે..."
+            labelStyle={styles.loadText}
+          />
         </View>
       ) : (
         <>

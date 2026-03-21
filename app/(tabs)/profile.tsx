@@ -6,6 +6,7 @@ import {
     getVillageItems,
 } from "@/data/gujarati-location";
 import { FarmerProfileCard } from "@/components/FarmerProfileCard";
+import { VadiLogoLoader, VadiLogoMark } from "@/components/VadiLogoLoader";
 import type { FarmerProfile as APIFarmerProfile, VadiScoreResponse } from "@/utils/api";
 import { getMyProfile, logout, updateProfile, getVadiScore } from "@/utils/api";
 import { formatArea, formatWholeNumber } from "@/utils/format";
@@ -13,7 +14,6 @@ import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import {
-    ActivityIndicator,
     Alert,
     Animated,
     Dimensions,
@@ -316,7 +316,7 @@ function EditModal({
                         </Pressable>
                         <Text style={editStyles.sheetTitle}>{t("profileTab", "editProfile")}</Text>
                         <Pressable onPress={onSave} disabled={saving} style={editStyles.sheetSaveBtn}>
-                            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={editStyles.sheetSaveBtnText}>{t("profileTab", "save")}</Text>}
+                            {saving ? <VadiLogoMark size="xs" inverted /> : <Text style={editStyles.sheetSaveBtnText}>{t("profileTab", "save")}</Text>}
                         </Pressable>
                     </View>
 
@@ -877,7 +877,11 @@ export default function Profile() {
     };
 
     if (loading) {
-        return <View style={styles.centerScreen}><ActivityIndicator size="large" color="#2E7D32" /><Text style={styles.loadingText}>{t("profileTab", "loading")}</Text></View>;
+        return (
+            <View style={styles.centerScreen}>
+                <VadiLogoLoader size="lg" label={t("profileTab", "loading")} labelStyle={styles.loadingText} />
+            </View>
+        );
     }
     if (loadError) {
         return (

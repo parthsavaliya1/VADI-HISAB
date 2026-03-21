@@ -1,4 +1,5 @@
 import { AppBackButton } from "@/components/AppBackButton";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
@@ -27,7 +28,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Dimensions,
   Keyboard,
@@ -978,10 +978,11 @@ export default function AddExpense() {
           backgroundColor: C.bg,
         }}
       >
-        <ActivityIndicator size="large" color={C.green700} />
-        <Text style={{ marginTop: 12, fontSize: 16, color: C.textMuted }}>
-          લોડ થઈ રહ્યું છે...
-        </Text>
+        <VadiLogoLoader
+          size="lg"
+          label="લોડ થઈ રહ્યું છે..."
+          labelStyle={{ marginTop: 12, fontSize: 16, color: C.textMuted }}
+        />
       </View>
     );
   }

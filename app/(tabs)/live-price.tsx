@@ -2,12 +2,12 @@
  * Live APMC / Mandi crop prices — tab screen (between Report and Profile).
  * Requires backend DATA_GOV_IN_API_KEY to be set.
  */
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { getApmcPrices, getApmcCommodities, type ApmcPriceRecord } from "@/utils/api";
 import { formatWholeNumber } from "@/utils/format";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   RefreshControl,
   ScrollView,
@@ -114,8 +114,11 @@ export default function LivePriceTabScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={C.green700} />
-          <Text style={styles.loadText}>ભાવ લોડ થઈ રહ્યા છે...</Text>
+          <VadiLogoLoader
+            size="lg"
+            label="ભાવ લોડ થઈ રહ્યા છે..."
+            labelStyle={styles.loadText}
+          />
         </View>
       ) : error ? (
         <View style={styles.center}>

@@ -10,6 +10,7 @@
 
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
+import { VadiLogoLoader, VadiLogoMark } from "@/components/VadiLogoLoader";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
@@ -47,7 +48,6 @@ function getYearOptions(): string[] {
 }
 import Toast from "react-native-toast-message";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -959,8 +959,11 @@ export default function AddIncomeScreen() {
   if (fetchingEdit) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color={C.green500} />
-        <Text style={styles.loadingText}>ડેટા લોડ થઈ રહ્યું છે...</Text>
+        <VadiLogoLoader
+          size="lg"
+          label="ડેટા લોડ થઈ રહ્યું છે..."
+          labelStyle={styles.loadingText}
+        />
       </View>
     );
   }
@@ -1225,7 +1228,7 @@ export default function AddIncomeScreen() {
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <VadiLogoMark size="xs" inverted />
             ) : (
               <Text style={styles.submitBtnText}>
                 {isEdit ? "💾  અપડેટ કરો" : "✅  આવક સેવ કરો"}

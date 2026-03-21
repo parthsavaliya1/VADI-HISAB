@@ -1,3 +1,4 @@
+import { VadiLogoMark } from "@/components/VadiLogoLoader";
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import translations from "@/translations.json";
 import { saveConsent } from "@/utils/api";
@@ -5,7 +6,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
     Alert,
     Animated,
     Easing,
@@ -207,7 +207,7 @@ export default function Consent() {
                                 style={styles.proceedGradient}
                             >
                                 {loading
-                                    ? <ActivityIndicator color="white" />
+                                    ? <VadiLogoMark size="xs" inverted />
                                     : <Text style={[styles.proceedText, selected === null && styles.proceedTextOff]}>{t.proceed}</Text>
                                 }
                             </LinearGradient>

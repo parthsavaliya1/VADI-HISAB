@@ -7,6 +7,7 @@
 
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
+import { VadiLogoMark } from "@/components/VadiLogoLoader";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
   createExpense,
@@ -26,7 +27,6 @@ import Toast from "react-native-toast-message";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -363,7 +363,7 @@ export default function AddTractorExpenseScreen() {
           disabled={saving}
         >
           {saving ? (
-            <ActivityIndicator color="#fff" />
+            <VadiLogoMark size="xs" inverted />
           ) : (
             <Text style={styles.saveBtnText}>{isEdit ? "સુધારો" : "સાચવો"}</Text>
           )}
@@ -372,7 +372,7 @@ export default function AddTractorExpenseScreen() {
         <View style={styles.historySection}>
           <Text style={styles.historyTitle}>સાચવેલ ખર્ચ (ઇતિહાસ)</Text>
           {loadingList ? (
-            <ActivityIndicator size="small" color={C.orange700} style={styles.historyLoader} />
+            <VadiLogoMark size="sm" style={styles.historyLoader} />
           ) : expenses.length === 0 ? (
             <Text style={styles.historyEmpty}>કોઈ ખર્ચ નથી. ઉપરથી ઉમેરો.</Text>
           ) : (

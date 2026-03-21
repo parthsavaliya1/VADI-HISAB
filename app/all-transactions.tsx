@@ -20,12 +20,12 @@ import {
 } from "@/utils/api";
 import { formatWholeNumber } from "@/utils/format";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Platform,
   RefreshControl,
@@ -505,8 +505,11 @@ export default function AllTransactionsScreen() {
 
       {loading ? (
         <View style={styles.loadWrap}>
-          <ActivityIndicator size="large" color={C.green700} />
-          <Text style={styles.loadText}>લોડ થઈ રહ્યું છે...</Text>
+          <VadiLogoLoader
+            size="lg"
+            label="લોડ થઈ રહ્યું છે..."
+            labelStyle={styles.loadText}
+          />
         </View>
       ) : (
         <ScrollView

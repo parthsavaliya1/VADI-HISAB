@@ -1,8 +1,8 @@
+import { VadiLogoMark } from "@/components/VadiLogoLoader";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
     Alert,
     Animated,
     Easing,
@@ -165,7 +165,7 @@ const DropdownButton = ({
         >
             {loading ? (
                 <View style={styles.dropdownLoadingWrap}>
-                    <ActivityIndicator size="small" color={C.green700} />
+                    <VadiLogoMark size="xs" />
                     <Text style={styles.dropdownBtnPlaceholder}>{placeholder}</Text>
                 </View>
             ) : (
@@ -834,7 +834,7 @@ export default function ProfileSetup() {
                                     style={styles.submitGradient}
                                 >
                                     {loading
-                                        ? <ActivityIndicator color="white" />
+                                        ? <VadiLogoMark size="xs" inverted />
                                         : <Text style={[styles.submitText, !isValid && styles.submitTextOff]}>{t.save}</Text>
                                     }
                                 </LinearGradient>

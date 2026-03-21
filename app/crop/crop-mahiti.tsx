@@ -1,6 +1,7 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import {
   deleteCrop,
   getCropById,
@@ -27,7 +28,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigationState } from "@react-navigation/native";
 import { CROPSWITHIMAGE } from "../constants";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   ScrollView,
@@ -262,8 +262,11 @@ export default function CropMahitiScreen() {
       <View style={styles.screen}>
         <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={C.green700} />
-          <Text style={styles.loadingText}>{t("crop", "loadingCrops")}</Text>
+          <VadiLogoLoader
+            size="lg"
+            label={t("crop", "loadingCrops")}
+            labelStyle={styles.loadingText}
+          />
         </View>
       </View>
     );
@@ -346,10 +349,13 @@ export default function CropMahitiScreen() {
         <Text style={styles.sectionTitle}>કેટેગરી પ્રમાણે ખર્ચ</Text>
 
         {summaryLoading ? (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={C.green700} />
-            <Text style={styles.loadingRowText}>લોડ થઈ રહ્યું છે...</Text>
-          </View>
+          <VadiLogoLoader
+            horizontal
+            size="sm"
+            label="લોડ થઈ રહ્યું છે..."
+            containerStyle={styles.loadingRow}
+            labelStyle={styles.loadingRowText}
+          />
         ) : (
           <>
             {EXPENSE_CATEGORY_ORDER.map((cat) => (

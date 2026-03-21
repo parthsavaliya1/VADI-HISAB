@@ -6,6 +6,7 @@
 
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
+import { VadiLogoLoader, VadiLogoMark } from "@/components/VadiLogoLoader";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
@@ -25,7 +26,6 @@ import Toast from "react-native-toast-message";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -279,10 +279,11 @@ export default function AddTractorIncomeScreen() {
       >
         {loadingEdit ? (
           <View style={{ padding: 40, alignItems: "center" }}>
-            <ActivityIndicator size="large" color={C.orange700} />
-            <Text style={{ marginTop: 12, fontSize: 15, color: C.textMuted }}>
-              લોડ થઈ રહ્યું છે...
-            </Text>
+            <VadiLogoLoader
+              size="lg"
+              label="લોડ થઈ રહ્યું છે..."
+              labelStyle={{ marginTop: 12, fontSize: 15, color: C.textMuted }}
+            />
           </View>
         ) : (
           <>
@@ -417,7 +418,7 @@ export default function AddTractorIncomeScreen() {
             ]}
           >
             {saving ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <VadiLogoMark size="xs" inverted />
             ) : (
               <>
                 <MaterialCommunityIcons name="tractor-variant" size={26} color="#fff" />

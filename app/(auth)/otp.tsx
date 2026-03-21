@@ -6,6 +6,7 @@
  * ✅ UI aligned with reference: clean layout, centered title, styled input/button
  */
 
+import { VadiLogoMark } from "@/components/VadiLogoLoader";
 import translations from "@/translations.json";
 import { getFriendlyErrorMessage, sendOtp, verifyOtp } from "@/utils/api";
 import { registerAndSyncPushToken } from "@/utils/pushNotifications";
@@ -13,7 +14,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
@@ -643,7 +643,7 @@ export default function OTP() {
                       />
                     )}
                     {verifying ? (
-                      <ActivityIndicator color={C.white} />
+                      <VadiLogoMark size="xs" inverted />
                     ) : (
                       <View style={styles.btnRow}>
                         <Text
@@ -684,7 +684,7 @@ export default function OTP() {
                   activeOpacity={0.7}
                 >
                   {loading ? (
-                    <ActivityIndicator color={C.green700} size="small" />
+                    <VadiLogoMark size="xs" />
                   ) : (
                     <Text style={styles.resendTxt}>{t.resend}</Text>
                   )}

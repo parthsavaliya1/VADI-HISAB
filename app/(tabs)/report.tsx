@@ -1,6 +1,7 @@
 import { AppTheme } from "@/constants/theme";
 import { ExpensePieChart } from "@/components/ExpensePieChart";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
@@ -25,7 +26,6 @@ import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { CROPS as ALL_CROPS } from "@/app/crop/add-crop";
 import {
-  ActivityIndicator,
   Dimensions,
   Modal,
   Image,
@@ -372,8 +372,11 @@ export default function ReportScreen() {
 
       {loading ? (
         <View style={styles.loadWrap}>
-          <ActivityIndicator size="large" color={C.green700} />
-          <Text style={styles.loadText}>લોડ થઈ રહ્યું છે...</Text>
+          <VadiLogoLoader
+            size="lg"
+            label="લોડ થઈ રહ્યું છે..."
+            labelStyle={styles.loadText}
+          />
         </View>
       ) : (
         <ScrollView

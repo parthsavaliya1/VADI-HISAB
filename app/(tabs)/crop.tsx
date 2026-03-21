@@ -19,7 +19,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
@@ -33,6 +32,7 @@ import {
   Image,
   View,
 } from "react-native";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { getCropImageSource } from "@/utils/cropImageSource";
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -581,8 +581,11 @@ export default function CropScreen() {
     return (
       <View style={styles.loaderWrap}>
         <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
-        <ActivityIndicator size="large" color={C.green700} />
-        <Text style={styles.loadingText}>{t("crop", "loadingCrops")}</Text>
+        <VadiLogoLoader
+          size="lg"
+          label={t("crop", "loadingCrops")}
+          labelStyle={styles.loadingText}
+        />
       </View>
     );
   }

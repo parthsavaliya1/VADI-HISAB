@@ -1,5 +1,6 @@
 import { AppTheme, HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -10,7 +11,6 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   RefreshControl,
   ScrollView,
@@ -135,7 +135,7 @@ export default function NotificationsScreen() {
 
       {loading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={C.green700} />
+          <VadiLogoLoader size="lg" />
         </View>
       ) : (
         <ScrollView

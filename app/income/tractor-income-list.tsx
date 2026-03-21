@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getCurrentFinancialYear,
@@ -16,7 +17,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigationState } from "@react-navigation/native";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
@@ -421,8 +421,11 @@ export default function TractorIncomeListScreen() {
 
       {loading ? (
         <View style={styles.loadWrap}>
-          <ActivityIndicator size="large" color={C.orange700} />
-          <Text style={styles.loadText}>લોડ થઈ રહ્યું છે...</Text>
+          <VadiLogoLoader
+            size="lg"
+            label="લોડ થઈ રહ્યું છે..."
+            labelStyle={styles.loadText}
+          />
         </View>
       ) : (
         <>

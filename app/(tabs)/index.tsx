@@ -17,6 +17,7 @@ import {
   type Expense,
   type ExpenseCategory,
 } from "@/utils/api";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { getCropColors } from "@/utils/cropColors";
 import { formatArea, formatWholeNumber } from "@/utils/format";
 
@@ -27,7 +28,6 @@ import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Dimensions,
   Image,
@@ -1129,10 +1129,11 @@ function RecentTransactions({
       <View style={styles.txnList}>
         {loading ? (
           <View style={{ padding: 24, alignItems: "center" }}>
-            <ActivityIndicator color={C.green500} size="small" />
-            <Text style={{ color: C.textMuted, marginTop: 8, fontSize: 17 }}>
-              {t("dashboard", "loading")}
-            </Text>
+            <VadiLogoLoader
+              size="md"
+              label={t("dashboard", "loading")}
+              labelStyle={{ color: C.textMuted, fontSize: 17 }}
+            />
           </View>
         ) : transactions.length === 0 ? (
           <View style={{ padding: 28, alignItems: "center" }}>

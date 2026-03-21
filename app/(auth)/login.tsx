@@ -5,6 +5,7 @@
  * Logo: gradient circle, decorative rings, scale/rotate animations.
  */
 
+import { VadiLogoMark } from "@/components/VadiLogoLoader";
 import translations from "@/translations.json";
 import { getFriendlyErrorMessage, sendOtp } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,7 +13,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
@@ -437,7 +437,7 @@ export default function Login() {
                     />
                   )}
                   {loading ? (
-                    <ActivityIndicator color="#fff" size="small" />
+                    <VadiLogoMark size="xs" inverted />
                   ) : (
                     <View style={styles.btnRow}>
                       <Text

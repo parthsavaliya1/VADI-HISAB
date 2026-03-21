@@ -1,5 +1,6 @@
 import { useRefresh } from "@/contexts/RefreshContext";
 import { AppBackButton } from "@/components/AppBackButton";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import Toast from "react-native-toast-message";
 import {
@@ -15,7 +16,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
@@ -334,8 +334,11 @@ export default function ExpenseList() {
 
       {loading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color="#059669" />
-          <Text style={styles.loadingText}>લોડ થઈ રહ્યું છે...</Text>
+          <VadiLogoLoader
+            size="lg"
+            label="લોડ થઈ રહ્યું છે..."
+            labelStyle={styles.loadingText}
+          />
         </View>
       ) : (
         <FlatList

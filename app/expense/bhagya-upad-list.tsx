@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getCurrentFinancialYear,
@@ -14,7 +15,6 @@ import { useNavigationState } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   RefreshControl,
   StatusBar,
@@ -221,8 +221,11 @@ const isInsideTabs = useNavigationState((state) => {
 
       {loading ? (
         <View style={styles.loadWrap}>
-          <ActivityIndicator size="large" color={C.blue700} />
-          <Text style={styles.loadText}>લોડ થઈ રહ્યું છે...</Text>
+          <VadiLogoLoader
+            size="lg"
+            label="લોડ થઈ રહ્યું છે..."
+            labelStyle={styles.loadText}
+          />
         </View>
       ) : (
         <>

@@ -6,6 +6,7 @@
 
 import { useRefresh } from "@/contexts/RefreshContext";
 import { AppBackButton } from "@/components/AppBackButton";
+import { VadiLogoLoader } from "@/components/VadiLogoLoader";
 import {
   deleteExpense,
   deleteIncome,
@@ -23,7 +24,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Platform,
   ScrollView,
@@ -214,8 +214,11 @@ export default function TransactionDetailsScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={C.green500} />
-        <Text style={styles.loadingText}>વિગત લોડ થઈ રહ્યું છે...</Text>
+        <VadiLogoLoader
+          size="lg"
+          label="વિગત લોડ થઈ રહ્યું છે..."
+          labelStyle={styles.loadingText}
+        />
       </View>
     );
   }
