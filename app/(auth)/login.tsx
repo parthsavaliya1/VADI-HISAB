@@ -5,7 +5,7 @@
  * Logo: gradient circle, decorative rings, scale/rotate animations.
  */
 
-import { VadiLogoMark } from "@/components/VadiLogoLoader";
+import { VadiButtonLoadingIndicator } from "@/components/VadiLogoLoader";
 import translations from "@/translations.json";
 import { getFriendlyErrorMessage, sendOtp } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
@@ -437,7 +437,7 @@ export default function Login() {
                     />
                   )}
                   {loading ? (
-                    <VadiLogoMark size="xs" inverted />
+                    <VadiButtonLoadingIndicator inverted />
                   ) : (
                     <View style={styles.btnRow}>
                       <Text

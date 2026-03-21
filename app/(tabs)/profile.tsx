@@ -6,7 +6,7 @@ import {
     getVillageItems,
 } from "@/data/gujarati-location";
 import { FarmerProfileCard } from "@/components/FarmerProfileCard";
-import { VadiLogoLoader, VadiLogoMark } from "@/components/VadiLogoLoader";
+import { VadiButtonLoadingIndicator, VadiLogoLoader } from "@/components/VadiLogoLoader";
 import type { FarmerProfile as APIFarmerProfile, VadiScoreResponse } from "@/utils/api";
 import { getMyProfile, logout, updateProfile, getVadiScore } from "@/utils/api";
 import { formatArea, formatWholeNumber } from "@/utils/format";
@@ -316,7 +316,7 @@ function EditModal({
                         </Pressable>
                         <Text style={editStyles.sheetTitle}>{t("profileTab", "editProfile")}</Text>
                         <Pressable onPress={onSave} disabled={saving} style={editStyles.sheetSaveBtn}>
-                            {saving ? <VadiLogoMark size="xs" inverted /> : <Text style={editStyles.sheetSaveBtnText}>{t("profileTab", "save")}</Text>}
+                            {saving ? <VadiButtonLoadingIndicator inverted /> : <Text style={editStyles.sheetSaveBtnText}>{t("profileTab", "save")}</Text>}
                         </Pressable>
                     </View>
 

@@ -4,9 +4,11 @@ import { useRefresh } from "@/contexts/RefreshContext";
 import {
   getCurrentFinancialYear,
   getFinancialYearOptionsExtended,
+  getFriendlyErrorMessage,
   getIncomes,
   getExpenses,
   deleteIncome,
+  sendTractorPendingReminder,
   type Income,
   type IncomeCategory,
 } from "@/utils/api";
@@ -17,6 +19,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigationState } from "@react-navigation/native";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
@@ -77,10 +80,16 @@ function TractorIncomeRow({
   item,
   onEdit,
   onDelete,
+  showBakiReminder,
+  sendingReminder,
+  onSendReminder,
 }: {
   item: Income;
   onEdit: (item: Income) => void;
   onDelete: (item: Income) => void;
+  showBakiReminder: boolean;
+  sendingReminder: boolean;
+  onSendReminder: (item: Income) => void;
 }) {
   const { t } = useTranslation();
   const r = item.rentalIncome;
@@ -107,6 +116,9 @@ function TractorIncomeRow({
   const farmerName = r?.rentedToName?.trim();
   const status = r?.paymentStatus ?? "Pending";
   const amount = getRentalAmount(item);
+  const farmerPhone = r?.farmerPhone?.trim();
+  const canSendReminder =
+    showBakiReminder && status === "Pending" && !!farmerPhone;
 
   const showActions = () => {
     Alert.alert("ટ્રેક્ટર આવક", "શું કરવું?", [
@@ -121,13 +133,13 @@ function TractorIncomeRow({
   };
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.85}
-      onPress={showActions}
-    >
+    <View style={styles.card}>
       <View style={styles.cardBar} />
-      <View style={styles.cardBody}>
+      <TouchableOpacity
+        style={styles.cardBody}
+        activeOpacity={0.85}
+        onPress={showActions}
+      >
         <View style={styles.cardTop}>
           <View style={styles.titleRow}>
             <Text style={styles.cardTitle} numberOfLines={1}>
@@ -183,8 +195,38 @@ function TractorIncomeRow({
             📝 {item.notes.trim()}
           </Text>
         ) : null}
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      {showBakiReminder && status === "Pending" ? (
+        <View style={styles.reminderCol}>
+          <TouchableOpacity
+            style={[
+              styles.reminderBtn,
+              (!canSendReminder || sendingReminder) && styles.reminderBtnDisabled,
+            ]}
+            onPress={() => {
+              if (!canSendReminder || sendingReminder) return;
+              onSendReminder(item);
+            }}
+            activeOpacity={0.85}
+          >
+            {sendingReminder ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons
+                name="notifications-outline"
+                size={20}
+                color={canSendReminder ? "#fff" : C.textMuted}
+              />
+            )}
+          </TouchableOpacity>
+          {!farmerPhone ? (
+            <Text style={styles.reminderHint} numberOfLines={2}>
+              નંબર ઉમેરો
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -202,6 +244,9 @@ export default function TractorIncomeListScreen() {
   const [selectedFarmer, setSelectedFarmer] = useState<string>("");
   const [farmerDropdownOpen, setFarmerDropdownOpen] = useState(false);
   const [tractorExpenseTotal, setTractorExpenseTotal] = useState(0);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(
+    null,
+  );
   const insets = useSafeAreaInsets();
 
   const isInsideTabs = useNavigationState((state) => {
@@ -256,6 +301,21 @@ export default function TractorIncomeListScreen() {
 
   const handleEditTractorAvak = useCallback((item: Income) => {
     router.push(`/income/add-tractor-income?id=${item._id}` as any);
+  }, []);
+
+  const handleSendPendingReminder = useCallback(async (item: Income) => {
+    try {
+      setSendingReminderId(item._id);
+      const res = await sendTractorPendingReminder(item._id);
+      Alert.alert(
+        "સૂચના",
+        res.message ?? "મોકલાઈ ગયું.",
+      );
+    } catch (e) {
+      Alert.alert("ભૂલ", getFriendlyErrorMessage(e));
+    } finally {
+      setSendingReminderId(null);
+    }
   }, []);
 
   const handleDeleteTractorAvak = useCallback(
@@ -551,6 +611,9 @@ export default function TractorIncomeListScreen() {
                 item={item}
                 onEdit={handleEditTractorAvak}
                 onDelete={handleDeleteTractorAvak}
+                showBakiReminder={statusFilter === "Pending"}
+                sendingReminder={sendingReminderId === item._id}
+                onSendReminder={handleSendPendingReminder}
               />
             )}
            contentContainerStyle={{
@@ -846,6 +909,31 @@ const styles = StyleSheet.create({
     backgroundColor: C.orange500,
   },
   cardBody: { flex: 1, padding: 14 },
+  reminderCol: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingRight: 10,
+    paddingVertical: 8,
+    maxWidth: 72,
+  },
+  reminderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: C.orange700,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reminderBtnDisabled: {
+    backgroundColor: C.orange200,
+  },
+  reminderHint: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: C.textMuted,
+    textAlign: "center",
+    marginTop: 4,
+  },
   cardTop: {
     flexDirection: "row",
     alignItems: "center",

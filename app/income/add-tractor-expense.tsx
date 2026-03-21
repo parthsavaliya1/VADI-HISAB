@@ -7,7 +7,7 @@
 
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
-import { VadiLogoMark } from "@/components/VadiLogoLoader";
+import { VadiButtonLoadingIndicator, VadiLogoMark } from "@/components/VadiLogoLoader";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
   createExpense,
@@ -363,7 +363,7 @@ export default function AddTractorExpenseScreen() {
           disabled={saving}
         >
           {saving ? (
-            <VadiLogoMark size="xs" inverted />
+            <VadiButtonLoadingIndicator inverted />
           ) : (
             <Text style={styles.saveBtnText}>{isEdit ? "સુધારો" : "સાચવો"}</Text>
           )}

@@ -1,4 +1,4 @@
-import { VadiLogoMark } from "@/components/VadiLogoLoader";
+import { VadiButtonLoadingIndicator } from "@/components/VadiLogoLoader";
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import translations from "@/translations.json";
 import { saveConsent } from "@/utils/api";
@@ -207,7 +207,7 @@ export default function Consent() {
                                 style={styles.proceedGradient}
                             >
                                 {loading
-                                    ? <VadiLogoMark size="xs" inverted />
+                                    ? <VadiButtonLoadingIndicator inverted />
                                     : <Text style={[styles.proceedText, selected === null && styles.proceedTextOff]}>{t.proceed}</Text>
                                 }
                             </LinearGradient>

@@ -99,18 +99,33 @@ API.interceptors.response.use(
 export const getFriendlyErrorMessage = (err: unknown): string => {
   const e = err as AxiosError | Error | any;
 
-  // No response / classic axios network error / timeout
-  if (
-    e.code === "ECONNABORTED" ||
-    e.message === "Network Error" ||
-    !e.response
-  ) {
+  const dataMsg = e.response?.data?.message ?? e.response?.data?.error;
+  if (typeof dataMsg === "string" && dataMsg.trim()) {
+    return dataMsg.trim();
+  }
+
+  const msg = typeof e?.message === "string" ? e.message.trim() : "";
+
+  // Timeout / no connection — real network failures (Axios still attached here)
+  if (e.code === "ECONNABORTED" || e.message === "Network Error") {
     return "ઇન્ટરનેટ કનેક્શન ચેક કરો (મોબાઇલ ડેટા / Wi‑Fi) અને ફરી પ્રયત્ન કરો.";
   }
 
-  if (typeof e.message === "string" && e.message.trim()) {
-    return e.message;
+  // Response interceptor rejects with `new Error(serverMessage)` — there is no `.response`
+  // on the thrown Error, so we must show `msg` before treating "no response" as offline.
+  if (
+    msg &&
+    msg !== "Network Error" &&
+    !/^Request failed with status code \d+$/i.test(msg)
+  ) {
+    return msg;
   }
+
+  if (!e.response) {
+    return "ઇન્ટરનેટ કનેક્શન ચેક કરો (મોબાઇલ ડેટા / Wi‑Fi) અને ફરી પ્રયત્ન કરો.";
+  }
+
+  if (msg) return msg;
 
   return "કંઈક ખોટું થયું. થોડી વારમાં ફરી પ્રયત્ન કરો.";
 };
@@ -1260,6 +1275,23 @@ export const updateIncome = async (
 /** DELETE /income/:id */
 export const deleteIncome = async (id: string): Promise<void> => {
   await API.delete(`/income/${id}`);
+};
+
+/** POST /income/:id/send-pending-reminder — push + in-app to farmer (VADI user on saved phone) */
+export interface SendTractorPendingReminderResponse {
+  success: boolean;
+  sentToTokens?: number;
+  inAppCreated?: boolean;
+  message?: string;
+}
+
+export const sendTractorPendingReminder = async (
+  incomeId: string,
+): Promise<SendTractorPendingReminderResponse> => {
+  const res = await API.post<SendTractorPendingReminderResponse>(
+    `/income/${incomeId}/send-pending-reminder`,
+  );
+  return res.data;
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -169,9 +169,6 @@ export default function NotificationsScreen() {
                   <Text style={styles.cardDate}>{formatDateTime(item.createdAt)}</Text>
                 </View>
                 <Text style={styles.cardMessage}>{item.message}</Text>
-                {item.referenceType === "Income" && item.referenceId ? (
-                  <Text style={styles.openText}>Tap to view entry</Text>
-                ) : null}
               </TouchableOpacity>
             ))
           )}
@@ -281,11 +278,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: C.textSecondary,
-  },
-  openText: {
-    marginTop: 10,
-    fontSize: 13,
-    fontWeight: "700",
-    color: C.green500,
   },
 });

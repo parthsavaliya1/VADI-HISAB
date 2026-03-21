@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  ActivityIndicator,
   Image,
   ImageStyle,
   StyleProp,
@@ -33,6 +34,26 @@ export type VadiLogoMarkProps = {
   inverted?: boolean;
   style?: StyleProp<ImageStyle>;
 };
+
+/**
+ * Spinner for buttons and compact actions — use while loading instead of the logo.
+ * Full-screen / block loading should use {@link VadiLogoLoader} (logo on screen).
+ */
+export function VadiButtonLoadingIndicator({
+  inverted,
+  size = "small",
+}: {
+  /** White on solid / gradient buttons; brand green on light surfaces. */
+  inverted?: boolean;
+  size?: "small" | "large";
+}) {
+  return (
+    <ActivityIndicator
+      size={size}
+      color={inverted ? "#FFFFFF" : AppTheme.green700}
+    />
+  );
+}
 
 /** Logo only — inline in buttons, dropdowns, or custom rows. */
 export function VadiLogoMark({ size = "md", inverted, style }: VadiLogoMarkProps) {

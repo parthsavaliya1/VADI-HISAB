@@ -10,7 +10,7 @@
 
 import { HEADER_PADDING_TOP } from "@/constants/theme";
 import { AppBackButton } from "@/components/AppBackButton";
-import { VadiLogoLoader, VadiLogoMark } from "@/components/VadiLogoLoader";
+import { VadiButtonLoadingIndicator, VadiLogoLoader } from "@/components/VadiLogoLoader";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { useRefresh } from "@/contexts/RefreshContext";
 import {
@@ -1228,7 +1228,7 @@ export default function AddIncomeScreen() {
             activeOpacity={0.85}
           >
             {loading ? (
-              <VadiLogoMark size="xs" inverted />
+              <VadiButtonLoadingIndicator inverted />
             ) : (
               <Text style={styles.submitBtnText}>
                 {isEdit ? "💾  અપડેટ કરો" : "✅  આવક સેવ કરો"}

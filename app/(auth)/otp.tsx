@@ -6,7 +6,7 @@
  * ✅ UI aligned with reference: clean layout, centered title, styled input/button
  */
 
-import { VadiLogoMark } from "@/components/VadiLogoLoader";
+import { VadiButtonLoadingIndicator } from "@/components/VadiLogoLoader";
 import translations from "@/translations.json";
 import { getFriendlyErrorMessage, sendOtp, verifyOtp } from "@/utils/api";
 import { registerAndSyncPushToken } from "@/utils/pushNotifications";
@@ -643,7 +643,7 @@ export default function OTP() {
                       />
                     )}
                     {verifying ? (
-                      <VadiLogoMark size="xs" inverted />
+                      <VadiButtonLoadingIndicator inverted />
                     ) : (
                       <View style={styles.btnRow}>
                         <Text
@@ -684,7 +684,7 @@ export default function OTP() {
                   activeOpacity={0.7}
                 >
                   {loading ? (
-                    <VadiLogoMark size="xs" />
+                    <VadiButtonLoadingIndicator />
                   ) : (
                     <Text style={styles.resendTxt}>{t.resend}</Text>
                   )}
