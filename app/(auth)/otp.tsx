@@ -83,7 +83,6 @@ export default function OTP() {
   const [success, setSuccess] = useState(false);
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
-  const hiddenOtpRef = useRef<TextInput>(null);
 
   // ── Native driver: true (transforms only) ────────────────────────────────
   const heroFade = useRef(new Animated.Value(0)).current;
@@ -209,8 +208,37 @@ export default function OTP() {
 
   const handleChange = (text: string, i: number) => {
     setError("");
-    const digit = text.replace(/[^0-9]/g, "").slice(-1);
-      if (otp[i] === digit) return; // 🔥 prevents extra re-renders
+    const digits = text.replace(/\D/g, "");
+
+    // SMS autofill / keyboard "From Messages" inserts the full code at once (needs maxLength 6 on first cell).
+    if (digits.length >= OTP_LENGTH) {
+      const arr = digits.slice(0, OTP_LENGTH).split("");
+      setOtp(arr);
+      arr.forEach((_, idx) => {
+        animateBoxFill(idx, 1);
+        animateBoxScale(idx);
+      });
+      setError("");
+      Keyboard.dismiss();
+      return;
+    }
+
+    if (digits.length > 1 && i === 0) {
+      const next = [...otp];
+      for (let d = 0; d < digits.length && d < OTP_LENGTH; d++) {
+        next[d] = digits[d]!;
+      }
+      setOtp(next);
+      for (let d = 0; d < digits.length && d < OTP_LENGTH; d++) {
+        animateBoxFill(d, 1);
+        animateBoxScale(d);
+      }
+      inputRefs.current[Math.min(digits.length, OTP_LENGTH - 1)]?.focus();
+      return;
+    }
+
+    const digit = digits.slice(-1);
+    if (otp[i] === digit) return; // 🔥 prevents extra re-renders
 
     const next = [...otp];
     next[i] = digit;
@@ -480,29 +508,7 @@ export default function OTP() {
                 OTP દાખલ કરો
               </Text>
 
-              {/* Hidden input for SMS OTP autofill (iOS oneTimeCode / Android sms-otp) */}
-              <TextInput
-                style={styles.hiddenOtpInput}
-                ref={hiddenOtpRef}
-                defaultValue=""
-                onChangeText={(text) => {
-                  const digits = text.replace(/\D/g, "").slice(0, OTP_LENGTH);
-                  if (digits.length >= OTP_LENGTH) {
-                    const arr = digits.split("").slice(0, OTP_LENGTH);
-                    setOtp(arr);
-                    setError("");
-                    arr.forEach((_, idx) => animateBoxFill(idx, 1));
-                    Keyboard.dismiss();
-                  }
-                }}
-                keyboardType="number-pad"
-                maxLength={OTP_LENGTH}
-                autoComplete="sms-otp"
-                textContentType="oneTimeCode"
-                caretHidden
-              />
-
-              {/* OTP Boxes */}
+              {/* OTP Boxes — autofill on first cell only (focused field + room for full code) */}
               <Animated.View
                 style={[
                   styles.otpRow,
@@ -539,20 +545,28 @@ export default function OTP() {
                           ]}
                         >
                           <TextInput
-ref={(r) => {
-  inputRefs.current[i] = r;
-}}                            style={[
+                            ref={(r) => {
+                              inputRefs.current[i] = r;
+                            }}
+                            style={[
                               styles.otpInput,
                               otp[i] ? styles.otpInputFilled : null,
                             ]}
                             keyboardType="numeric"
-                            maxLength={1}
+                            maxLength={i === 0 ? OTP_LENGTH : 1}
                             value={otp[i]}
                             onChangeText={(txt) => handleChange(txt, i)}
                             onKeyPress={({ nativeEvent }) =>
                               handleKey(nativeEvent.key, i)
                             }
                             selectionColor={C.green700}
+                            {...(i === 0
+                              ? {
+                                  textContentType: "oneTimeCode" as const,
+                                  autoComplete: "sms-otp" as const,
+                                  importantForAutofill: "yes" as const,
+                                }
+                              : {})}
                           />
                         </Animated.View>
                       </Animated.View>
@@ -783,14 +797,6 @@ const styles = StyleSheet.create({
     paddingTop: 34,
     paddingBottom: 10,
   },
-  hiddenOtpInput: {
-    position: "absolute",
-    width: 1,
-    height: 1,
-    opacity: 0,
-    zIndex: -1,
-  },
-
   changeNumWrap: {
     alignItems: "center",
     marginTop: 18,
